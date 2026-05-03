@@ -219,7 +219,7 @@ async function callScorecardFunction(photos) {
   const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
   try {
-    const res = await fetch('/.netlify/functions/parse-scorecard', {
+    const res = await fetch('https://scorecard-parser.thecard.workers.dev', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ photos }),
