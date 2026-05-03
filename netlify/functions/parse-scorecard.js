@@ -2,12 +2,8 @@
 //
 // Server-side Gemini scorecard parser.
 // Accepts POST { photos: [{ b64, mediaType }] }
-// Uploads each image to Gemini Files API (persistent, full-resolution URI),
-// then runs the Fairway Analytics schema extraction against those URIs.
-// Returns parsed courseLib-compatible JSON.
-//
+// Uploads each image to Gemini Files API, then extracts scorecard data.
 // GEMINI_API_KEY must be set in Netlify environment variables.
-// Never exposed to the browser.
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY;
 const MODEL      = 'gemini-2.5-flash';
@@ -16,54 +12,57 @@ const BASE_URL   = 'https://generativelanguage.googleapis.com';
 // ── Upload one image to Gemini Files API ──────────────────────────────────────
 
 async function uploadToFilesAPI(b64, mediaType, displayName) {
+  const imageBytes = Buffer.from(b64, 'base64');
+  const byteLength = imageBytes.length;
+
   // Step 1: initiate resumable upload
   const initRes = await fetch(
     `${BASE_URL}/upload/v1beta/files?key=${GEMINI_KEY}`,
     {
       method:  'POST',
       headers: {
-        'X-Goog-Upload-Protocol': 'resumable',
-        'X-Goog-Upload-Command':  'start',
+        'X-Goog-Upload-Protocol':              'resumable',
+        'X-Goog-Upload-Command':               'start',
         'X-Goog-Upload-Header-Content-Type':   mediaType,
-        'X-Goog-Upload-Header-Content-Length': Math.ceil(b64.length * 0.75).toString(),
-        'Content-Type': 'application/json',
+        'X-Goog-Upload-Header-Content-Length': byteLength.toString(),
+        'Content-Type':                        'application/json',
       },
       body: JSON.stringify({ file: { display_name: displayName } }),
     }
   );
 
   if (!initRes.ok) {
-    const err = await initRes.json().catch(() => ({}));
-    throw new Error(`Files API init failed: ${err?.error?.message || initRes.status}`);
+    const txt = await initRes.text();
+    throw new Error(`Files API init failed (${initRes.status}): ${txt}`);
   }
 
   const uploadUrl = initRes.headers.get('x-goog-upload-url');
   if (!uploadUrl) throw new Error('Files API did not return upload URL');
 
   // Step 2: upload the image bytes
-  const imageBytes = Buffer.from(b64, 'base64');
-  const uploadRes  = await fetch(uploadUrl, {
+  const uploadRes = await fetch(uploadUrl, {
     method:  'POST',
     headers: {
-      'Content-Type':            mediaType,
-      'X-Goog-Upload-Offset':    '0',
-      'X-Goog-Upload-Command':   'upload, finalize',
+      'Content-Type':          mediaType,
+      'Content-Length':        byteLength.toString(),
+      'X-Goog-Upload-Offset':  '0',
+      'X-Goog-Upload-Command': 'upload, finalize',
     },
     body: imageBytes,
   });
 
   if (!uploadRes.ok) {
-    const err = await uploadRes.json().catch(() => ({}));
-    throw new Error(`Files API upload failed: ${err?.error?.message || uploadRes.status}`);
+    const txt = await uploadRes.text();
+    throw new Error(`Files API upload failed (${uploadRes.status}): ${txt}`);
   }
 
   const fileData = await uploadRes.json();
   const uri = fileData?.file?.uri;
-  if (!uri) throw new Error('Files API did not return file URI');
+  if (!uri) throw new Error(`Files API did not return URI. Response: ${JSON.stringify(fileData)}`);
   return { uri, mimeType: mediaType };
 }
 
-// ── Gemini generateContent call using file URIs ───────────────────────────────
+// ── Gemini generateContent ────────────────────────────────────────────────────
 
 const SCORECARD_SI =
   'You are an expert OCR agent specializing in high-precision data extraction from golf scorecards. ' +
@@ -122,16 +121,16 @@ async function parseWithGemini(fileUris) {
         ...imageParts,
         { text:
           'Analyze these golf scorecard images. ' +
-          'Extract the course name, address, all tee ratings/slopes for men and women separately, ' +
+          'Extract the course name, address, all tee ratings and slopes for men and women separately, ' +
           'and hole-by-hole par and handicap data for all holes. ' +
           'Capture every hole and all available tee sets.'
         },
       ],
     }],
     generationConfig: {
-      temperature:         0,
-      response_mime_type:  'application/json',
-      response_schema:     SCORECARD_SCHEMA,
+      temperature:        0,
+      response_mime_type: 'application/json',
+      response_schema:    SCORECARD_SCHEMA,
     },
   };
 
@@ -145,17 +144,17 @@ async function parseWithGemini(fileUris) {
   );
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Gemini API ${res.status}`);
+    const txt = await res.text();
+    throw new Error(`Gemini API ${res.status}: ${txt}`);
   }
 
   const d    = await res.json();
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  if (!text) throw new Error('Gemini returned no content');
+  if (!text) throw new Error(`Gemini returned no content. Response: ${JSON.stringify(d)}`);
   return JSON.parse(text);
 }
 
-// ── Convert Gemini output → courseLib schema ──────────────────────────────────
+// ── Convert to courseLib schema ───────────────────────────────────────────────
 
 function toSchema(d) {
   const sorted    = [...d.holes].sort((a, b) => a.holeNumber - b.holeNumber);
@@ -198,34 +197,44 @@ function toSchema(d) {
 // ── Netlify handler ───────────────────────────────────────────────────────────
 
 exports.handler = async (event) => {
+  console.log('parse-scorecard invoked:', event.httpMethod);
+
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   if (!GEMINI_KEY) {
+    console.error('GEMINI_API_KEY not set');
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'GEMINI_API_KEY not configured in Netlify environment variables' }),
+      body: JSON.stringify({ error: 'GEMINI_API_KEY not configured' }),
     };
   }
 
   let photos;
   try {
-    ({ photos } = JSON.parse(event.body));
-    if (!Array.isArray(photos) || !photos.length) throw new Error('No photos provided');
+    const parsed = JSON.parse(event.body);
+    photos = parsed.photos;
+    if (!Array.isArray(photos) || !photos.length) throw new Error('No photos in request');
+    console.log(`Received ${photos.length} photo(s)`);
   } catch (e) {
+    console.error('Body parse error:', e.message);
     return { statusCode: 400, body: JSON.stringify({ error: e.message }) };
   }
 
   try {
-    // Upload all images to Files API for persistent full-resolution URIs
+    console.log('Uploading to Files API...');
     const fileUris = await Promise.all(
       photos.map((p, i) => uploadToFilesAPI(p.b64, p.mediaType, `scorecard_${i + 1}`))
     );
+    console.log('Upload complete:', fileUris.map(f => f.uri));
 
-    // Parse using file URIs (server-side key, full resolution)
+    console.log('Calling Gemini...');
     const raw    = await parseWithGemini(fileUris);
+    console.log('Gemini response received');
+
     const result = toSchema(raw);
+    console.log('Conversion complete:', result.courseName);
 
     return {
       statusCode: 200,
@@ -233,6 +242,7 @@ exports.handler = async (event) => {
       body:       JSON.stringify(result),
     };
   } catch (e) {
+    console.error('Function error:', e.message);
     return {
       statusCode: 500,
       body:       JSON.stringify({ error: e.message }),
