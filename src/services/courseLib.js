@@ -210,10 +210,19 @@ function extractJSON(text) {
  * (i.e. when window.location.hostname is localhost).
  */
 async function callScorecardFunction(photos) {
+  // Resize images before sending to stay under Netlify's 6MB body limit.
+  // Gemini Files API receives them server-side at full quality after upload.
+  const resized = await Promise.all(
+    photos.map(async p => ({
+      b64:       await resizeForUpload(p.b64, p.mediaType),
+      mediaType: 'image/jpeg',
+    }))
+  );
+
   const res = await fetch('/.netlify/functions/parse-scorecard', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ photos }),
+    body:    JSON.stringify({ photos: resized }),
   });
 
   if (!res.ok) {
@@ -262,6 +271,28 @@ async function geminiVisionCall(parts, { systemInstruction = '', jsonMode = fals
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
   if (!text) throw new Error('Gemini returned no content');
   return text;
+}
+
+/**
+ * Resize image to max 2048px on longest edge at 0.85 JPEG quality.
+ * Keeps detail high enough for Gemini OCR while staying under Netlify's
+ * 6MB function body limit (two photos ~1-2MB each after resize).
+ */
+function resizeForUpload(b64, mediaType) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1600;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      res(canvas.toDataURL('image/jpeg', 0.80).split(',')[1]);
+    };
+    img.onerror = () => res(b64); // fallback to original on error
+    img.src = `data:${mediaType};base64,${b64}`;
+  });
 }
 
 /** Build image parts for direct Gemini calls (local dev fallback). */
