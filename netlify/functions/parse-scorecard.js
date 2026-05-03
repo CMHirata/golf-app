@@ -99,28 +99,14 @@ const SCORECARD_SCHEMA = {
   required: ['courseName', 'holes'],
 };
 
-async function parseWithGemini(fileUris) {
-  const imageParts = fileUris.map(f => ({
-    file_data: { mime_type: f.mimeType, file_uri: f.uri },
-  }));
-
+async function geminiCall(contents, schema) {
   const body = {
     system_instruction: { parts: [{ text: SCORECARD_SI }] },
-    contents: [{
-      parts: [
-        ...imageParts,
-        { text:
-          'Analyze these golf scorecard images. ' +
-          'Extract the course name, address, all tee ratings and slopes for men and women separately, ' +
-          'and hole-by-hole par and handicap data for all holes. ' +
-          'Capture every hole and all available tee sets.'
-        },
-      ],
-    }],
+    contents,
     generationConfig: {
       temperature:        0,
       response_mime_type: 'application/json',
-      response_schema:    SCORECARD_SCHEMA,
+      response_schema:    schema || SCORECARD_SCHEMA,
     },
   };
 
@@ -142,6 +128,49 @@ async function parseWithGemini(fileUris) {
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
   if (!text) throw new Error(`Gemini returned no content. Response: ${JSON.stringify(d)}`);
   return JSON.parse(text);
+}
+
+async function parseWithGemini(fileUris) {
+  const imageParts = fileUris.map(f => ({
+    file_data: { mime_type: f.mimeType, file_uri: f.uri },
+  }));
+
+  // Pass 1 — Extract all scorecard data
+  console.log('Pass 1: extracting data...');
+  const extracted = await geminiCall([{
+    parts: [
+      ...imageParts,
+      { text:
+        'Analyze these golf scorecard images. ' +
+        'Extract the course name, address, all tee ratings and slopes for men and women separately, ' +
+        'and hole-by-hole par and handicap data for all holes. ' +
+        'Capture every hole and all available tee sets.'
+      },
+    ],
+  }]);
+
+  // Pass 2 — Validation loop: verify yardage sums match TOT columns
+  console.log('Pass 2: validating yardage totals...');
+  const validated = await geminiCall([{
+    parts: [
+      ...imageParts,
+      { text:
+        'Here is data extracted from this golf scorecard:
+' +
+        JSON.stringify(extracted, null, 2) + '
+
+' +
+        'For each tee, sum the individual hole yardages and compare against ' +
+        'the printed OUT, IN, and TOT columns on the scorecard image. ' +
+        'If the sums do not match, re-read those specific holes and correct the yardages. ' +
+        'Also verify par values (must be 3, 4, or 5) and that handicap values ' +
+        'are unique from 1 to the total number of holes. ' +
+        'Return the fully corrected data in the same JSON format.'
+      },
+    ],
+  }]);
+
+  return validated;
 }
 
 function toSchema(d) {
