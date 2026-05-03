@@ -211,7 +211,7 @@ function extractJSON(text) {
  */
 async function callScorecardFunction(photos) {
   // Resize images before sending to stay under Netlify's 6MB body limit.
-  // Gemini Files API receives them server-side at full quality after upload.
+  console.log('Resizing', photos.length, 'photo(s)...');
   const resized = await Promise.all(
     photos.map(async p => ({
       b64:       await resizeForUpload(p.b64, p.mediaType),
@@ -219,18 +219,36 @@ async function callScorecardFunction(photos) {
     }))
   );
 
-  const res = await fetch('/.netlify/functions/parse-scorecard', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ photos: resized }),
+  // Log approximate sizes
+  resized.forEach((p, i) => {
+    console.log(`Photo ${i+1} resized b64 length: ${p.b64.length} (~${Math.round(p.b64.length * 0.75 / 1024)}KB)`);
   });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error || `Server error ${res.status}`);
-  }
+  console.log('Sending to Netlify function...');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
-  return res.json();
+  try {
+    const res = await fetch('/.netlify/functions/parse-scorecard', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ photos: resized }),
+      signal:  controller.signal,
+    });
+    clearTimeout(timeout);
+    console.log('Function responded with status:', res.status);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error || `Server error ${res.status}`);
+    }
+
+    return res.json();
+  } catch (e) {
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') throw new Error('Request timed out after 60s');
+    throw e;
+  }
 }
 
 /**
@@ -282,13 +300,13 @@ function resizeForUpload(b64, mediaType) {
   return new Promise(res => {
     const img = new Image();
     img.onload = () => {
-      const MAX = 1600;
+      const MAX = 1200;
       const scale = Math.min(1, MAX / Math.max(img.width, img.height));
       const canvas = document.createElement('canvas');
       canvas.width  = Math.round(img.width  * scale);
       canvas.height = Math.round(img.height * scale);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      res(canvas.toDataURL('image/jpeg', 0.80).split(',')[1]);
+      res(canvas.toDataURL('image/jpeg', 0.75).split(',')[1]);
     };
     img.onerror = () => res(b64); // fallback to original on error
     img.src = `data:${mediaType};base64,${b64}`;
@@ -461,22 +479,9 @@ function fairwayToSchema(d) {
  */
 export async function aiParseScorecard(photos, onProgress) {
   onProgress?.('Reading scorecard…');
-
-  const isLocal = typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-  if (!isLocal) {
-    // Production: use Netlify Function (Files API, server-side key, full resolution)
-    return callScorecardFunction(photos);
-  }
-
-  // Local dev fallback: direct Gemini call with localStorage key
-  const imageParts = makeImageParts(photos);
-  const text = await geminiVisionCall(
-    [...imageParts, { text: SCORECARD_PROMPT }],
-    { systemInstruction: SCORECARD_SI, jsonMode: true, jsonSchema: SCORECARD_SCHEMA },
-  );
-  return fairwayToSchema(extractJSON(text));
+  // Always use Netlify Function — handles Files API upload server-side.
+  // For local dev, run 'netlify dev' to proxy the function locally.
+  return callScorecardFunction(photos);
 }
 
 // ─── Course comparison utilities ──────────────────────────────────────────────
