@@ -182,7 +182,7 @@ function toSchema(d) {
   };
 }
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   console.log('parse-scorecard invoked:', event.httpMethod);
 
   if (event.httpMethod !== 'POST') {
