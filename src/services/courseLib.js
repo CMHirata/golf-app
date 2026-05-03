@@ -210,20 +210,10 @@ function extractJSON(text) {
  * (i.e. when window.location.hostname is localhost).
  */
 async function callScorecardFunction(photos) {
-  // Resize images before sending to stay under Netlify's 6MB body limit.
-  console.log('Resizing', photos.length, 'photo(s)...');
-  const resized = await Promise.all(
-    photos.map(async p => ({
-      b64:       await resizeForUpload(p.b64, p.mediaType),
-      mediaType: 'image/jpeg',
-    }))
-  );
-
-  // Log approximate sizes
-  resized.forEach((p, i) => {
-    console.log(`Photo ${i+1} resized b64 length: ${p.b64.length} (~${Math.round(p.b64.length * 0.75 / 1024)}KB)`);
+  // Log sizes before sending
+  photos.forEach((p, i) => {
+    console.log(`Photo ${i+1} b64 length: ${p.b64.length} (~${Math.round(p.b64.length * 0.75 / 1024)}KB)`);
   });
-
   console.log('Sending to Netlify function...');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
@@ -232,7 +222,7 @@ async function callScorecardFunction(photos) {
     const res = await fetch('/.netlify/functions/parse-scorecard', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ photos: resized }),
+      body:    JSON.stringify({ photos }),
       signal:  controller.signal,
     });
     clearTimeout(timeout);
