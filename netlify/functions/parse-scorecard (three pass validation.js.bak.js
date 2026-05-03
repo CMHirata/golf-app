@@ -135,18 +135,36 @@ async function parseWithGemini(fileUris) {
     file_data: { mime_type: f.mimeType, file_uri: f.uri },
   }));
 
-  // Pass 1 - Extract all data
-  console.log('Pass 1: extracting...');
+  // Pass 1 - Layout mapping
+  console.log('Pass 1: mapping layout...');
+  const layoutBody = {
+    system_instruction: { parts: [{ text: SCORECARD_SI }] },
+    contents: [{ parts: [
+      ...imageParts,
+      { text: 'Before extracting any data, describe the layout of this scorecard. List every tee box name in the order they appear. Identify where par, handicap, and yardage rows are. Note whether men and women ratings are in separate columns. Note any combo tees. Describe the structure in detail.' },
+    ]}],
+    generationConfig: { temperature: 0 },
+  };
+  const layoutRes = await fetch(
+    BASE_URL + '/v1beta/models/' + MODEL + ':generateContent?key=' + GEMINI_KEY,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(layoutBody) }
+  );
+  const layoutD = await layoutRes.json();
+  const layout  = layoutD.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  console.log('Layout mapped:', layout.slice(0, 80));
+
+  // Pass 2 - Extract all data using layout context
+  console.log('Pass 2: extracting...');
   const extracted = await geminiCall(
     imageParts,
-    'Analyze these golf scorecard images. Extract the course name, address, all tee ratings and slopes for men and women separately, and hole-by-hole par, handicap, and yardage data for every hole. Capture all yardages for every tee and all available tee sets.'
+    'Using this layout description as reference: ' + layout + ' Now extract all data from the scorecard: course name, address, all tee ratings and slopes for men and women separately, and hole-by-hole par, handicap, and yardage data for every hole. Capture all yardages for every tee.'
   );
 
-  // Pass 2 - Validation: verify sums and fix errors
-  console.log('Pass 2: validating...');
+  // Pass 3 - Validation: verify sums and fix errors
+  console.log('Pass 3: validating...');
   const validated = await geminiCall(
     imageParts,
-    'Here is data extracted from this scorecard: ' + JSON.stringify(extracted) + ' Verify this data against the scorecard images: 1. For each tee, sum hole yardages and compare to OUT, IN, TOT columns. Fix any mismatches. 2. Check par values are all 3, 4, or 5. 3. Check handicap values are unique from 1 to total hole count for both men and women separately. 4. Ensure no yardages are missing. Return the fully corrected data.'
+    'Here is data extracted from this scorecard: ' + JSON.stringify(extracted) + ' Verify this data against the scorecard images: 1. For each tee, sum hole yardages and compare to OUT, IN, TOT columns. Fix any mismatches. 2. Check par values are all 3, 4, or 5. 3. Check handicap values are unique from 1 to total hole count. 4. Ensure no yardages are missing. Return the fully corrected data.'
   );
 
   return validated;
