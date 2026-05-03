@@ -1,21 +1,14 @@
 // netlify/functions/parse-scorecard.js
-//
-// Server-side Gemini scorecard parser.
-// Accepts POST { photos: [{ b64, mediaType }] }
-// Uploads each image to Gemini Files API, then extracts scorecard data.
-// GEMINI_API_KEY must be set in Netlify environment variables.
+// ES Module syntax — required because package.json has "type": "module"
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY;
 const MODEL      = 'gemini-2.5-flash';
 const BASE_URL   = 'https://generativelanguage.googleapis.com';
 
-// ── Upload one image to Gemini Files API ──────────────────────────────────────
-
 async function uploadToFilesAPI(b64, mediaType, displayName) {
   const imageBytes = Buffer.from(b64, 'base64');
   const byteLength = imageBytes.length;
 
-  // Step 1: initiate resumable upload
   const initRes = await fetch(
     `${BASE_URL}/upload/v1beta/files?key=${GEMINI_KEY}`,
     {
@@ -39,7 +32,6 @@ async function uploadToFilesAPI(b64, mediaType, displayName) {
   const uploadUrl = initRes.headers.get('x-goog-upload-url');
   if (!uploadUrl) throw new Error('Files API did not return upload URL');
 
-  // Step 2: upload the image bytes
   const uploadRes = await fetch(uploadUrl, {
     method:  'POST',
     headers: {
@@ -61,8 +53,6 @@ async function uploadToFilesAPI(b64, mediaType, displayName) {
   if (!uri) throw new Error(`Files API did not return URI. Response: ${JSON.stringify(fileData)}`);
   return { uri, mimeType: mediaType };
 }
-
-// ── Gemini generateContent ────────────────────────────────────────────────────
 
 const SCORECARD_SI =
   'You are an expert OCR agent specializing in high-precision data extraction from golf scorecards. ' +
@@ -154,8 +144,6 @@ async function parseWithGemini(fileUris) {
   return JSON.parse(text);
 }
 
-// ── Convert to courseLib schema ───────────────────────────────────────────────
-
 function toSchema(d) {
   const sorted    = [...d.holes].sort((a, b) => a.holeNumber - b.holeNumber);
   const nineSize  = 9;
@@ -194,9 +182,7 @@ function toSchema(d) {
   };
 }
 
-// ── Netlify handler ───────────────────────────────────────────────────────────
-
-exports.handler = async (event) => {
+export const handler = async (event) => {
   console.log('parse-scorecard invoked:', event.httpMethod);
 
   if (event.httpMethod !== 'POST') {
@@ -231,11 +217,9 @@ exports.handler = async (event) => {
 
     console.log('Calling Gemini...');
     const raw    = await parseWithGemini(fileUris);
-    console.log('Gemini response received');
+    console.log('Gemini complete:', raw.courseName);
 
     const result = toSchema(raw);
-    console.log('Conversion complete:', result.courseName);
-
     return {
       statusCode: 200,
       headers:    { 'Content-Type': 'application/json' },
