@@ -1,5 +1,5 @@
 // netlify/functions/parse-scorecard.js
-// ES Module syntax — required because package.json has "type": "module"
+// CommonJS syntax (functions/package.json declares type:commonjs)
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY;
 const MODEL      = 'gemini-2.5-flash';
