@@ -1,5 +1,5 @@
 // Cloudflare Worker — Golf Scorecard Parser
-// Uploads images to Gemini Files API and runs 2-pass extraction pipeline.
+// Uses inline base64 (no Files API) for speed, enabling 3-pass pipeline.
 // GEMINI_API_KEY set via: wrangler secret put GEMINI_API_KEY
 
 const MODEL    = 'gemini-2.5-flash';
@@ -29,6 +29,8 @@ const SCORECARD_SCHEMA = {
           gender:  { type: 'string', enum: ['Men', 'Women', 'Unspecified'] },
           rating:  { type: 'number' },
           slope:   { type: 'number' },
+          nineYards: { type: 'array', items: { type: 'integer' } },
+          totalYards: { type: 'integer' },
         },
         required: ['teeName', 'gender', 'rating', 'slope'],
       },
@@ -42,7 +44,6 @@ const SCORECARD_SCHEMA = {
           par:           { type: 'integer' },
           handicapMen:   { type: 'integer' },
           handicapWomen: { type: 'integer' },
-          yardages:      { type: 'object' },
         },
         required: ['holeNumber', 'par'],
       },
@@ -51,63 +52,12 @@ const SCORECARD_SCHEMA = {
   required: ['courseName', 'holes'],
 };
 
-// Upload image to Gemini Files API
-async function uploadImage(b64, mediaType, name, apiKey) {
-  // Decode base64 to binary in Workers runtime (no Buffer available)
-  const binary    = atob(b64);
-  const bytes     = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const byteLen   = bytes.length;
+// Single Gemini generateContent call with inline base64 images
+async function geminiCall(photos, prompt, apiKey) {
+  const imageParts = photos.map(p => ({
+    inline_data: { mime_type: p.mediaType, data: p.b64 },
+  }));
 
-  // Step 1: initiate resumable upload
-  const initRes = await fetch(
-    `${BASE_URL}/upload/v1beta/files?key=${apiKey}`,
-    {
-      method:  'POST',
-      headers: {
-        'X-Goog-Upload-Protocol':              'resumable',
-        'X-Goog-Upload-Command':               'start',
-        'X-Goog-Upload-Header-Content-Type':   mediaType,
-        'X-Goog-Upload-Header-Content-Length': byteLen.toString(),
-        'Content-Type':                        'application/json',
-      },
-      body: JSON.stringify({ file: { display_name: name } }),
-    }
-  );
-
-  if (!initRes.ok) {
-    const txt = await initRes.text();
-    throw new Error(`Files API init failed (${initRes.status}): ${txt}`);
-  }
-
-  const uploadUrl = initRes.headers.get('x-goog-upload-url');
-  if (!uploadUrl) throw new Error('Files API did not return upload URL');
-
-  // Step 2: upload bytes
-  const uploadRes = await fetch(uploadUrl, {
-    method:  'POST',
-    headers: {
-      'Content-Type':          mediaType,
-      'Content-Length':        byteLen.toString(),
-      'X-Goog-Upload-Offset':  '0',
-      'X-Goog-Upload-Command': 'upload, finalize',
-    },
-    body: bytes,
-  });
-
-  if (!uploadRes.ok) {
-    const txt = await uploadRes.text();
-    throw new Error(`Files API upload failed (${uploadRes.status}): ${txt}`);
-  }
-
-  const fileData = await uploadRes.json();
-  const uri = fileData?.file?.uri;
-  if (!uri) throw new Error(`Files API no URI. Response: ${JSON.stringify(fileData)}`);
-  return { uri, mimeType: mediaType };
-}
-
-// Single Gemini generateContent call
-async function geminiCall(imageParts, prompt, apiKey) {
   const body = {
     system_instruction: { parts: [{ text: SCORECARD_SI }] },
     contents: [{ parts: [...imageParts, { text: prompt }] }],
@@ -134,11 +84,11 @@ async function geminiCall(imageParts, prompt, apiKey) {
 
   const d    = await res.json();
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  if (!text) throw new Error(`Gemini returned no content`);
+  if (!text) throw new Error('Gemini returned no content');
   return JSON.parse(text);
 }
 
-// Convert Gemini per-hole output to courseLib schema
+// Convert Gemini output to courseLib schema
 function toSchema(d) {
   const sorted    = [...d.holes].sort((a, b) => a.holeNumber - b.holeNumber);
   const nineSize  = 9;
@@ -162,6 +112,8 @@ function toSchema(d) {
     if (t.gender === 'Men' || t.gender === 'Unspecified') {
       teeMap[t.teeName].rating = t.rating;
       teeMap[t.teeName].slope  = t.slope;
+      if (Array.isArray(t.nineYards))  teeMap[t.teeName].nineYards  = t.nineYards;
+      if (t.totalYards != null)        teeMap[t.teeName].totalYards = t.totalYards;
     }
     if (t.gender === 'Women') {
       teeMap[t.teeName].ratingW = t.rating;
@@ -169,31 +121,16 @@ function toSchema(d) {
     }
   }
 
-  // Build nineYards from hole yardages
-  const tees = Object.values(teeMap).map(tee => {
-    const nineYards = nines.map((nine, ni) => {
-      const group = sorted.slice(ni * nineSize, (ni + 1) * nineSize);
-      const yards = group.map(h => h.yardages?.[tee.name]).filter(v => v != null);
-      return yards.length === group.length ? yards.reduce((a, b) => a + b, 0) : null;
-    }).filter(v => v != null);
-    if (nineYards.length === nines.length) {
-      tee.nineYards  = nineYards;
-      tee.totalYards = nineYards.reduce((a, b) => a + b, 0);
-    }
-    return tee;
-  });
-
   return {
     courseName: d.courseName || 'Imported Course',
     location:   d.address    || '',
     nines,
-    tees,
+    tees: Object.values(teeMap),
   };
 }
 
 export default {
   async fetch(request, env) {
-    // CORS headers for browser requests
     const corsHeaders = {
       'Access-Control-Allow-Origin':  '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -227,26 +164,24 @@ export default {
     }
 
     try {
-      // Upload all images to Files API
-      const fileUris = await Promise.all(
-        photos.map((p, i) => uploadImage(p.b64, p.mediaType, `scorecard_${i + 1}`, apiKey))
-      );
-
-      const imageParts = fileUris.map(f => ({
-        file_data: { mime_type: f.mimeType, file_uri: f.uri },
-      }));
-
-      // Pass 1 - Extract
-      const extracted = await geminiCall(
-        imageParts,
-        'Analyze these golf scorecard images. Extract the course name, address, all tee ratings and slopes for men and women separately, and hole-by-hole par, handicap, and yardage data for every hole. Capture all yardages for every tee and all available tee sets.',
+      // Pass 1 - Layout mapping
+      const layout = await geminiCall(
+        photos,
+        'Before extracting any data, describe the layout of this scorecard. List every tee box name in the order they appear. Identify where par, handicap, and yardage rows are. Note whether men and women ratings are in separate columns. Note any combo tees. Describe the structure in detail.',
         apiKey
       );
 
-      // Pass 2 - Validate and correct
+      // Pass 2 - Full extraction using layout context
+      const extracted = await geminiCall(
+        photos,
+        'Using this layout description as reference: ' + JSON.stringify(layout) + ' Now extract ALL data from the scorecard: course name, address, all tee ratings and slopes for men and women separately, nine yardage totals and overall total for each tee, and hole-by-hole par and handicap data for every hole.',
+        apiKey
+      );
+
+      // Pass 3 - Validation and correction
       const validated = await geminiCall(
-        imageParts,
-        'Here is data extracted from this scorecard: ' + JSON.stringify(extracted) + ' Verify this data against the scorecard images: 1. For each tee, sum hole yardages and compare to OUT, IN, TOT columns. Fix any mismatches. 2. Check par values are all 3, 4, or 5. 3. Check handicap values are unique from 1 to total hole count for both men and women separately. 4. Ensure no yardages are missing. Return the fully corrected data.',
+        photos,
+        'Here is data extracted from this scorecard: ' + JSON.stringify(extracted) + ' Verify this data against the scorecard images: 1. Check par values are all 3, 4, or 5. 2. Check handicap values are unique from 1 to total hole count for both men and women separately. 3. Verify nine yardage totals match OUT and IN columns on the card. 4. Ensure all tee yardages are present. Return the fully corrected data.',
         apiKey
       );
 
