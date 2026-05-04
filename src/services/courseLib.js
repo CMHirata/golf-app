@@ -216,7 +216,7 @@ async function callScorecardFunction(photos) {
   });
   console.log('Sending to Netlify function...');
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
+  const timeout = setTimeout(() => controller.abort(), 120000); // 120s timeout
 
   try {
     const res = await fetch('https://scorecard-parser.thecard.workers.dev', {
