@@ -33,9 +33,66 @@ export default function PhotoImportModal({ onImport, onClose }) {
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result;
-      const b64 = dataUrl.split(',')[1];
-      const mediaType = ['image/jpeg','image/png','image/gif','image/webp'].includes(file.type) ? file.type : 'image/jpeg';
-      res({ b64, mediaType, thumb: dataUrl });
+      const img = new Image();
+      img.onload = () => {
+        // Convert to grayscale to improve OCR accuracy
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        // Grayscale + contrast boost (factor 1.5)
+        const contrast = 1.5;
+        const intercept = 128 * (1 - contrast);
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+          const adjusted = Math.min(255, Math.max(0, Math.round(gray * contrast + intercept)));
+          data[i] = data[i+1] = data[i+2] = adjusted;
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        // Sharpen using unsharp mask convolution
+        const sharpCanvas = document.createElement('canvas');
+        sharpCanvas.width  = canvas.width;
+        sharpCanvas.height = canvas.height;
+        const sCtx = sharpCanvas.getContext('2d');
+        sCtx.filter = 'contrast(1.1)';
+        sCtx.drawImage(canvas, 0, 0);
+        // Apply sharpening kernel via CSS filter (supported in modern browsers)
+        const sharpCtx = sharpCanvas.getContext('2d');
+        const sharpData = sharpCtx.getImageData(0, 0, sharpCanvas.width, sharpCanvas.height);
+        const src = imageData.data;
+        const dst = sharpData.data;
+        const w   = sharpCanvas.width;
+        const h   = sharpCanvas.height;
+        // Sharpen kernel: center=5, neighbors=-1 (normalized)
+        for (let y = 1; y < h - 1; y++) {
+          for (let x = 1; x < w - 1; x++) {
+            const i = (y * w + x) * 4;
+            for (let ch = 0; ch < 3; ch++) {
+              const val = 5 * src[i+ch]
+                - src[((y-1)*w+x)*4+ch]
+                - src[((y+1)*w+x)*4+ch]
+                - src[(y*w+x-1)*4+ch]
+                - src[(y*w+x+1)*4+ch];
+              dst[i+ch] = Math.min(255, Math.max(0, val));
+            }
+            dst[i+3] = 255;
+          }
+        }
+        sCtx.putImageData(sharpData, 0, 0);
+        const jpegUrl = sharpCanvas.toDataURL('image/jpeg', 0.92);
+        res({ b64: jpegUrl.split(',')[1], mediaType: 'image/jpeg', thumb: jpegUrl });
+      };
+      img.onerror = () => {
+        // Fallback: use raw data
+        const b64 = dataUrl.split(',')[1];
+        const mediaType = ['image/jpeg','image/png','image/gif','image/webp'].includes(file.type) ? file.type : 'image/jpeg';
+        res({ b64, mediaType, thumb: dataUrl });
+      };
+      img.src = dataUrl;
     };
     reader.onerror = rej;
     reader.readAsDataURL(file);
