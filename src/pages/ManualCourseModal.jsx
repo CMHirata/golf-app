@@ -89,8 +89,6 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
     );
   };
 
-  const sublbl = { fontSize:9, color:'#aaa', marginBottom:2 };
-  const mwLbl  = (color) => ({ fontSize:10, fontWeight:700, color, width:18, flexShrink:0, display:'flex', alignItems:'center' });
 
   return (
     <div style={{ border:'1.5px solid #e0ece0', borderRadius:10, padding:'8px 10px', marginBottom:6 }}>
@@ -101,64 +99,60 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
         {onRemove && <Btn small variant="danger" onClick={onRemove} style={{ padding:'3px 7px', fontSize:11 }}>✕</Btn>}
       </div>
 
-      {/* Rating + Slope — M and W stacked, side by side */}
-      <div style={{ display:'flex', gap:8, marginBottom:6 }}>
-        <div style={{ flex:1 }}>
-          <div style={sublbl}>Rating</div>
-          <div style={{ display:'flex', gap:3, alignItems:'center', marginBottom:3 }}>
-            <span style={mwLbl('#555')}>M</span>
+      {/* Rating + Slope — M on one line, W on one line */}
+      {[
+        { label:'M', color:'#555', ratingKey:'rating', slopeKey:'slope', ratingId:`tee${teeIdx}_ratingM`, slopeId:`tee${teeIdx}_slopeM`, rPh:'72.3', sPh:'131', rMode:'handicap-decimal', sMode:'integer',
+          rCommit: v => { const n=parseInt(v||'0'); onChange({...tee, rating: isNaN(n)?'':String(n/10)}); },
+          sCommit: v => onChange({...tee, slope: v}),
+        },
+        { label:'W', color:PINK,   ratingKey:'ratingW', slopeKey:'slopeW', ratingId:`tee${teeIdx}_ratingW`, slopeId:`tee${teeIdx}_slopeW`, rPh:'74.1', sPh:'128', rMode:'handicap-decimal', sMode:'integer',
+          rCommit: v => { const n=parseInt(v||'0'); onChange({...tee, ratingW: isNaN(n)?'':String(n/10)}); },
+          sCommit: v => onChange({...tee, slopeW: v}),
+        },
+      ].map(row => (
+        <div key={row.label} style={{ display:'flex', gap:4, alignItems:'center', marginBottom:4 }}>
+          <span style={{ fontSize:10, fontWeight:700, color:row.color, width:14, flexShrink:0 }}>{row.label}</span>
+          <span style={{ fontSize:9, color:'#aaa', width:36, flexShrink:0 }}>Rating</span>
+          <div style={{ flex:1 }}>
             {onActivate
-              ? kpField(`tee${teeIdx}_ratingM`, tee.rating, 'handicap-decimal', '72.3', v => {
-                  const n = parseInt(v||'0'); const r = isNaN(n) ? '' : String(n / 10);
-                  onChange({...tee, rating: r});
-                })
-              : <Inp value={tee.rating||''} onChange={v=>onChange({...tee,rating:v})}
-                  placeholder="72.3" type="number" style={{ fontSize:12, padding:'3px 5px' }}/>
+              ? kpField(row.ratingId, tee[row.ratingKey], row.rMode, row.rPh, row.rCommit)
+              : <input type="number" value={tee[row.ratingKey]||''} placeholder={row.rPh}
+                  onChange={e=>onChange({...tee,[row.ratingKey]:e.target.value})}
+                  onFocus={e=>e.target.select()}
+                  style={{ width:'100%', boxSizing:'border-box', border:'1px solid #ddd', borderRadius:5,
+                    fontSize:11, padding:'3px 4px', textAlign:'center',
+                    WebkitAppearance:'none', MozAppearance:'textfield' }}/>
             }
           </div>
-          <div style={{ display:'flex', gap:3, alignItems:'center' }}>
-            <span style={mwLbl(PINK)}>W</span>
+          <span style={{ fontSize:9, color:'#aaa', width:30, flexShrink:0, textAlign:'right' }}>Slope</span>
+          <div style={{ flex:1 }}>
             {onActivate
-              ? kpField(`tee${teeIdx}_ratingW`, tee.ratingW, 'handicap-decimal', '74.1', v => {
-                  const n = parseInt(v||'0'); const r = isNaN(n) ? '' : String(n / 10);
-                  onChange({...tee, ratingW: r});
-                })
-              : <Inp value={tee.ratingW||''} onChange={v=>onChange({...tee,ratingW:v})}
-                  placeholder="74.1" type="number" style={{ fontSize:12, padding:'3px 5px' }}/>
-            }
-          </div>
-        </div>
-        <div style={{ flex:1 }}>
-          <div style={sublbl}>Slope</div>
-          <div style={{ display:'flex', gap:3, alignItems:'center', marginBottom:3 }}>
-            <span style={mwLbl('#555')}>M</span>
-            {onActivate
-              ? kpField(`tee${teeIdx}_slopeM`, tee.slope, 'integer', '131', v => onChange({...tee, slope: v}))
-              : <Inp value={tee.slope||''} onChange={v=>onChange({...tee,slope:v})}
-                  placeholder="131" type="number" style={{ fontSize:12, padding:'3px 5px' }}/>
-            }
-          </div>
-          <div style={{ display:'flex', gap:3, alignItems:'center' }}>
-            <span style={mwLbl(PINK)}>W</span>
-            {onActivate
-              ? kpField(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', '128', v => onChange({...tee, slopeW: v}))
-              : <Inp value={tee.slopeW||''} onChange={v=>onChange({...tee,slopeW:v})}
-                  placeholder="128" type="number" style={{ fontSize:12, padding:'3px 5px' }}/>
+              ? kpField(row.slopeId, tee[row.slopeKey], row.sMode, row.sPh, row.sCommit)
+              : <input type="number" value={tee[row.slopeKey]||''} placeholder={row.sPh}
+                  onChange={e=>onChange({...tee,[row.slopeKey]:e.target.value})}
+                  onFocus={e=>e.target.select()}
+                  style={{ width:'100%', boxSizing:'border-box', border:'1px solid #ddd', borderRadius:5,
+                    fontSize:11, padding:'3px 4px', textAlign:'center',
+                    WebkitAppearance:'none', MozAppearance:'textfield' }}/>
             }
           </div>
         </div>
-      </div>
+      ))}
 
       {/* Yardage */}
-      <div style={{ display:'flex', gap:4, alignItems:'flex-end' }}>
+      <div style={{ display:'flex', gap:4, alignItems:'flex-end', marginTop:4 }}>
         <div style={{ fontSize:9, color:'#aaa', width:18, paddingBottom:2, flexShrink:0 }}>yds</div>
         {nineNames.map((nineName, ni) => (
           <div key={ni} style={{ flex:1 }}>
-            <div style={sublbl}>{nineName}</div>
+            <div style={{ fontSize:9, color:'#aaa', marginBottom:2 }}>{nineName}</div>
             {onActivate
               ? kpField(`tee${teeIdx}_yds${ni}`, nineYards[ni], 'integer', '3200', v => setNineYard(ni, v))
-              : <Inp value={nineYards[ni]||''} onChange={v=>setNineYard(ni, v)}
-                  placeholder="3200" type="number" style={{ fontSize:12, padding:'3px 5px' }}/>
+              : <input type="number" value={nineYards[ni]||''} placeholder="3200"
+                  onChange={e=>setNineYard(ni, e.target.value)}
+                  onFocus={e=>e.target.select()}
+                  style={{ width:'100%', boxSizing:'border-box', border:'1px solid #ddd', borderRadius:5,
+                    fontSize:11, padding:'3px 4px', textAlign:'center',
+                    WebkitAppearance:'none', MozAppearance:'textfield' }}/>
             }
           </div>
         ))}
@@ -432,6 +426,12 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'16px 16px 80px', overflowY:'auto' }} onClick={onClose}>
+      {/* Remove number input spinners globally within this modal */}
+      <style>{`
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+      `}</style>
       <div style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:10 }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
           <div style={{ fontWeight:800, fontSize:17, color:G }}>{initialData ? 'Edit Course' : 'Enter Manually'}</div>
