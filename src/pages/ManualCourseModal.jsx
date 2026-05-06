@@ -395,7 +395,7 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                   <td style={{ paddingRight:6, fontSize:11, fontWeight:700, color:'#333', whiteSpace:'nowrap' }}>
                     {t.name || `Tee ${ti+1}`}
                   </td>
-                  {nineNames.map((_,ni) => (
+                  {nineNames.map((nineName, ni) => (
                     <td key={ni} style={{ paddingRight:2 }}>
                       {numCell(nineYards[ni], nineName, v=>setYard(ni,v))}
                     </td>
@@ -420,7 +420,6 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
 export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const [name,       setName]       = useState(initialData?.name || '');
   const [loc,        setLoc]        = useState(initialData?.location || '');
-  const [website,    setWebsite]    = useState(initialData?.website || '');
   const [showWomens, setShowWomens] = useState(
     !!(initialData?.nines?.some(n => n.handicapsWomen?.length || n.parsWomen?.length))
   );
@@ -525,7 +524,7 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
       } else { delete out.nineYards; delete out.totalYards; }
       return out;
     });
-    onSave({ name: name.trim(), location: loc.trim(), website: website.trim(), nines: cleanNines, tees: cleanTees });
+    onSave({ name: name.trim(), location: loc.trim(), nines: cleanNines, tees: cleanTees });
   };
 
   const tabStyle = active => ({
@@ -549,8 +548,7 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
         </div>
 
         <Inp value={name}    onChange={setName}    placeholder="Course name *"          style={{ marginBottom:6 }}/>
-        <Inp value={loc}     onChange={setLoc}     placeholder="City, State (optional)" style={{ marginBottom:6 }}/>
-        <Inp value={website} onChange={setWebsite} placeholder="Website (optional)"     style={{ marginBottom:12 }}/>
+        <Inp value={loc}  onChange={setLoc}  placeholder="City, State (optional)" style={{ marginBottom:12 }}/>
 
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, padding:'7px 12px', background:'#f8f8f8', borderRadius:10 }}>
           <div style={{ flex:1, fontSize:12, color:'#555' }}><strong>Include women's data</strong></div>
@@ -563,7 +561,7 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
         </div>
 
         <div style={{ display:'flex', background:'#f0f8f0', borderRadius:10, padding:3, marginBottom:12, gap:3 }}>
-          <button style={tabStyle(activeTab==='holes')} onClick={()=>setActiveTab('holes')}>Holes &amp; Handicaps</button>
+          <button style={tabStyle(activeTab==='holes')} onClick={()=>setActiveTab('holes')}>Par &amp; Handicap</button>
           <button style={tabStyle(activeTab==='tees2')} onClick={()=>setActiveTab('tees2')}>Rating/Slope &amp; Yardage</button>
         </div>
 
