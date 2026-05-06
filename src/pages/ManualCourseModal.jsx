@@ -276,6 +276,23 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
       style={cellSt()}/>
   );
 
+  // Rating cell — displays one decimal place; on blur, formats "70" → "70.0"
+  const ratingCell = (val, ph, onChange) => {
+    const display = (val !== '' && val != null) ? Number(val).toFixed(1) : '';
+    return (
+      <input type="number" step="0.1" value={display} placeholder={ph}
+        onChange={e=>onChange(e.target.value)}
+        onFocus={e=>e.target.select()}
+        onBlur={e=>{
+          const v = e.target.value;
+          if (v === '' || v == null) return;
+          const n = parseFloat(v);
+          if (!isNaN(n)) onChange(n.toFixed(1));
+        }}
+        style={cellSt()}/>
+    );
+  };
+
   // Rating / Slope table
   const rsCols = showWomens
     ? ['M Rating','M Slope','W Rating','W Slope']
@@ -285,18 +302,18 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
     <div>
       {/* ── Rating / Slope table ── */}
       <div style={{ fontSize:10, fontWeight:700, color:'#888', marginBottom:4 }}>Rating / Slope</div>
-      <div style={{ overflowX:'auto', marginBottom:12 }}>
-        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+      <div style={{ marginBottom:12 }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
           <colgroup>
-            <col style={{ width:'28%' }}/>  {/* tee name */}
-            <col style={{ width:'13%' }}/>  {/* M rating */}
-            <col style={{ width:'4%'  }}/>  {/* / */}
-            <col style={{ width:'13%' }}/>  {/* M slope */}
-            {showWomens && <col style={{ width:'4%'  }}/>}  {/* gap */}
-            {showWomens && <col style={{ width:'13%' }}/>}  {/* W rating */}
-            {showWomens && <col style={{ width:'4%'  }}/>}  {/* / */}
-            {showWomens && <col style={{ width:'13%' }}/>}  {/* W slope */}
-            <col style={{ width:'4%'  }}/>  {/* ✕ */}
+            <col style={{ width:'24%' }}/>                  {/* tee name */}
+            <col style={{ width:'14%' }}/>                  {/* M rating */}
+            <col style={{ width:'3%'  }}/>                  {/* / */}
+            <col style={{ width:'14%' }}/>                  {/* M slope */}
+            {showWomens && <col style={{ width:'4%'  }}/>}  {/* M↔W gap */}
+            {showWomens && <col style={{ width:'14%' }}/>}  {/* W rating */}
+            {showWomens && <col style={{ width:'3%'  }}/>}  {/* / */}
+            {showWomens && <col style={{ width:'14%' }}/>}  {/* W slope */}
+            <col style={{ width:'24px' }}/>                 {/* ✕ fixed */}
           </colgroup>
           <thead>
             <tr>
@@ -321,16 +338,16 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                       padding:'3px 5px', width:'100%', boxSizing:'border-box' }}/>
                 </td>
                 <td style={{ paddingBottom:3 }}>
-                  {numCell(t.rating, '72.3', v=>onUpdateTee(ti,{...t,rating:v}))}
+                  {ratingCell(t.rating, '72.3', v=>onUpdateTee(ti,{...t,rating:v}))}
                 </td>
                 <td style={{ fontSize:11, color:'#bbb', textAlign:'center', padding:'0 1px 3px' }}>/</td>
-                <td style={{ paddingBottom:3, paddingRight: showWomens ? 8 : 0 }}>
+                <td style={{ paddingBottom:3 }}>
                   {numCell(t.slope, '131', v=>onUpdateTee(ti,{...t,slope:v}))}
                 </td>
                 {showWomens && <td style={{ paddingBottom:3 }}/>}
                 {showWomens && (
                   <td style={{ paddingBottom:3 }}>
-                    {numCell(t.ratingW, '74.1', v=>onUpdateTee(ti,{...t,ratingW:v}))}
+                    {ratingCell(t.ratingW, '74.1', v=>onUpdateTee(ti,{...t,ratingW:v}))}
                   </td>
                 )}
                 {showWomens && (
@@ -341,11 +358,12 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                     {numCell(t.slopeW, '128', v=>onUpdateTee(ti,{...t,slopeW:v}))}
                   </td>
                 )}
-                <td style={{ paddingLeft:4, paddingBottom:3 }}>
+                <td style={{ paddingLeft:4, paddingBottom:3, textAlign:'right' }}>
                   {tees.length > 1 &&
                     <button onClick={()=>onRemoveTee(ti)}
                       style={{ background:'#e53935', border:'none', borderRadius:'50%', width:18, height:18,
-                        color:'#fff', fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+                        color:'#fff', fontSize:11, cursor:'pointer', padding:0,
+                        display:'inline-flex', alignItems:'center', justifyContent:'center' }}>✕</button>
                   }
                 </td>
               </tr>
