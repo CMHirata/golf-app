@@ -286,47 +286,62 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
       {/* ── Rating / Slope table ── */}
       <div style={{ fontSize:10, fontWeight:700, color:'#888', marginBottom:4 }}>Rating / Slope</div>
       <div style={{ overflowX:'auto', marginBottom:12 }}>
-        <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:'0 3px' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <colgroup>
+            <col style={{ width:'28%' }}/>  {/* tee name */}
+            <col style={{ width:'13%' }}/>  {/* M rating */}
+            <col style={{ width:'4%'  }}/>  {/* / */}
+            <col style={{ width:'13%' }}/>  {/* M slope */}
+            {showWomens && <col style={{ width:'4%'  }}/>}  {/* gap */}
+            {showWomens && <col style={{ width:'13%' }}/>}  {/* W rating */}
+            {showWomens && <col style={{ width:'4%'  }}/>}  {/* / */}
+            {showWomens && <col style={{ width:'13%' }}/>}  {/* W slope */}
+            <col style={{ width:'4%'  }}/>  {/* ✕ */}
+          </colgroup>
           <thead>
             <tr>
-              <th style={{ ...hdrSt, textAlign:'left', paddingRight:6 }}></th>
-              <th style={hdrSt}>M</th>
-              <th style={hdrSt}>/</th>
+              <th style={{ ...hdrSt, textAlign:'left' }}></th>
+              <th style={{ ...hdrSt, color:'#555' }}>M</th>
+              <th></th>
               <th style={hdrSt}>Slope</th>
-              {showWomens && <th style={{ ...hdrSt, paddingLeft:8 }}>W</th>}
-              {showWomens && <th style={hdrSt}>/</th>}
+              {showWomens && <th></th>}
+              {showWomens && <th style={{ ...hdrSt, color:PINK }}>W</th>}
+              {showWomens && <th></th>}
               {showWomens && <th style={hdrSt}>Slope</th>}
-              <th style={{ width:24 }}></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {tees.map((t, ti) => (
               <tr key={ti}>
-                <td style={{ paddingRight:6, minWidth:60 }}>
-                  <input value={t.name} placeholder="Tee"
+                <td style={{ paddingRight:6, paddingBottom:3 }}>
+                  <input value={t.name} placeholder="Tee name"
                     onChange={e=>onUpdateTee(ti,{...t,name:e.target.value})}
                     style={{ border:'1px solid #ddd', borderRadius:4, fontSize:11,
                       padding:'3px 5px', width:'100%', boxSizing:'border-box' }}/>
                 </td>
-                <td style={{ paddingRight:2 }}>
+                <td style={{ paddingBottom:3 }}>
                   {numCell(t.rating, '72.3', v=>onUpdateTee(ti,{...t,rating:v}))}
                 </td>
-                <td style={{ fontSize:10, color:'#bbb', textAlign:'center', padding:'0 1px' }}>/</td>
-                <td style={{ paddingRight: showWomens ? 8 : 0 }}>
+                <td style={{ fontSize:11, color:'#bbb', textAlign:'center', padding:'0 1px 3px' }}>/</td>
+                <td style={{ paddingBottom:3, paddingRight: showWomens ? 8 : 0 }}>
                   {numCell(t.slope, '131', v=>onUpdateTee(ti,{...t,slope:v}))}
                 </td>
+                {showWomens && <td style={{ paddingBottom:3 }}/>}
                 {showWomens && (
-                  <td style={{ paddingRight:2 }}>
+                  <td style={{ paddingBottom:3 }}>
                     {numCell(t.ratingW, '74.1', v=>onUpdateTee(ti,{...t,ratingW:v}))}
                   </td>
                 )}
                 {showWomens && (
-                  <td style={{ fontSize:10, color:'#bbb', textAlign:'center', padding:'0 1px' }}>/</td>
+                  <td style={{ fontSize:11, color:'#bbb', textAlign:'center', padding:'0 1px 3px' }}>/</td>
                 )}
                 {showWomens && (
-                  <td>{numCell(t.slopeW, '128', v=>onUpdateTee(ti,{...t,slopeW:v}))}</td>
+                  <td style={{ paddingBottom:3 }}>
+                    {numCell(t.slopeW, '128', v=>onUpdateTee(ti,{...t,slopeW:v}))}
+                  </td>
                 )}
-                <td style={{ paddingLeft:4, width:24 }}>
+                <td style={{ paddingLeft:4, paddingBottom:3 }}>
                   {tees.length > 1 &&
                     <button onClick={()=>onRemoveTee(ti)}
                       style={{ background:'#e53935', border:'none', borderRadius:'50%', width:18, height:18,
