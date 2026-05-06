@@ -1,13 +1,4 @@
 // ─── ManualCourseModal.jsx ─────────────────────────────────────────────────────
-// Pure render components — no logic, no state mutations beyond local form state.
-// Contains three tightly-coupled components used only together:
-//   TeeRow     — one editable tee box row (rating, slope, yardage per nine)
-//   NineEditor — one editable nine (pars + stroke index, men's + optional women's)
-//   ManualCourseModal — full modal wrapping both, for add and edit flows
-//
-// Called from CoursesPage for both "Manual" add and "Edit" flows.
-// Also called from PhotoImportModal for post-OCR review ("Review & Save" path).
-//
 // SI validation rules (USGA):
 //   2 nines  → nine 0: odd  1,3,5,7,9,11,13,15,17
 //              nine 1: even 2,4,6,8,10,12,14,16,18
@@ -20,18 +11,21 @@ import { ScoreKeypad } from './ScoreKeypad.jsx';
 const PINK = '#c2185b';
 const ERR  = '#c0392b';
 
-// ─── SI helpers ───────────────────────────────────────────────────────────────
+// Shared no-arrow select style
+const SEL = {
+  width:'100%', boxSizing:'border-box', borderRadius:4, fontSize:11,
+  padding:'2px 0', textAlign:'center', textAlignLast:'center',
+  background:'#fff', border:'1px solid #ddd',
+  WebkitAppearance:'none', MozAppearance:'none', appearance:'none',
+};
 
 function siValidSet(nineCount, nineIdx) {
   if (nineCount === 2) {
-    return nineIdx === 0
-      ? [1,3,5,7,9,11,13,15,17]
-      : [2,4,6,8,10,12,14,16,18];
+    return nineIdx === 0 ? [1,3,5,7,9,11,13,15,17] : [2,4,6,8,10,12,14,16,18];
   }
   return [1,2,3,4,5,6,7,8,9];
 }
 
-// Returns Set of hole indices (0-based) with duplicate SI values within this nine
 function dupIndices(handicaps) {
   const seen = {};
   handicaps.forEach((v, i) => {
@@ -48,47 +42,37 @@ function dupIndices(handicaps) {
 // ─── TeeRow ───────────────────────────────────────────────────────────────────
 function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, activeFieldId }) {
   const nineCount = nineNames.length;
-  const nineYards = (tee.nineYards?.length === nineCount)
-    ? tee.nineYards
-    : Array(nineCount).fill('');
+  const nineYards = (tee.nineYards?.length === nineCount) ? tee.nineYards : Array(nineCount).fill('');
 
   const setNineYard = (ni, val) => {
     const next = [...nineYards];
     next[ni] = val === '' ? '' : parseInt(val) || '';
-    const total = next.reduce((s, y) => s + (parseInt(y)||0), 0);
-    onChange({ ...tee, nineYards: next, totalYards: total || '' });
+    onChange({ ...tee, nineYards: next, totalYards: next.reduce((s,y) => s+(parseInt(y)||0), 0) || '' });
   };
 
   const kpField = (fieldId, currentVal, mode, placeholder, onCommit) => {
-    if (!onActivate) return null;
     const display  = currentVal !== '' && currentVal != null ? String(currentVal) : '';
     const isActive = activeFieldId === fieldId;
     return (
-      <input
-        type="text"
-        inputMode="none"
-        readOnly
-        value={display}
-        placeholder={placeholder}
-        onFocus={(e) => {
-          e.target.blur();
-          onActivate(fieldId, display, false, mode,
-            (newVal) => onCommit(newVal),
-            () => {},
-          );
-        }}
-        style={{
-          border: isActive ? `2px solid ${G}` : '1px solid #ddd',
-          borderRadius:6, padding: isActive ? '2px 4px' : '3px 5px',
-          fontSize:12, fontFamily:'inherit',
-          background: isActive ? GA : '#fff',
-          color: display ? '#222' : '#aaa', cursor:'pointer',
-          width:'100%', boxSizing:'border-box', textAlign:'center',
-        }}
+      <input type="text" inputMode="none" readOnly value={display} placeholder={placeholder}
+        onFocus={e => { e.target.blur(); onActivate(fieldId, display, false, mode, v => onCommit(v), ()=>{}); }}
+        style={{ border: isActive ? `2px solid ${G}` : '1px solid #ddd', borderRadius:5,
+          padding:'3px 4px', fontSize:11, fontFamily:'inherit', background: isActive ? GA : '#fff',
+          color: display ? '#222' : '#aaa', cursor:'pointer', width:'100%', boxSizing:'border-box', textAlign:'center' }}
       />
     );
   };
 
+  const numInput = (val, placeholder, onCh) => (
+    <input type="number" value={val||''} placeholder={placeholder}
+      onChange={e => onCh(e.target.value)} onFocus={e => e.target.select()}
+      style={{ width:'100%', boxSizing:'border-box', border:'1px solid #ddd', borderRadius:5,
+        fontSize:11, padding:'3px 4px', textAlign:'center',
+        WebkitAppearance:'none', MozAppearance:'textfield', appearance:'textfield' }}
+    />
+  );
+
+  const sublbl = { fontSize:9, color:'#aaa', marginBottom:1 };
 
   return (
     <div style={{ border:'1.5px solid #e0ece0', borderRadius:10, padding:'8px 10px', marginBottom:6 }}>
@@ -99,66 +83,61 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
         {onRemove && <Btn small variant="danger" onClick={onRemove} style={{ padding:'3px 7px', fontSize:11 }}>✕</Btn>}
       </div>
 
-      {/* Rating + Slope — M on one line, W on one line */}
-      {[
-        { label:'M', color:'#555', ratingKey:'rating', slopeKey:'slope', ratingId:`tee${teeIdx}_ratingM`, slopeId:`tee${teeIdx}_slopeM`, rPh:'72.3', sPh:'131', rMode:'handicap-decimal', sMode:'integer',
-          rCommit: v => { const n=parseInt(v||'0'); onChange({...tee, rating: isNaN(n)?'':String(n/10)}); },
-          sCommit: v => onChange({...tee, slope: v}),
-        },
-        { label:'W', color:PINK,   ratingKey:'ratingW', slopeKey:'slopeW', ratingId:`tee${teeIdx}_ratingW`, slopeId:`tee${teeIdx}_slopeW`, rPh:'74.1', sPh:'128', rMode:'handicap-decimal', sMode:'integer',
-          rCommit: v => { const n=parseInt(v||'0'); onChange({...tee, ratingW: isNaN(n)?'':String(n/10)}); },
-          sCommit: v => onChange({...tee, slopeW: v}),
-        },
-      ].map(row => (
-        <div key={row.label} style={{ display:'flex', gap:4, alignItems:'center', marginBottom:4 }}>
-          <span style={{ fontSize:10, fontWeight:700, color:row.color, width:14, flexShrink:0 }}>{row.label}</span>
-          <span style={{ fontSize:9, color:'#aaa', width:36, flexShrink:0 }}>Rating</span>
-          <div style={{ flex:1 }}>
-            {onActivate
-              ? kpField(row.ratingId, tee[row.ratingKey], row.rMode, row.rPh, row.rCommit)
-              : <input type="number" value={tee[row.ratingKey]||''} placeholder={row.rPh}
-                  onChange={e=>onChange({...tee,[row.ratingKey]:e.target.value})}
-                  onFocus={e=>e.target.select()}
-                  style={{ width:'100%', boxSizing:'border-box', border:'1px solid #ddd', borderRadius:5,
-                    fontSize:11, padding:'3px 4px', textAlign:'center',
-                    WebkitAppearance:'none', MozAppearance:'textfield' }}/>
-            }
-          </div>
-          <span style={{ fontSize:9, color:'#aaa', width:30, flexShrink:0, textAlign:'right' }}>Slope</span>
-          <div style={{ flex:1 }}>
-            {onActivate
-              ? kpField(row.slopeId, tee[row.slopeKey], row.sMode, row.sPh, row.sCommit)
-              : <input type="number" value={tee[row.slopeKey]||''} placeholder={row.sPh}
-                  onChange={e=>onChange({...tee,[row.slopeKey]:e.target.value})}
-                  onFocus={e=>e.target.select()}
-                  style={{ width:'100%', boxSizing:'border-box', border:'1px solid #ddd', borderRadius:5,
-                    fontSize:11, padding:'3px 4px', textAlign:'center',
-                    WebkitAppearance:'none', MozAppearance:'textfield' }}/>
-            }
-          </div>
+      {/* M — Rating + Slope on one line */}
+      <div style={{ display:'flex', gap:4, alignItems:'center', marginBottom:4 }}>
+        <span style={{ fontSize:10, fontWeight:700, color:'#555', width:14, flexShrink:0 }}>M</span>
+        <span style={{ fontSize:9, color:'#aaa', width:38, flexShrink:0 }}>Rating</span>
+        <div style={{ flex:1 }}>
+          {onActivate
+            ? kpField(`tee${teeIdx}_ratingM`, tee.rating, 'handicap-decimal', '72.3',
+                v => { const n=parseInt(v||'0'); onChange({...tee, rating: isNaN(n)?'':String(n/10)}); })
+            : numInput(tee.rating, '72.3', v => onChange({...tee, rating:v}))
+          }
         </div>
-      ))}
+        <span style={{ fontSize:9, color:'#aaa', width:32, flexShrink:0, textAlign:'right' }}>Slope</span>
+        <div style={{ flex:1 }}>
+          {onActivate
+            ? kpField(`tee${teeIdx}_slopeM`, tee.slope, 'integer', '131', v => onChange({...tee, slope:v}))
+            : numInput(tee.slope, '131', v => onChange({...tee, slope:v}))
+          }
+        </div>
+      </div>
+
+      {/* W — Rating + Slope on one line */}
+      <div style={{ display:'flex', gap:4, alignItems:'center', marginBottom:6 }}>
+        <span style={{ fontSize:10, fontWeight:700, color:PINK, width:14, flexShrink:0 }}>W</span>
+        <span style={{ fontSize:9, color:'#aaa', width:38, flexShrink:0 }}>Rating</span>
+        <div style={{ flex:1 }}>
+          {onActivate
+            ? kpField(`tee${teeIdx}_ratingW`, tee.ratingW, 'handicap-decimal', '74.1',
+                v => { const n=parseInt(v||'0'); onChange({...tee, ratingW: isNaN(n)?'':String(n/10)}); })
+            : numInput(tee.ratingW, '74.1', v => onChange({...tee, ratingW:v}))
+          }
+        </div>
+        <span style={{ fontSize:9, color:'#aaa', width:32, flexShrink:0, textAlign:'right' }}>Slope</span>
+        <div style={{ flex:1 }}>
+          {onActivate
+            ? kpField(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', '128', v => onChange({...tee, slopeW:v}))
+            : numInput(tee.slopeW, '128', v => onChange({...tee, slopeW:v}))
+          }
+        </div>
+      </div>
 
       {/* Yardage */}
-      <div style={{ display:'flex', gap:4, alignItems:'flex-end', marginTop:4 }}>
-        <div style={{ fontSize:9, color:'#aaa', width:18, paddingBottom:2, flexShrink:0 }}>yds</div>
+      <div style={{ display:'flex', gap:4, alignItems:'flex-end' }}>
+        <div style={{ fontSize:9, color:'#aaa', width:14, paddingBottom:2, flexShrink:0 }}>yds</div>
         {nineNames.map((nineName, ni) => (
           <div key={ni} style={{ flex:1 }}>
-            <div style={{ fontSize:9, color:'#aaa', marginBottom:2 }}>{nineName}</div>
+            <div style={sublbl}>{nineName}</div>
             {onActivate
               ? kpField(`tee${teeIdx}_yds${ni}`, nineYards[ni], 'integer', '3200', v => setNineYard(ni, v))
-              : <input type="number" value={nineYards[ni]||''} placeholder="3200"
-                  onChange={e=>setNineYard(ni, e.target.value)}
-                  onFocus={e=>e.target.select()}
-                  style={{ width:'100%', boxSizing:'border-box', border:'1px solid #ddd', borderRadius:5,
-                    fontSize:11, padding:'3px 4px', textAlign:'center',
-                    WebkitAppearance:'none', MozAppearance:'textfield' }}/>
+              : numInput(nineYards[ni], '3200', v => setNineYard(ni, v))
             }
           </div>
         ))}
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:9, color:G, fontWeight:700, marginBottom:2 }}>Total</div>
-          <div style={{ fontSize:12, fontWeight:700, color:G, padding:'3px 5px', background:GB, borderRadius:6, textAlign:'center' }}>
+          <div style={{ fontSize:9, color:G, fontWeight:700, marginBottom:1 }}>Total</div>
+          <div style={{ fontSize:11, fontWeight:700, color:G, padding:'3px 4px', background:GB, borderRadius:5, textAlign:'center' }}>
             {nineYards.reduce((s,y) => s+(parseInt(y)||0), 0) || '—'}
           </div>
         </div>
@@ -168,8 +147,6 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
 }
 
 // ─── NineEditor ───────────────────────────────────────────────────────────────
-// nineCount: total nines in this course (determines valid SI set)
-// idx:       0-based index of this nine
 function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
   const setPars  = pars           => onChange({ ...nine, pars });
   const setHcp   = handicaps      => onChange({ ...nine, handicaps });
@@ -182,14 +159,9 @@ function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
   const dups     = dupIndices(nine.handicaps || []);
   const dupsW    = dupIndices(nine.handicapsWomen || nine.handicaps || []);
   const hasSIErr = dups.size > 0 || (showWomens && dupsW.size > 0);
-
   const holeNums = Array.from({length:9}, (_,h) => idx * 9 + h + 1);
 
-  const cellBox = (extra={}) => ({
-    width:'100%', boxSizing:'border-box', border:'1px solid #ddd',
-    borderRadius:4, fontSize:11, padding:'2px 0', textAlign:'center',
-    background:'#fff', ...extra,
-  });
+  const selStyle = (extra={}) => ({ ...SEL, ...extra });
 
   const mwLbl = (color) => ({
     fontSize:10, fontWeight:700, color, width:20, flexShrink:0,
@@ -198,30 +170,26 @@ function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
 
   const secHdr = (label, sub) => (
     <div style={{ fontSize:10, fontWeight:700, color:'#888', marginBottom:3, display:'flex', alignItems:'baseline', gap:6 }}>
-      {label}
-      {sub && <span style={{ fontWeight:400, color:'#bbb' }}>{sub}</span>}
+      {label}{sub && <span style={{ fontWeight:400, color:'#bbb' }}>{sub}</span>}
     </div>
   );
 
   const holeNumRow = (
     <div style={{ display:'grid', gridTemplateColumns:'20px repeat(9,1fr)', gap:3, marginBottom:2 }}>
       <div/>
-      {holeNums.map(n => (
-        <div key={n} style={{ fontSize:8, color:'#bbb', textAlign:'center' }}>{n}</div>
-      ))}
+      {holeNums.map(n => <div key={n} style={{ fontSize:8, color:'#bbb', textAlign:'center' }}>{n}</div>)}
     </div>
   );
 
   return (
     <div style={{ background:'#fafafa', borderRadius:10, padding:'8px 10px', marginBottom:6 }}>
-      {/* Nine name + remove */}
       <div style={{ display:'flex', gap:6, marginBottom:7, alignItems:'center' }}>
         <Inp value={nine.name} onChange={v=>onChange({...nine,name:v})} placeholder="Nine name"
           style={{ flex:1, fontSize:13, padding:'4px 8px' }}/>
         {onRemove && <Btn small variant="danger" onClick={onRemove} style={{ padding:'3px 7px' }}>✕</Btn>}
       </div>
 
-      {/* ── Par ── */}
+      {/* Par */}
       {secHdr('Par', showWomens && parTotW ? `M ${parTotM} · W ${parTotW}` : `total: ${parTotM}`)}
       {holeNumRow}
       <div style={{ display:'grid', gridTemplateColumns:'20px repeat(9,1fr)', gap:3, marginBottom:3 }}>
@@ -229,7 +197,7 @@ function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
         {nine.pars?.map((par, h) => (
           <select key={h} value={par}
             onChange={e => { const p=[...nine.pars]; p[h]=parseInt(e.target.value); setPars(p); }}
-            style={cellBox()}>
+            style={selStyle()}>
             {[3,4,5,6].map(v=><option key={v} value={v}>{v}</option>)}
           </select>
         ))}
@@ -241,17 +209,16 @@ function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
             <select key={h} value={par}
               onChange={e => {
                 const base = nine.parsWomen ? [...nine.parsWomen] : [...nine.pars];
-                base[h] = parseInt(e.target.value);
-                setParsW(base);
+                base[h] = parseInt(e.target.value); setParsW(base);
               }}
-              style={cellBox({ border:`1px solid ${PINK}55`, background:'#fff0f5' })}>
+              style={selStyle({ border:`1px solid ${PINK}55`, background:'#fff0f5' })}>
               {[3,4,5,6].map(v=><option key={v} value={v}>{v}</option>)}
             </select>
           ))}
         </div>
       )}
 
-      {/* ── Stroke Index ── */}
+      {/* Stroke Index */}
       {secHdr('Stroke Index')}
       {holeNumRow}
       <div style={{ display:'grid', gridTemplateColumns:'20px repeat(9,1fr)', gap:3, marginBottom:3 }}>
@@ -261,7 +228,7 @@ function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
           return (
             <select key={h} value={hc}
               onChange={e => { const hs=[...nine.handicaps]; hs[h]=parseInt(e.target.value); setHcp(hs); }}
-              style={cellBox(isDup ? { border:`1.5px solid ${ERR}`, color:ERR, background:'#fce8e8' } : {})}>
+              style={selStyle(isDup ? { border:`1.5px solid ${ERR}`, color:ERR, background:'#fce8e8' } : {})}>
               {validSI.map(v=><option key={v} value={v}>{v}</option>)}
             </select>
           );
@@ -276,10 +243,9 @@ function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
               <select key={h} value={hc}
                 onChange={e => {
                   const base = nine.handicapsWomen ? [...nine.handicapsWomen] : [...nine.handicaps];
-                  base[h] = parseInt(e.target.value);
-                  setHcpW(base);
+                  base[h] = parseInt(e.target.value); setHcpW(base);
                 }}
-                style={cellBox(isDup
+                style={selStyle(isDup
                   ? { border:`1.5px solid ${ERR}`, color:ERR, background:'#fce8e8' }
                   : { border:`1px solid ${PINK}55`, background:'#fff0f5' })}>
                 {validSI.map(v=><option key={v} value={v}>{v}</option>)}
@@ -288,7 +254,6 @@ function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
           })}
         </div>
       )}
-
       {hasSIErr && (
         <div style={{ fontSize:10, color:ERR, marginTop:4, fontWeight:600 }}>
           Duplicate stroke index — each value must appear exactly once per nine.
@@ -309,7 +274,6 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const [activeTab, setActiveTab] = useState('holes');
   const [saveErr,   setSaveErr]   = useState('');
 
-  // B-12: Setup keypad — ScoreKeypad_Contract §10.5
   const [setupKp, setSetupKp] = useState(null);
   const setupKpRef    = useRef(null);
   const setupKpCbsRef = useRef({ onChange: null, onCommit: null });
@@ -394,25 +358,17 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
     });
     const cleanTees = tees.map(t => {
       const out = { ...t };
-      if (t.rating  !== '' && t.rating  != null) out.rating  = parseFloat(t.rating);
-      else delete out.rating;
-      if (t.slope   !== '' && t.slope   != null) out.slope   = parseInt(t.slope);
-      else delete out.slope;
-      if (t.ratingW !== '' && t.ratingW != null) out.ratingW = parseFloat(t.ratingW);
-      else delete out.ratingW;
-      if (t.slopeW  !== '' && t.slopeW  != null) out.slopeW  = parseInt(t.slopeW);
-      else delete out.slopeW;
+      if (t.rating  !== '' && t.rating  != null) out.rating  = parseFloat(t.rating);  else delete out.rating;
+      if (t.slope   !== '' && t.slope   != null) out.slope   = parseInt(t.slope);     else delete out.slope;
+      if (t.ratingW !== '' && t.ratingW != null) out.ratingW = parseFloat(t.ratingW); else delete out.ratingW;
+      if (t.slopeW  !== '' && t.slopeW  != null) out.slopeW  = parseInt(t.slopeW);   else delete out.slopeW;
       const cleanNY = (t.nineYards||[]).map(y => parseInt(y)||0);
       if (cleanNY.some(y => y > 0)) {
         out.nineYards  = cleanNY;
         out.totalYards = cleanNY.reduce((a,b) => a+b, 0);
       } else if (t.totalYards !== '' && t.totalYards != null) {
-        out.totalYards = parseInt(t.totalYards);
-        delete out.nineYards;
-      } else {
-        delete out.nineYards;
-        delete out.totalYards;
-      }
+        out.totalYards = parseInt(t.totalYards); delete out.nineYards;
+      } else { delete out.nineYards; delete out.totalYards; }
       return out;
     });
     onSave({ name: name.trim(), location: loc.trim(), website: website.trim(), nines: cleanNines, tees: cleanTees });
@@ -426,11 +382,11 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'16px 16px 80px', overflowY:'auto' }} onClick={onClose}>
-      {/* Remove number input spinners globally within this modal */}
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+        input[type=number] { -moz-appearance:textfield; }
+        select { -webkit-appearance:none; -moz-appearance:none; appearance:none; }
       `}</style>
       <div style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:10 }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
@@ -442,7 +398,6 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
         <Inp value={loc}     onChange={setLoc}     placeholder="City, State (optional)" style={{ marginBottom:6 }}/>
         <Inp value={website} onChange={setWebsite} placeholder="Website (optional)"     style={{ marginBottom:12 }}/>
 
-        {/* Women's data toggle */}
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, padding:'7px 12px', background:'#f8f8f8', borderRadius:10 }}>
           <div style={{ flex:1, fontSize:12, color:'#555' }}><strong>Include women's data</strong></div>
           <button onClick={() => setShowWomens(v => !v)}
@@ -453,7 +408,6 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
           </button>
         </div>
 
-        {/* Tab switcher */}
         <div style={{ display:'flex', background:'#f0f8f0', borderRadius:10, padding:3, marginBottom:12, gap:3 }}>
           <button style={tabStyle(activeTab==='holes')} onClick={()=>setActiveTab('holes')}>Holes &amp; Handicaps</button>
           <button style={tabStyle(activeTab==='tees')}  onClick={()=>setActiveTab('tees')}>Tee Boxes &amp; Yardage</button>
@@ -462,8 +416,7 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
         {activeTab === 'holes' && (
           <div>
             {nines.map((nine, ni) => (
-              <NineEditor key={ni} nine={nine} idx={ni}
-                nineCount={nines.length}
+              <NineEditor key={ni} nine={nine} idx={ni} nineCount={nines.length}
                 onChange={v => updateNine(ni, v)}
                 onRemove={nines.length > 1 ? () => removeNine(ni) : null}
                 showWomens={showWomens}
@@ -501,35 +454,13 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
         </div>
       </div>
 
-      {/* B-12: Setup keypad — ScoreKeypad_Contract §10.5, zIndex 1100 */}
       {setupKp && (
-        <ScoreKeypad
-          containerRef={setupKpRef}
-          visible={true}
-          value={setupKp.kpValue}
-          kpPlus={setupKp.kpPlus}
-          mode={setupKp.mode}
-          noPlus={true}
-          onChange={val => {
-            setSetupKp(kp => {
-              if (!kp) return null;
-              setupKpCbsRef.current.onChange?.(val);
-              return { ...kp, kpValue: val };
-            });
-          }}
+        <ScoreKeypad containerRef={setupKpRef} visible={true}
+          value={setupKp.kpValue} kpPlus={setupKp.kpPlus} mode={setupKp.mode} noPlus={true}
+          onChange={val => { setSetupKp(kp => { if (!kp) return null; setupKpCbsRef.current.onChange?.(val); return { ...kp, kpValue: val }; }); }}
           onPlusToggle={() => {}}
-          onBackspace={() => {
-            setSetupKp(kp => {
-              if (!kp) return null;
-              const next = kp.kpValue.slice(0, -1);
-              setupKpCbsRef.current.onChange?.(next);
-              return { ...kp, kpValue: next };
-            });
-          }}
-          onCommit={() => {
-            setupKpCbsRef.current.onCommit?.();
-            setSetupKp(null);
-          }}
+          onBackspace={() => { setSetupKp(kp => { if (!kp) return null; const next = kp.kpValue.slice(0,-1); setupKpCbsRef.current.onChange?.(next); return { ...kp, kpValue: next }; }); }}
+          onCommit={() => { setupKpCbsRef.current.onCommit?.(); setSetupKp(null); }}
         />
       )}
     </div>
