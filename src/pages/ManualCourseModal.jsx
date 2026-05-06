@@ -87,31 +87,31 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
         <span style={{ fontSize:10, fontWeight:700, color:'#555', width:14, flexShrink:0 }}>M</span>
         <div style={{ flex:1 }}>
           {onActivate
-            ? kpField(`tee${teeIdx}_ratingM`, tee.rating, 'handicap-decimal', '72.3',
+            ? kpField(`tee${teeIdx}_ratingM`, tee.rating, 'handicap-decimal', 'Rating',
                 v => { const n=parseInt(v||'0'); onChange({...tee, rating: isNaN(n)?'':String(n/10)}); })
-            : numInput(tee.rating, '72.3', v => onChange({...tee, rating:v}))
+            : numInput(tee.rating, 'Rating', v => onChange({...tee, rating:v}))
           }
         </div>
         <span style={{ fontSize:11, color:'#bbb', flexShrink:0 }}>/</span>
         <div style={{ flex:1 }}>
           {onActivate
-            ? kpField(`tee${teeIdx}_slopeM`, tee.slope, 'integer', '131', v => onChange({...tee, slope:v}))
-            : numInput(tee.slope, '131', v => onChange({...tee, slope:v}))
+            ? kpField(`tee${teeIdx}_slopeM`, tee.slope, 'integer', 'Slope', v => onChange({...tee, slope:v}))
+            : numInput(tee.slope, 'Slope', v => onChange({...tee, slope:v}))
           }
         </div>
         <span style={{ fontSize:10, fontWeight:700, color:PINK, width:14, flexShrink:0, textAlign:'right' }}>W</span>
         <div style={{ flex:1 }}>
           {onActivate
-            ? kpField(`tee${teeIdx}_ratingW`, tee.ratingW, 'handicap-decimal', '74.1',
+            ? kpField(`tee${teeIdx}_ratingW`, tee.ratingW, 'handicap-decimal', 'Rating',
                 v => { const n=parseInt(v||'0'); onChange({...tee, ratingW: isNaN(n)?'':String(n/10)}); })
-            : numInput(tee.ratingW, '74.1', v => onChange({...tee, ratingW:v}))
+            : numInput(tee.ratingW, 'Rating', v => onChange({...tee, ratingW:v}))
           }
         </div>
         <span style={{ fontSize:11, color:'#bbb', flexShrink:0 }}>/</span>
         <div style={{ flex:1 }}>
           {onActivate
-            ? kpField(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', '128', v => onChange({...tee, slopeW:v}))
-            : numInput(tee.slopeW, '128', v => onChange({...tee, slopeW:v}))
+            ? kpField(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', 'Slope', v => onChange({...tee, slopeW:v}))
+            : numInput(tee.slopeW, 'Slope', v => onChange({...tee, slopeW:v}))
           }
         </div>
       </div>
@@ -334,16 +334,16 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                       padding:'3px 5px', width:'100%', boxSizing:'border-box' }}/>
                 </td>
                 <td style={{ paddingBottom:3 }}>
-                  {ratingCell(t.rating, '72.3', v=>onUpdateTee(ti,{...t,rating:v}))}
+                  {ratingCell(t.rating, 'Rating', v=>onUpdateTee(ti,{...t,rating:v}))}
                 </td>
                 <td style={{ fontSize:11, color:'#bbb', textAlign:'center', padding:'0 1px 3px' }}>/</td>
                 <td style={{ paddingBottom:3 }}>
-                  {numCell(t.slope, '131', v=>onUpdateTee(ti,{...t,slope:v}))}
+                  {numCell(t.slope, 'Slope', v=>onUpdateTee(ti,{...t,slope:v}))}
                 </td>
                 {showWomens && <td style={{ paddingBottom:3 }}/>}
                 {showWomens && (
                   <td style={{ paddingBottom:3 }}>
-                    {ratingCell(t.ratingW, '74.1', v=>onUpdateTee(ti,{...t,ratingW:v}))}
+                    {ratingCell(t.ratingW, 'Rating', v=>onUpdateTee(ti,{...t,ratingW:v}))}
                   </td>
                 )}
                 {showWomens && (
@@ -351,7 +351,7 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                 )}
                 {showWomens && (
                   <td style={{ paddingBottom:3 }}>
-                    {numCell(t.slopeW, '128', v=>onUpdateTee(ti,{...t,slopeW:v}))}
+                    {numCell(t.slopeW, 'Slope', v=>onUpdateTee(ti,{...t,slopeW:v}))}
                   </td>
                 )}
                 <td style={{ paddingLeft:4, paddingBottom:3, textAlign:'right' }}>
@@ -397,7 +397,7 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                   </td>
                   {nineNames.map((_,ni) => (
                     <td key={ni} style={{ paddingRight:2 }}>
-                      {numCell(nineYards[ni], '3200', v=>setYard(ni,v))}
+                      {numCell(nineYards[ni], nineName, v=>setYard(ni,v))}
                     </td>
                   ))}
                   <td>
@@ -424,8 +424,9 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const [showWomens, setShowWomens] = useState(
     !!(initialData?.nines?.some(n => n.handicapsWomen?.length || n.parsWomen?.length))
   );
-  const [activeTab, setActiveTab] = useState('holes');
-  const [saveErr,   setSaveErr]   = useState('');
+  const [activeTab,       setActiveTab]       = useState('holes');
+  const [saveErr,         setSaveErr]         = useState('');
+  const [confirmDiscard,  setConfirmDiscard]  = useState(false);
 
   const [setupKp, setSetupKp] = useState(null);
   const setupKpRef    = useRef(null);
@@ -534,17 +535,17 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   });
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'16px 16px 80px', overflowY:'auto' }} onClick={onClose}>
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'16px 16px 80px', overflowY:'auto' }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
         input[type=number] { -moz-appearance:textfield; }
         select { -webkit-appearance:none; -moz-appearance:none; appearance:none; }
       `}</style>
-      <div style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:10 }} onClick={e=>e.stopPropagation()}>
+      <div style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:10, position:'relative' }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
           <div style={{ fontWeight:800, fontSize:17, color:G }}>{initialData ? 'Edit Course' : 'Enter Manually'}</div>
-          <button onClick={onClose} style={{ border:'none', background:'none', fontSize:24, cursor:'pointer', color:'#aaa' }}>×</button>
+          <button onClick={() => setConfirmDiscard(true)} style={{ border:'none', background:'none', fontSize:24, cursor:'pointer', color:'#aaa' }}>×</button>
         </div>
 
         <Inp value={name}    onChange={setName}    placeholder="Course name *"          style={{ marginBottom:6 }}/>
@@ -563,8 +564,7 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
 
         <div style={{ display:'flex', background:'#f0f8f0', borderRadius:10, padding:3, marginBottom:12, gap:3 }}>
           <button style={tabStyle(activeTab==='holes')} onClick={()=>setActiveTab('holes')}>Holes &amp; Handicaps</button>
-          <button style={tabStyle(activeTab==='tees')}  onClick={()=>setActiveTab('tees')}>Tees 1</button>
-          <button style={tabStyle(activeTab==='tees2')} onClick={()=>setActiveTab('tees2')}>Tees 2</button>
+          <button style={tabStyle(activeTab==='tees2')} onClick={()=>setActiveTab('tees2')}>Rating/Slope &amp; Yardage</button>
         </div>
 
         {activeTab === 'holes' && (
@@ -580,6 +580,7 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
           </div>
         )}
 
+        {/* TEES 1 — card-per-tee layout, kept for potential settings menu option
         {activeTab === 'tees' && (
           <div>
             {tees.map((t, ti) => (
@@ -593,6 +594,7 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
             <Btn small variant="outline" onClick={addTee} style={{ marginBottom:8 }}>+ Add Tee</Btn>
           </div>
         )}
+        */}
 
         {activeTab === 'tees2' && (
           <TeesTableLayout
@@ -609,11 +611,26 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
         )}
 
         <div style={{ display:'flex', gap:8, marginTop:12 }}>
-          <Btn variant="outline" onClick={onClose} style={{ flex:1 }}>Cancel</Btn>
+          <Btn variant="outline" onClick={() => setConfirmDiscard(true)} style={{ flex:1 }}>Cancel</Btn>
           <Btn onClick={handleSave} disabled={!name.trim()} style={{ flex:2 }}>
             {initialData ? 'Save Changes' : 'Save Course'}
           </Btn>
         </div>
+
+        {/* Discard confirmation */}
+        {confirmDiscard && (
+          <div style={{ position:'absolute', inset:0, background:'rgba(255,255,255,.96)', borderRadius:20,
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, padding:24 }}>
+            <div style={{ fontSize:17, fontWeight:800, color:ERR }}>Discard Changes?</div>
+            <div style={{ fontSize:13, color:'#555', textAlign:'center' }}>
+              Any unsaved edits will be lost.
+            </div>
+            <div style={{ display:'flex', gap:10, width:'100%' }}>
+              <Btn variant="outline" onClick={() => setConfirmDiscard(false)} style={{ flex:1 }}>Keep Editing</Btn>
+              <Btn onClick={onClose} style={{ flex:1, background:ERR, borderColor:ERR }}>Discard</Btn>
+            </div>
+          </div>
+        )}
       </div>
 
       {setupKp && (
