@@ -54,6 +54,7 @@ Rules:
 - "nineYards" — one subtotal per nine in same order as nines array
 - "totalYards" — must equal sum of nineYards
 - All numbers must be numbers not strings
+- "nineComboNames" — for 27-hole courses only, include the three 18-hole combination names in the order shown on the card (e.g. ["South/North", "North/East", "East/South"]). Omit for 18-hole courses.
 - Do not guess — omit any field you cannot read clearly
 - Verify: each pars array sums to 27-40, each handicaps array has 9 unique values`;
 
@@ -327,7 +328,11 @@ export default function PhotoImportModal({ onImport, onClose }) {
         {!parsed && (
           <div style={{ display:'flex', gap:4, background:'#f0f0f0', borderRadius:10, padding:3, marginBottom:14 }}>
             <button style={tabStyle(aiMode==='photo')}    onClick={() => { setAiMode('photo');     setErr(''); setJsonErr(''); }}>Auto Scan</button>
-            <button style={tabStyle(aiMode==='assistant')} onClick={() => { setAiMode('assistant'); setErr(''); setJsonErr(''); }}>AI Assistant</button>
+            <button style={tabStyle(aiMode==='assistant')} onClick={async () => {
+              setAiMode('assistant'); setErr(''); setJsonErr('');
+              // Auto-copy prompt when switching to assistant mode
+              try { await navigator.clipboard.writeText(IMPORT_PROMPT); setPromptCopied(true); } catch(e) {}
+            }}>AI Assistant</button>
           </div>
         )}
 
@@ -397,49 +402,36 @@ export default function PhotoImportModal({ onImport, onClose }) {
         {/* ── ASSISTANT MODE ── */}
         {aiMode === 'assistant' && !parsed && (
           <div>
-            <div style={{ background:AMBBG, color:AMB, borderRadius:8, padding:'8px 11px', fontSize:12, marginBottom:16 }}>
-              Use Gemini to read your scorecard and paste the result back here.
-            </div>
+            {promptCopied && (
+              <div style={{ background:'#f0f8f0', border:'1px solid #b8d8b8', borderRadius:8, padding:'7px 11px', fontSize:12, color:'#3a7a3a', marginBottom:12 }}>
+                Import prompt copied to clipboard.
+              </div>
+            )}
 
-            {/* Step 1 */}
+            {/* Step 1 — Open Gemini */}
             <div style={stepStyle}>
               <div style={stepNumStyle}>1</div>
               <div style={{ flex:1 }}>
-                <div style={{ fontWeight:700, fontSize:13, color:'#333', marginBottom:4 }}>Copy the import prompt</div>
-                <Btn onClick={copyPrompt} style={{ width:'100%' }}>
-                  {promptCopied ? '✓ Copied!' : 'Copy Prompt to Clipboard'}
+                <div style={{ fontWeight:700, fontSize:13, color:'#333', marginBottom:2 }}>Open Gemini and upload your scorecard photos</div>
+                <div style={{ fontSize:12, color:'#888', marginBottom:6 }}>The import prompt has been copied to your clipboard. Paste it, attach your scorecard photos, and send.</div>
+                <Btn onClick={openGemini} variant="outline" style={{ width:'100%' }}>
+                  Open Gemini
                 </Btn>
               </div>
             </div>
 
-            {/* Step 2 */}
+            {/* Step 2 — Paste result */}
             <div style={stepStyle}>
               <div style={stepNumStyle}>2</div>
               <div style={{ flex:1 }}>
-                <div style={{ fontWeight:700, fontSize:13, color:'#333', marginBottom:2 }}>Open Gemini and upload your scorecard photos</div>
-                <div style={{ fontSize:12, color:'#888', marginBottom:6 }}>Paste the prompt, attach your scorecard photos, and send.</div>
-                <Btn onClick={openGemini} variant="outline" style={{ width:'100%' }}>
-                  Open Gemini ↗
-                </Btn>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div style={stepStyle}>
-              <div style={stepNumStyle}>3</div>
-              <div style={{ flex:1 }}>
-                <div style={{ fontWeight:700, fontSize:13, color:'#333', marginBottom:2 }}>Paste the JSON result back here</div>
-                <div style={{ fontSize:12, color:'#888', marginBottom:8 }}>Copy the JSON from Gemini, then tap below — or paste it manually.</div>
-                <Btn onClick={pasteFromClipboard} style={{ width:'100%', marginBottom:8 }}>
-                  Paste from Clipboard
-                </Btn>
-                <div style={{ fontSize:11, color:'#aaa', textAlign:'center', marginBottom:6 }}>or paste manually:</div>
+                <div style={{ fontWeight:700, fontSize:13, color:'#333', marginBottom:2 }}>Paste the JSON result</div>
+                <div style={{ fontSize:12, color:'#888', marginBottom:8 }}>Copy the JSON from Gemini, then long-press below to paste.</div>
                 <textarea
                   value={jsonDraft}
                   onChange={e => setJsonDraft(e.target.value)}
-                  placeholder='{"courseName": "...", "nines": [...], "tees": [...]}'
+                  placeholder='Paste JSON here'
                   style={{
-                    width:'100%', minHeight:80, borderRadius:8, border:'1.5px solid #ddd',
+                    width:'100%', minHeight:90, borderRadius:8, border:'1.5px solid #ddd',
                     padding:'8px 10px', fontSize:11, fontFamily:'monospace', resize:'vertical',
                     boxSizing:'border-box', color:'#333',
                   }}
