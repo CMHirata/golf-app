@@ -3,7 +3,7 @@
 //
 // Course schema:
 //   {
-//     id, name, location, website?,
+//     id, name, location,
 //     nines: [{
 //       name,
 //       pars:            [9 numbers],  // men's par
@@ -18,6 +18,10 @@
 //       nineYards?: [number],     // one OUT-total per nine, in nine order
 //       totalYards?,              // sum of nineYards; for 3-nine courses = primary combo
 //     }],
+//     nineComboNames?: [string],  // 3-nine courses only: the three 18-hole combo labels
+//                                 // in card order (e.g. ['South/North','North/East','East/South'])
+//                                 // Used by CourseCard to display combo yardages correctly.
+//                                 // Omit for 18-hole courses.
 //   }
 //
 // Combo tees (e.g. Blue/White) play a different tee per nine. nineYards reflects
@@ -35,7 +39,7 @@ export const courseLib = {
   /**
    * Read stored courses, backfill missing IDs, and silently upgrade any record
    * whose name matches a KNOWN_COURSE but is missing fields the known version
-   * now has (e.g. women's ratings, nineYards, website added in a later build).
+   * now has (e.g. women's ratings, nineYards added in a later build).
    *
    * ID backfill: courses saved before IDs were added to the schema get a stable
    * generated ID written back to localStorage (one-time, safe migration).
@@ -70,7 +74,7 @@ export const courseLib = {
       const out = { ...stored };
 
       // Top-level scalar fields
-      for (const field of ['location', 'website']) {
+      for (const field of ['location']) {
         if (!out[field] && known[field]) { out[field] = known[field]; changed = true; }
       }
 
@@ -169,10 +173,7 @@ export const courseLib = {
 
 // ─── AI helpers ───────────────────────────────────────────────────────────────
 
-/**
- * Anthropic transport — text-only, used by aiSearchCourses.
- */
-async function aiCall(provider, messages, maxTokens = 2000) {
+async function aiCall(messages, maxTokens = 2000) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -197,123 +198,10 @@ function extractJSON(text) {
   throw new Error('No JSON found in response');
 }
 
-/**
- * Server-side scorecard parser via Netlify Function.
- * Images are uploaded to Gemini Files API server-side — full resolution,
- * no base64 bloat in the request, API key never exposed to the browser.
- *
- * Endpoint: /.netlify/functions/parse-scorecard
- * POST { photos: [{ b64, mediaType }] }
- * Returns courseLib-compatible { courseName, location, nines, tees }
- *
- * Falls back to direct Gemini call if running locally without Netlify
- * (i.e. when window.location.hostname is localhost).
- */
-async function callScorecardFunction(photos) {
-  // Log sizes before sending
-  photos.forEach((p, i) => {
-    console.log(`Photo ${i+1} b64 length: ${p.b64.length} (~${Math.round(p.b64.length * 0.75 / 1024)}KB)`);
-  });
-  console.log('Sending to Netlify function...');
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120000); // 120s timeout
-
-  try {
-    const res = await fetch('https://scorecard-parser.thecard.workers.dev', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ photos }),
-      signal:  controller.signal,
-    });
-    clearTimeout(timeout);
-    console.log('Function responded with status:', res.status);
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error || `Server error ${res.status}`);
-    }
-
-    return res.json();
-  } catch (e) {
-    clearTimeout(timeout);
-    if (e.name === 'AbortError') throw new Error('Request timed out after 60s');
-    throw e;
-  }
-}
-
-/**
- * Gemini 2.5 Flash direct call — used as local dev fallback only.
- * Auth: SK.geminiKey from localStorage.
- */
-async function geminiVisionCall(parts, { systemInstruction = '', jsonMode = false, jsonSchema = null } = {}) {
-  const key = ls.get(SK.geminiKey);
-  if (!key) throw new Error('GEMINI_NO_KEY');
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`;
-
-  const body = {
-    ...(systemInstruction ? {
-      system_instruction: { parts: [{ text: systemInstruction }] },
-    } : {}),
-    contents: [{ parts }],
-    generationConfig: {
-      temperature: 0,
-      ...(jsonMode   ? { response_mime_type: 'application/json' } : {}),
-      ...(jsonSchema ? { response_schema: jsonSchema }            : {}),
-    },
-  };
-
-  const r = await fetch(url, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-  });
-
-  if (r.status === 401 || r.status === 403) throw new Error('GEMINI_AUTH_FAILURE');
-  if (!r.ok) {
-    const err = await r.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Gemini API ${r.status}`);
-  }
-
-  const d    = await r.json();
-  const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  if (!text) throw new Error('Gemini returned no content');
-  return text;
-}
-
-/**
- * Resize image to max 2048px on longest edge at 0.85 JPEG quality.
- * Keeps detail high enough for Gemini OCR while staying under Netlify's
- * 6MB function body limit (two photos ~1-2MB each after resize).
- */
-function resizeForUpload(b64, mediaType) {
-  return new Promise(res => {
-    const img = new Image();
-    img.onload = () => {
-      const MAX = 1200;
-      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width  = Math.round(img.width  * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      res(canvas.toDataURL('image/jpeg', 0.75).split(',')[1]);
-    };
-    img.onerror = () => res(b64); // fallback to original on error
-    img.src = `data:${mediaType};base64,${b64}`;
-  });
-}
-
-/** Build image parts for direct Gemini calls (local dev fallback). */
-function makeImageParts(photos) {
-  return photos.map(p => ({
-    inline_data: { mime_type: p.mediaType, data: p.b64 },
-  }));
-}
-
 // ─── aiSearchCourses ──────────────────────────────────────────────────────────
 
 export async function aiSearchCourses(query) {
-  const text = await aiCall('anthropic', [{
+  const text = await aiCall([{
     role:    'user',
     content:
     `You are a golf course database. Return ONLY valid JSON (no markdown) for golf courses matching: "${query}"\n\n` +
@@ -322,7 +210,6 @@ export async function aiSearchCourses(query) {
     `  "courses": [{\n` +
     `    "name": "Full Course Name",\n` +
     `    "location": "City, State",\n` +
-    `    "website": "https://...",\n` +
     `    "nines": [\n` +
     `      {\n` +
     `        "name": "Front",\n` +
@@ -350,7 +237,7 @@ export async function aiSearchCourses(query) {
     `- Include ALL available tee boxes with accurate USGA/R&A ratings and slopes\n` +
     `- Include women's ratings/slopes wherever the tee is available to women\n` +
     `- parsWomen and handicapsWomen may be omitted if identical to men's values\n` +
-    `- nineYards: one yardage total per nine. totalYards = sum of nineYards\n` +
+    `- nineYards: one yardage total per nine (e.g. [3375, 3065] for front+back). totalYards = sum of nineYards\n` +
     `- For 3-nine courses nineYards has 3 entries; totalYards reflects the primary 18-hole combo\n` +
     `- Use real, accurate data for known courses. If data is uncertain, omit that field rather than guess.\n` +
     `- Return up to 3 matching courses if multiple results are plausible`
@@ -360,106 +247,23 @@ export async function aiSearchCourses(query) {
 
 // ─── aiParseScorecard ─────────────────────────────────────────────────────────
 
-const SCORECARD_SI =
-  'You are an expert OCR agent specializing in high-precision data extraction from golf scorecards. ' +
-  'Operational Protocol: ' +
-  '1. Identify Anchors: First, locate the row headers (Black, Blue, White, Par, HCP) and column headers (Holes 1-18, OUT, IN, TOT). ' +
-  '2. Process Logic: For every hole, cross-reference the vertical column with the horizontal row. ' +
-  '3. Combo Tee Rule: Pay close attention to small black triangles or arrows indicating combo tees. ' +
-  '4. Self-Correction Step: After extracting all holes, verify yardage sums match the TOT columns on the card. ' +
-  '5. Handling Ambiguity: If a number is obstructed, output null. DO NOT guess or infer. ' +
-  '6. Final Output: Provide only valid JSON following the provided schema. No markdown or conversational text.';
-
-const SCORECARD_SCHEMA = {
-  type: 'object',
-  properties: {
-    courseName: { type: 'string' },
-    address:    { type: 'string' },
-    tees: {
-      type:  'array',
-      items: {
-        type: 'object',
-        properties: {
-          teeName: { type: 'string' },
-          gender:  { type: 'string', enum: ['Men', 'Women', 'Unspecified'] },
-          rating:  { type: 'number' },
-          slope:   { type: 'number' },
-        },
-        required: ['teeName', 'gender', 'rating', 'slope'],
-      },
-    },
-    holes: {
-      type:  'array',
-      items: {
-        type: 'object',
-        properties: {
-          holeNumber:   { type: 'integer' },
-          par:          { type: 'integer' },
-          handicapMen:  { type: 'integer' },
-          handicapWomen:{ type: 'integer' },
-        },
-        required: ['holeNumber', 'par'],
-      },
-    },
-  },
-  required: ['courseName', 'address', 'tees', 'holes'],
-};
-
-// Prompt proven working in AI Studio (Fairway Analytics).
-const SCORECARD_PROMPT =
-  'Analyze these images of a golf scorecard (front and back). ' +
-  'Extract the following information: ' +
-  '1. Course Name and Address. ' +
-  '2. Hole numbers, par for each hole, and handicaps (Mens and Womens where available). ' +
-  '3. All tees listed, including their color/name, and the Rating and Slope for both men and women if specified. ' +
-  'Capture every hole (usually 1-18) and all available tee sets.';
-
-/**
- * Convert Fairway Analytics schema → courseLib nines/tees schema.
- * Tees come in as separate Men/Women entries — merge them into combined objects.
- */
-function fairwayToSchema(d) {
-  if (!d || !Array.isArray(d.holes)) throw new Error('Invalid response shape');
-
-  // Sort holes and group into nines
-  const sorted    = [...d.holes].sort((a, b) => a.holeNumber - b.holeNumber);
-  const nineSize  = 9;
-  const nineCount = Math.ceil(sorted.length / nineSize);
-  const nineNames = ['Front', 'Back', 'Third'];
-  const nines     = [];
-
-  for (let i = 0; i < nineCount; i++) {
-    const group = sorted.slice(i * nineSize, (i + 1) * nineSize);
-    const nine  = { name: nineNames[i] || `Nine ${i + 1}` };
-    nine.pars      = group.map(h => h.par).filter(v => v != null);
-    nine.handicaps = group.map(h => h.handicapMen).filter(v => v != null);
-    const hw = group.map(h => h.handicapWomen).filter(v => v != null);
-    if (hw.length === group.length) nine.handicapsWomen = hw;
-    nines.push(nine);
-  }
-
-  // Merge Men/Women tee entries into combined tee objects
-  const teeMap = {};
-  for (const t of (d.tees || [])) {
-    const key = t.teeName;
-    if (!teeMap[key]) teeMap[key] = { name: key };
-    if (t.gender === 'Men' || t.gender === 'Unspecified') {
-      teeMap[key].rating = t.rating;
-      teeMap[key].slope  = t.slope;
-    }
-    if (t.gender === 'Women') {
-      teeMap[key].ratingW = t.rating;
-      teeMap[key].slopeW  = t.slope;
-    }
-  }
-  const tees = Object.values(teeMap);
-
-  return {
-    courseName: d.courseName || 'Imported Course',
-    location:   d.address    || '',
-    nines,
-    tees,
-  };
+/** Resize a base64 image to max 1400px on the long edge via canvas. */
+async function resizeImage(b64, mediaType) {
+  const mt = ['image/jpeg','image/png','image/gif','image/webp'].includes(mediaType)
+    ? mediaType : 'image/jpeg';
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 1400 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width  = Math.round(img.width  * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    img.onerror = () => res(b64);
+    img.src = `data:${mt};base64,${b64}`;
+  });
 }
 
 /**
@@ -467,11 +271,64 @@ function fairwayToSchema(d) {
  * photos: [{ b64, mediaType }]
  * Returns a course object matching the courseLib schema (minus id).
  */
-export async function aiParseScorecard(photos, onProgress) {
-  onProgress?.('Reading scorecard…');
-  // Always use Netlify Function — handles Files API upload server-side.
-  // For local dev, run 'netlify dev' to proxy the function locally.
-  return callScorecardFunction(photos);
+export async function aiParseScorecard(photos) {
+  const resized = await Promise.all(
+    photos.map(p => resizeImage(p.b64, p.mediaType))
+  );
+
+  const imageBlocks = resized.map(data => ({
+    type:   'image',
+    source: { type: 'base64', media_type: 'image/jpeg', data },
+  }));
+
+  const prompt =
+    `You are looking at ${photos.length} photo${photos.length > 1 ? 's' : ''} of a golf scorecard.\n` +
+    `Extract ALL available data from the image(s). Typical scorecard layout:\n` +
+    `- Ratings panel: tee box names, men's course rating & slope, women's course rating & slope, nine/total yardages per tee\n` +
+    `- Holes panel: par by hole (men's, and women's if different), men's stroke index, women's stroke index\n\n` +
+    `Return ONLY valid JSON (no markdown) in exactly this format:\n` +
+    `{\n` +
+    `  "courseName": "Full Course Name",\n` +
+    `  "location": "City, State",\n` +
+    `  "nines": [\n` +
+    `    {\n` +
+    `      "name": "Front",\n` +
+    `      "pars":           [4,4,3,5,4,3,4,5,4],\n` +
+    `      "parsWomen":      [4,4,3,5,4,3,4,5,5],\n` +
+    `      "handicaps":      [7,11,15,1,5,17,3,9,13],\n` +
+    `      "handicapsWomen": [6,10,14,2,4,18,4,8,12]\n` +
+    `    }\n` +
+    `  ],\n` +
+    `  "tees": [\n` +
+    `    {\n` +
+    `      "name": "Blue",\n` +
+    `      "rating":  72.1,\n` +
+    `      "slope":   131,\n` +
+    `      "ratingW": 75.2,\n` +
+    `      "slopeW":  128,\n` +
+    `      "nineYards": [3375, 3065],\n` +
+    `      "totalYards": 6440\n` +
+    `    }\n` +
+    `  ]\n` +
+    `}\n\n` +
+    `Important rules:\n` +
+    `- Each nine must have exactly 9 values in pars and handicaps arrays\n` +
+    `- Stroke index values are unique 1-18 across all nines combined (not 1-9 per nine)\n` +
+    `- parsWomen and handicapsWomen: omit if identical to men's values, otherwise include\n` +
+    `- nineYards: one OUT total per nine in order (e.g. [3375, 3065] for front+back 18-hole card)\n` +
+    `- totalYards: the printed 18-hole total; must equal sum of nineYards for standard 2-nine courses\n` +
+    `- For 3-nine courses, nineYards has 3 entries and totalYards reflects the primary combo on the card\n` +
+    `- DO NOT attempt to read per-hole yardages — nine totals and 18-hole total only\n` +
+    `- Include ALL tee boxes visible on the scorecard\n` +
+    `- If a value is not legible, omit that field entirely rather than guessing\n` +
+    `- Preserve exact tee names as printed on the scorecard`;
+
+  const text = await aiCall([{
+    role:    'user',
+    content: [...imageBlocks, { type: 'text', text: prompt }],
+  }], 3000);
+
+  return extractJSON(text);
 }
 
 // ─── Course comparison utilities ──────────────────────────────────────────────
@@ -560,7 +417,6 @@ export const KNOWN_COURSES = [
   {
     name:     'Fircrest Golf Club',
     location: 'Fircrest, WA',
-    website:  'https://www.fircrestgolfclub.org',
     // Women's par differs: front holes 2 & 5; back holes 14 & 15.
     nines: [
       {
@@ -593,7 +449,6 @@ export const KNOWN_COURSES = [
   {
     name:     'Sahalee Country Club',
     location: 'Sammamish, WA',
-    website:  'https://www.sahalee.com',
     // Three nines. Stroke index restarts 1-9 per nine (USGA 27-hole standard).
     nines: [
       {
