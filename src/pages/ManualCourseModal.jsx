@@ -44,9 +44,23 @@ function dupIndices(handicaps) {
 function KpField({ fieldId, value, mode, placeholder, activeFieldId, onActivate, onCommit, style={} }) {
   const display  = value !== '' && value != null ? String(value) : '';
   const isActive = activeFieldId === fieldId;
+  // Seed raw digit string for handicap-decimal
+  // Stored value may be decimal ("73.5") or raw digits ("735") — normalize both to "735"
+  const seedKpValue = () => {
+    if (mode === 'handicap-decimal' && display) {
+      if (display.includes('.')) {
+        // Already a decimal: "73.5" → "735"
+        const n = parseFloat(display);
+        return isNaN(n) ? '' : String(Math.round(n * 10));
+      }
+      // Raw digits already: "735" → "735"
+      return display.slice(0, 3);
+    }
+    return display;
+  };
   return (
     <input type="text" inputMode="none" readOnly value={display} placeholder={placeholder}
-      onFocus={e => { e.target.blur(); onActivate(fieldId, display, false, mode, onCommit, ()=>{}); }}
+      onFocus={e => { e.target.blur(); onActivate(fieldId, seedKpValue(), false, mode, onCommit, ()=>{}); }}
       style={{ border: isActive ? `2px solid ${G}` : '1px solid #ddd', borderRadius:5,
         padding:'3px 4px', fontSize:11, fontFamily:'inherit', background: isActive ? GA : '#fff',
         color: display ? '#222' : '#aaa', cursor:'pointer', width:'100%', boxSizing:'border-box',
@@ -83,22 +97,23 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
         <span style={{ fontSize:10, fontWeight:700, color:'#555', width:14, flexShrink:0 }}>M</span>
         <div style={{ flex:1 }}>
           {kp(`tee${teeIdx}_ratingM`, tee.rating, 'handicap-decimal', 'Rating',
-            v => { const n=parseInt(v||'0'); onChange({...tee, rating: isNaN(n)?'':String(n/10)}); })}
+            v => onChange({...tee, rating: v}))}
         </div>
         <span style={{ fontSize:11, color:'#bbb', flexShrink:0 }}>/</span>
         <div style={{ flex:1 }}>
           {kp(`tee${teeIdx}_slopeM`, tee.slope, 'integer', 'Slope',
-            v => onChange({...tee, slope: v ? parseInt(v) : ''}))}
+            v => onChange({...tee, slope: v}))}
         </div>
         <span style={{ fontSize:10, fontWeight:700, color:PINK, width:14, flexShrink:0, textAlign:'right' }}>W</span>
         <div style={{ flex:1 }}>
           {kp(`tee${teeIdx}_ratingW`, tee.ratingW, 'handicap-decimal', 'Rating',
-            v => { const n=parseInt(v||'0'); onChange({...tee, ratingW: isNaN(n)?'':String(n/10)}); })}
+            v => onChange({...tee, ratingW: v}))}
         </div>
         <span style={{ fontSize:11, color:'#bbb', flexShrink:0 }}>/</span>
         <div style={{ flex:1 }}>
           {kp(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', 'Slope',
-            v => onChange({...tee, slopeW: v ? parseInt(v) : ''}))}
+            v => onChange({...tee, slopeW: v}))}
+        </div>
         </div>
       </div>
 
@@ -287,18 +302,18 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                 </td>
                 <td style={{ paddingBottom:3 }}>
                   {kp(`ttl${ti}_rM`, t.rating, 'handicap-decimal', 'Rating',
-                    v => { const n=parseInt(v||'0'); onUpdateTee(ti,{...t, rating: isNaN(n)?'':String(n/10)}); })}
+                    v => onUpdateTee(ti,{...t, rating: v}))}
                 </td>
                 <td style={{ fontSize:11, color:'#bbb', textAlign:'center', padding:'0 1px 3px' }}>/</td>
                 <td style={{ paddingBottom:3 }}>
                   {kp(`ttl${ti}_sM`, t.slope, 'integer', 'Slope',
-                    v => onUpdateTee(ti,{...t, slope: v ? parseInt(v) : ''}))}
+                    v => onUpdateTee(ti,{...t, slope: v}))}
                 </td>
                 {showWomens && <td style={{ paddingBottom:3 }}/>}
                 {showWomens && (
                   <td style={{ paddingBottom:3 }}>
                     {kp(`ttl${ti}_rW`, t.ratingW, 'handicap-decimal', 'Rating',
-                      v => { const n=parseInt(v||'0'); onUpdateTee(ti,{...t, ratingW: isNaN(n)?'':String(n/10)}); })}
+                      v => onUpdateTee(ti,{...t, ratingW: v}))}
                   </td>
                 )}
                 {showWomens && (
@@ -307,7 +322,7 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                 {showWomens && (
                   <td style={{ paddingBottom:3 }}>
                     {kp(`ttl${ti}_sW`, t.slopeW, 'integer', 'Slope',
-                      v => onUpdateTee(ti,{...t, slopeW: v ? parseInt(v) : ''}))}
+                      v => onUpdateTee(ti,{...t, slopeW: v}))}
                   </td>
                 )}
                 <td style={{ paddingLeft:4, paddingBottom:3, textAlign:'right' }}>
@@ -388,12 +403,15 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const setupKpRef    = useRef(null);
   const setupKpCbsRef = useRef({ onChange: null, onCommit: null });
 
+  const setupKpStateRef = useRef(null);
+  setupKpStateRef.current = setupKp;
+
   useEffect(() => {
-    if (!setupKp) return;
     const handler = (e) => {
-      if (setupKpRef.current && setupKpRef.current.contains(e.target)) return;
+      if (!setupKpStateRef.current) return;
       const t = e.target;
       if (t && t.tagName === 'INPUT' && t.readOnly && t.getAttribute('inputmode') === 'none') return;
+      if (setupKpRef.current && setupKpRef.current.contains(t)) return;
       setupKpCbsRef.current.onCommit?.();
       setSetupKp(null);
     };
@@ -403,11 +421,11 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
       document.removeEventListener('touchstart', handler);
       document.removeEventListener('mousedown', handler);
     };
-  }, [setupKp]);
+  }, []); // register once, never re-register
 
-  const activateSetupKp = (fieldId, _seedValue, kpPlus, mode, onChange, onCommit) => {
+  const activateSetupKp = (fieldId, seedValue, kpPlus, mode, onChange, onCommit) => {
     setupKpCbsRef.current = { onChange, onCommit };
-    setSetupKp({ fieldId, kpValue: '', kpPlus, mode });
+    setSetupKp({ fieldId, kpValue: seedValue || '', kpPlus: kpPlus || false, mode });
   };
 
   const [nines, setNines] = useState(() => {
@@ -468,10 +486,13 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
     });
     const cleanTees = tees.map(t => {
       const out = { ...t };
-      if (t.rating  !== '' && t.rating  != null) out.rating  = parseFloat(t.rating);  else delete out.rating;
-      if (t.slope   !== '' && t.slope   != null) out.slope   = parseInt(t.slope);     else delete out.slope;
-      if (t.ratingW !== '' && t.ratingW != null) out.ratingW = parseFloat(t.ratingW); else delete out.ratingW;
-      if (t.slopeW  !== '' && t.slopeW  != null) out.slopeW  = parseInt(t.slopeW);   else delete out.slopeW;
+      // rating stored as raw kp digits ("735") or already decimal ("73.5") — normalize both
+      const toRating = v => { if (v === '' || v == null) return null; const n = parseFloat(v); if (isNaN(n)) return null; return n > 200 ? n / 10 : n; };
+      const toInt    = v => { if (v === '' || v == null) return null; const n = parseInt(v); return isNaN(n) ? null : n; };
+      const r  = toRating(t.rating);  if (r  != null) out.rating  = r;  else delete out.rating;
+      const s  = toInt(t.slope);      if (s  != null) out.slope   = s;  else delete out.slope;
+      const rW = toRating(t.ratingW); if (rW != null) out.ratingW = rW; else delete out.ratingW;
+      const sW = toInt(t.slopeW);     if (sW != null) out.slopeW  = sW; else delete out.slopeW;
       const cleanNY = (t.nineYards||[]).map(y => parseInt(y)||0);
       if (cleanNY.some(y => y > 0)) {
         out.nineYards  = cleanNY;
