@@ -402,11 +402,6 @@ export default function PhotoImportModal({ onImport, onClose }) {
         {/* ── ASSISTANT MODE ── */}
         {aiMode === 'assistant' && !parsed && (
           <div>
-            {promptCopied && (
-              <div style={{ background:'#f0f8f0', border:'1px solid #b8d8b8', borderRadius:8, padding:'7px 11px', fontSize:12, color:'#3a7a3a', marginBottom:12 }}>
-                Import prompt copied to clipboard.
-              </div>
-            )}
 
             {/* Step 1 — Open Gemini */}
             <div style={stepStyle}>
