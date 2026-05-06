@@ -254,6 +254,139 @@ function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
   );
 }
 
+// ─── TeesTableLayout ──────────────────────────────────────────────────────────
+// Tees 2: two aligned tables — Rating/Slope, then Yardage — one row per tee
+function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRemoveTee, setupKp, onActivate }) {
+  const nineNames = nines.map((n,i) => n.name || `Nine ${i+1}`);
+
+  const cellSt = (extra={}) => ({
+    border:'1px solid #ddd', borderRadius:4, fontSize:11, padding:'3px 4px',
+    textAlign:'center', background:'#fff', width:'100%', boxSizing:'border-box',
+    WebkitAppearance:'none', MozAppearance:'textfield', appearance:'textfield',
+    ...extra,
+  });
+
+  const hdrSt = { fontSize:9, fontWeight:700, color:'#888', textAlign:'center', paddingBottom:3 };
+  const lblSt = { fontSize:11, fontWeight:700, color:'#333', paddingRight:4, whiteSpace:'nowrap', display:'flex', alignItems:'center' };
+  const mwSt  = (color) => ({ fontSize:9, fontWeight:700, color, textAlign:'center', paddingBottom:1 });
+
+  const numCell = (val, ph, onChange) => (
+    <input type="number" value={val||''} placeholder={ph}
+      onChange={e=>onChange(e.target.value)} onFocus={e=>e.target.select()}
+      style={cellSt()}/>
+  );
+
+  // Rating / Slope table
+  const rsCols = showWomens
+    ? ['M Rating','M Slope','W Rating','W Slope']
+    : ['M Rating','M Slope'];
+
+  return (
+    <div>
+      {/* ── Rating / Slope table ── */}
+      <div style={{ fontSize:10, fontWeight:700, color:'#888', marginBottom:4 }}>Rating / Slope</div>
+      <div style={{ overflowX:'auto', marginBottom:12 }}>
+        <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:'0 3px' }}>
+          <thead>
+            <tr>
+              <th style={{ ...hdrSt, textAlign:'left', paddingRight:6 }}></th>
+              <th style={hdrSt}>M</th>
+              <th style={hdrSt}>/</th>
+              <th style={hdrSt}>Slope</th>
+              {showWomens && <th style={{ ...hdrSt, paddingLeft:8 }}>W</th>}
+              {showWomens && <th style={hdrSt}>/</th>}
+              {showWomens && <th style={hdrSt}>Slope</th>}
+              <th style={{ width:24 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {tees.map((t, ti) => (
+              <tr key={ti}>
+                <td style={{ paddingRight:6, minWidth:60 }}>
+                  <input value={t.name} placeholder="Tee"
+                    onChange={e=>onUpdateTee(ti,{...t,name:e.target.value})}
+                    style={{ border:'1px solid #ddd', borderRadius:4, fontSize:11,
+                      padding:'3px 5px', width:'100%', boxSizing:'border-box' }}/>
+                </td>
+                <td style={{ paddingRight:2 }}>
+                  {numCell(t.rating, '72.3', v=>onUpdateTee(ti,{...t,rating:v}))}
+                </td>
+                <td style={{ fontSize:10, color:'#bbb', textAlign:'center', padding:'0 1px' }}>/</td>
+                <td style={{ paddingRight: showWomens ? 8 : 0 }}>
+                  {numCell(t.slope, '131', v=>onUpdateTee(ti,{...t,slope:v}))}
+                </td>
+                {showWomens && (
+                  <td style={{ paddingRight:2 }}>
+                    {numCell(t.ratingW, '74.1', v=>onUpdateTee(ti,{...t,ratingW:v}))}
+                  </td>
+                )}
+                {showWomens && (
+                  <td style={{ fontSize:10, color:'#bbb', textAlign:'center', padding:'0 1px' }}>/</td>
+                )}
+                {showWomens && (
+                  <td>{numCell(t.slopeW, '128', v=>onUpdateTee(ti,{...t,slopeW:v}))}</td>
+                )}
+                <td style={{ paddingLeft:4, width:24 }}>
+                  {tees.length > 1 &&
+                    <button onClick={()=>onRemoveTee(ti)}
+                      style={{ background:'#e53935', border:'none', borderRadius:'50%', width:18, height:18,
+                        color:'#fff', fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+                  }
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Btn small variant="outline" onClick={onAddTee} style={{ marginBottom:14 }}>+ Add Tee</Btn>
+
+      {/* ── Yardage table ── */}
+      <div style={{ fontSize:10, fontWeight:700, color:'#888', marginBottom:4 }}>Yardage</div>
+      <div style={{ overflowX:'auto', marginBottom:8 }}>
+        <table style={{ width:'100%', borderCollapse:'separate', borderSpacing:'0 3px' }}>
+          <thead>
+            <tr>
+              <th style={{ ...hdrSt, textAlign:'left' }}></th>
+              {nineNames.map((n,i) => <th key={i} style={hdrSt}>{n}</th>)}
+              <th style={{ ...hdrSt, color:G }}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tees.map((t, ti) => {
+              const nineYards = (t.nineYards?.length === nineNames.length)
+                ? t.nineYards : Array(nineNames.length).fill('');
+              const total = nineYards.reduce((s,y) => s+(parseInt(y)||0), 0);
+              const setYard = (ni, val) => {
+                const next = [...nineYards];
+                next[ni] = val === '' ? '' : parseInt(val)||'';
+                onUpdateTee(ti, {...t, nineYards: next, totalYards: next.reduce((s,y)=>s+(parseInt(y)||0),0)||''});
+              };
+              return (
+                <tr key={ti}>
+                  <td style={{ paddingRight:6, fontSize:11, fontWeight:700, color:'#333', whiteSpace:'nowrap' }}>
+                    {t.name || `Tee ${ti+1}`}
+                  </td>
+                  {nineNames.map((_,ni) => (
+                    <td key={ni} style={{ paddingRight:2 }}>
+                      {numCell(nineYards[ni], '3200', v=>setYard(ni,v))}
+                    </td>
+                  ))}
+                  <td>
+                    <div style={{ fontSize:11, fontWeight:700, color:G, padding:'3px 4px',
+                      background:GB, borderRadius:4, textAlign:'center' }}>
+                      {total || '—'}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── ManualCourseModal ─────────────────────────────────────────────────────────
 export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const [name,       setName]       = useState(initialData?.name || '');
@@ -401,7 +534,8 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
 
         <div style={{ display:'flex', background:'#f0f8f0', borderRadius:10, padding:3, marginBottom:12, gap:3 }}>
           <button style={tabStyle(activeTab==='holes')} onClick={()=>setActiveTab('holes')}>Holes &amp; Handicaps</button>
-          <button style={tabStyle(activeTab==='tees')}  onClick={()=>setActiveTab('tees')}>Tee Boxes &amp; Yardage</button>
+          <button style={tabStyle(activeTab==='tees')}  onClick={()=>setActiveTab('tees')}>Tees 1</button>
+          <button style={tabStyle(activeTab==='tees2')} onClick={()=>setActiveTab('tees2')}>Tees 2</button>
         </div>
 
         {activeTab === 'holes' && (
@@ -429,6 +563,14 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
             ))}
             <Btn small variant="outline" onClick={addTee} style={{ marginBottom:8 }}>+ Add Tee</Btn>
           </div>
+        )}
+
+        {activeTab === 'tees2' && (
+          <TeesTableLayout
+            tees={tees} nines={nines} showWomens={showWomens}
+            onUpdateTee={updateTee} onAddTee={addTee} onRemoveTee={removeTee}
+            setupKp={setupKp} onActivate={activateSetupKp}
+          />
         )}
 
         {saveErr && (
