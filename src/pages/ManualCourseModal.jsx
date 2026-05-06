@@ -6,17 +6,46 @@
 //   ManualCourseModal — full modal wrapping both, for add and edit flows
 //
 // Called from CoursesPage for both "Manual" add and "Edit" flows.
+// Also called from PhotoImportModal for post-OCR review ("Review & Save" path).
+//
+// SI validation rules (USGA):
+//   2 nines  → nine 0: odd  1,3,5,7,9,11,13,15,17
+//              nine 1: even 2,4,6,8,10,12,14,16,18
+//   1 or 3+  → each nine: 1–9, no odd/even constraint
 
 import { useState, useRef, useEffect } from 'react';
 import { Btn, Inp, G, GA, GB } from '../components/ui.jsx';
 import { ScoreKeypad } from './ScoreKeypad.jsx';
 
 const PINK = '#c2185b';
+const ERR  = '#c0392b';
+
+// ─── SI helpers ───────────────────────────────────────────────────────────────
+
+function siValidSet(nineCount, nineIdx) {
+  if (nineCount === 2) {
+    return nineIdx === 0
+      ? [1,3,5,7,9,11,13,15,17]
+      : [2,4,6,8,10,12,14,16,18];
+  }
+  return [1,2,3,4,5,6,7,8,9];
+}
+
+// Returns Set of hole indices (0-based) with duplicate SI values within this nine
+function dupIndices(handicaps) {
+  const seen = {};
+  handicaps.forEach((v, i) => {
+    if (v == null) return;
+    const k = String(v);
+    if (!seen[k]) seen[k] = [];
+    seen[k].push(i);
+  });
+  const dups = new Set();
+  Object.values(seen).forEach(idxs => { if (idxs.length > 1) idxs.forEach(i => dups.add(i)); });
+  return dups;
+}
 
 // ─── TeeRow ───────────────────────────────────────────────────────────────────
-// tee shape: { name, rating, slope, ratingW, slopeW, nineYards[], totalYards }
-// nineYards: one OUT total per nine in order; totalYards = sum.
-// onActivate (optional): custom keypad activation — ScoreKeypad_Contract §6.2/§6.4
 function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, activeFieldId }) {
   const nineCount = nineNames.length;
   const nineYards = (tee.nineYards?.length === nineCount)
@@ -30,11 +59,9 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
     onChange({ ...tee, nineYards: next, totalYards: total || '' });
   };
 
-  // Helper: build a numeric input for keypad-activated fields
-  // Uses readOnly + onFocus to suppress iOS keyboard
   const kpField = (fieldId, currentVal, mode, placeholder, onCommit) => {
     if (!onActivate) return null;
-    const display = currentVal !== '' && currentVal != null ? String(currentVal) : '';
+    const display  = currentVal !== '' && currentVal != null ? String(currentVal) : '';
     const isActive = activeFieldId === fieldId;
     return (
       <input
@@ -52,8 +79,8 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
         }}
         style={{
           border: isActive ? `2px solid ${G}` : '1px solid #ddd',
-          borderRadius:8, padding: isActive ? '3px 5px' : '4px 6px',
-          fontSize:13, fontFamily:'inherit',
+          borderRadius:6, padding: isActive ? '2px 4px' : '3px 5px',
+          fontSize:12, fontFamily:'inherit',
           background: isActive ? GA : '#fff',
           color: display ? '#222' : '#aaa', cursor:'pointer',
           width:'100%', boxSizing:'border-box', textAlign:'center',
@@ -62,75 +89,82 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
     );
   };
 
+  const sublbl = { fontSize:9, color:'#aaa', marginBottom:2 };
+  const mwLbl  = (color) => ({ fontSize:10, fontWeight:700, color, width:18, flexShrink:0, display:'flex', alignItems:'center' });
+
   return (
-    <div style={{ border:'1.5px solid #e0ece0', borderRadius:10, padding:'10px 12px', marginBottom:8 }}>
+    <div style={{ border:'1.5px solid #e0ece0', borderRadius:10, padding:'8px 10px', marginBottom:6 }}>
       {/* Name + remove */}
-      <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:8 }}>
-        <Inp value={tee.name} onChange={v=>onChange({...tee,name:v})} placeholder="Tee name" style={{ flex:1, fontSize:13, padding:'5px 8px' }}/>
-        {onRemove && <Btn small variant="danger" onClick={onRemove} style={{ padding:'4px 8px', fontSize:11 }}>✕</Btn>}
+      <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:7 }}>
+        <Inp value={tee.name} onChange={v=>onChange({...tee,name:v})} placeholder="Tee name"
+          style={{ flex:1, fontSize:13, padding:'4px 8px' }}/>
+        {onRemove && <Btn small variant="danger" onClick={onRemove} style={{ padding:'3px 7px', fontSize:11 }}>✕</Btn>}
       </div>
-      {/* Men's */}
-      <div style={{ display:'flex', gap:6, marginBottom:6, alignItems:'flex-end' }}>
-        <div style={{ fontSize:10, fontWeight:700, color:'#555', width:22, paddingBottom:4 }}>M</div>
+
+      {/* Rating + Slope — M and W stacked, side by side */}
+      <div style={{ display:'flex', gap:8, marginBottom:6 }}>
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:9, color:'#aaa', marginBottom:2 }}>Rating</div>
-          {onActivate
-            ? kpField(`tee${teeIdx}_ratingM`, tee.rating, 'handicap-decimal', '72.3', v => {
-                const n = parseInt(v||'0'); const r = isNaN(n) ? '' : String(n / 10);
-                onChange({...tee, rating: r});
-              })
-            : <Inp value={tee.rating||''} onChange={v=>onChange({...tee,rating:v})} placeholder="72.3" type="number" style={{ fontSize:13, padding:'4px 6px' }}/>
-          }
+          <div style={sublbl}>Rating</div>
+          <div style={{ display:'flex', gap:3, alignItems:'center', marginBottom:3 }}>
+            <span style={mwLbl('#555')}>M</span>
+            {onActivate
+              ? kpField(`tee${teeIdx}_ratingM`, tee.rating, 'handicap-decimal', '72.3', v => {
+                  const n = parseInt(v||'0'); const r = isNaN(n) ? '' : String(n / 10);
+                  onChange({...tee, rating: r});
+                })
+              : <Inp value={tee.rating||''} onChange={v=>onChange({...tee,rating:v})}
+                  placeholder="72.3" type="number" style={{ fontSize:12, padding:'3px 5px' }}/>
+            }
+          </div>
+          <div style={{ display:'flex', gap:3, alignItems:'center' }}>
+            <span style={mwLbl(PINK)}>W</span>
+            {onActivate
+              ? kpField(`tee${teeIdx}_ratingW`, tee.ratingW, 'handicap-decimal', '74.1', v => {
+                  const n = parseInt(v||'0'); const r = isNaN(n) ? '' : String(n / 10);
+                  onChange({...tee, ratingW: r});
+                })
+              : <Inp value={tee.ratingW||''} onChange={v=>onChange({...tee,ratingW:v})}
+                  placeholder="74.1" type="number" style={{ fontSize:12, padding:'3px 5px' }}/>
+            }
+          </div>
         </div>
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:9, color:'#aaa', marginBottom:2 }}>Slope</div>
-          {onActivate
-            ? kpField(`tee${teeIdx}_slopeM`, tee.slope, 'integer', '131', v => {
-                onChange({...tee, slope: v});
-              })
-            : <Inp value={tee.slope||''} onChange={v=>onChange({...tee,slope:v})} placeholder="131" type="number" style={{ fontSize:13, padding:'4px 6px' }}/>
-          }
+          <div style={sublbl}>Slope</div>
+          <div style={{ display:'flex', gap:3, alignItems:'center', marginBottom:3 }}>
+            <span style={mwLbl('#555')}>M</span>
+            {onActivate
+              ? kpField(`tee${teeIdx}_slopeM`, tee.slope, 'integer', '131', v => onChange({...tee, slope: v}))
+              : <Inp value={tee.slope||''} onChange={v=>onChange({...tee,slope:v})}
+                  placeholder="131" type="number" style={{ fontSize:12, padding:'3px 5px' }}/>
+            }
+          </div>
+          <div style={{ display:'flex', gap:3, alignItems:'center' }}>
+            <span style={mwLbl(PINK)}>W</span>
+            {onActivate
+              ? kpField(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', '128', v => onChange({...tee, slopeW: v}))
+              : <Inp value={tee.slopeW||''} onChange={v=>onChange({...tee,slopeW:v})}
+                  placeholder="128" type="number" style={{ fontSize:12, padding:'3px 5px' }}/>
+            }
+          </div>
         </div>
       </div>
-      {/* Women's */}
-      <div style={{ display:'flex', gap:6, marginBottom:8, alignItems:'flex-end' }}>
-        <div style={{ fontSize:10, fontWeight:700, color:PINK, width:22, paddingBottom:4 }}>W</div>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:9, color:'#aaa', marginBottom:2 }}>Rating</div>
-          {onActivate
-            ? kpField(`tee${teeIdx}_ratingW`, tee.ratingW, 'handicap-decimal', '74.1', v => {
-                const n = parseInt(v||'0'); const r = isNaN(n) ? '' : String(n / 10);
-                onChange({...tee, ratingW: r});
-              })
-            : <Inp value={tee.ratingW||''} onChange={v=>onChange({...tee,ratingW:v})} placeholder="74.1" type="number" style={{ fontSize:13, padding:'4px 6px' }}/>
-          }
-        </div>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:9, color:'#aaa', marginBottom:2 }}>Slope</div>
-          {onActivate
-            ? kpField(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', '128', v => {
-                onChange({...tee, slopeW: v});
-              })
-            : <Inp value={tee.slopeW||''} onChange={v=>onChange({...tee,slopeW:v})} placeholder="128" type="number" style={{ fontSize:13, padding:'4px 6px' }}/>
-          }
-        </div>
-      </div>
-      {/* Nine yardage totals */}
-      <div style={{ display:'flex', gap:6, alignItems:'flex-end' }}>
-        <div style={{ fontSize:9, color:'#aaa', width:22, paddingBottom:4 }}>yds</div>
+
+      {/* Yardage */}
+      <div style={{ display:'flex', gap:4, alignItems:'flex-end' }}>
+        <div style={{ fontSize:9, color:'#aaa', width:18, paddingBottom:2, flexShrink:0 }}>yds</div>
         {nineNames.map((nineName, ni) => (
           <div key={ni} style={{ flex:1 }}>
-            <div style={{ fontSize:9, color:'#aaa', marginBottom:2 }}>{nineName}</div>
+            <div style={sublbl}>{nineName}</div>
             {onActivate
               ? kpField(`tee${teeIdx}_yds${ni}`, nineYards[ni], 'integer', '3200', v => setNineYard(ni, v))
               : <Inp value={nineYards[ni]||''} onChange={v=>setNineYard(ni, v)}
-                  placeholder="3200" type="number" style={{ fontSize:13, padding:'4px 6px' }}/>
+                  placeholder="3200" type="number" style={{ fontSize:12, padding:'3px 5px' }}/>
             }
           </div>
         ))}
         <div style={{ flex:1 }}>
           <div style={{ fontSize:9, color:G, fontWeight:700, marginBottom:2 }}>Total</div>
-          <div style={{ fontSize:13, fontWeight:700, color:G, padding:'4px 6px', background:GB, borderRadius:6, textAlign:'center' }}>
+          <div style={{ fontSize:12, fontWeight:700, color:G, padding:'3px 5px', background:GB, borderRadius:6, textAlign:'center' }}>
             {nineYards.reduce((s,y) => s+(parseInt(y)||0), 0) || '—'}
           </div>
         </div>
@@ -140,99 +174,130 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
 }
 
 // ─── NineEditor ───────────────────────────────────────────────────────────────
-function NineEditor({ nine, idx, onChange, onRemove, showWomens }) {
-  const setPars    = (pars)             => onChange({ ...nine, pars });
-  const setHcp     = (handicaps)        => onChange({ ...nine, handicaps });
-  const setParsW   = (parsWomen)        => onChange({ ...nine, parsWomen });
-  const setHcpW    = (handicapsWomen)   => onChange({ ...nine, handicapsWomen });
+// nineCount: total nines in this course (determines valid SI set)
+// idx:       0-based index of this nine
+function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
+  const setPars  = pars           => onChange({ ...nine, pars });
+  const setHcp   = handicaps      => onChange({ ...nine, handicaps });
+  const setParsW = parsWomen      => onChange({ ...nine, parsWomen });
+  const setHcpW  = handicapsWomen => onChange({ ...nine, handicapsWomen });
 
-  const parTotM = nine.pars?.reduce((a,b) => a+b, 0) || 0;
-  const parTotW = nine.parsWomen?.reduce((a,b) => a+b, 0) || 0;
+  const parTotM  = nine.pars?.reduce((a,b) => a+b, 0) || 0;
+  const parTotW  = nine.parsWomen?.reduce((a,b) => a+b, 0) || 0;
+  const validSI  = siValidSet(nineCount, idx);
+  const dups     = dupIndices(nine.handicaps || []);
+  const dupsW    = dupIndices(nine.handicapsWomen || nine.handicaps || []);
+  const hasSIErr = dups.size > 0 || (showWomens && dupsW.size > 0);
+
+  const holeNums = Array.from({length:9}, (_,h) => idx * 9 + h + 1);
+
+  const cellBox = (extra={}) => ({
+    width:'100%', boxSizing:'border-box', border:'1px solid #ddd',
+    borderRadius:4, fontSize:11, padding:'2px 0', textAlign:'center',
+    background:'#fff', ...extra,
+  });
+
+  const mwLbl = (color) => ({
+    fontSize:10, fontWeight:700, color, width:20, flexShrink:0,
+    display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight:3,
+  });
+
+  const secHdr = (label, sub) => (
+    <div style={{ fontSize:10, fontWeight:700, color:'#888', marginBottom:3, display:'flex', alignItems:'baseline', gap:6 }}>
+      {label}
+      {sub && <span style={{ fontWeight:400, color:'#bbb' }}>{sub}</span>}
+    </div>
+  );
+
+  const holeNumRow = (
+    <div style={{ display:'grid', gridTemplateColumns:'20px repeat(9,1fr)', gap:3, marginBottom:2 }}>
+      <div/>
+      {holeNums.map(n => (
+        <div key={n} style={{ fontSize:8, color:'#bbb', textAlign:'center' }}>{n}</div>
+      ))}
+    </div>
+  );
 
   return (
-    <div style={{ background:'#fafafa', borderRadius:10, padding:10, marginBottom:8 }}>
-      <div style={{ display:'flex', gap:6, marginBottom:6, alignItems:'center' }}>
-        <Inp value={nine.name} onChange={v=>onChange({...nine,name:v})} placeholder="Nine name" style={{ flex:1, fontSize:13, padding:'5px 8px' }}/>
-        {onRemove && <Btn small variant="danger" onClick={onRemove} style={{ padding:'4px 8px' }}>✕</Btn>}
+    <div style={{ background:'#fafafa', borderRadius:10, padding:'8px 10px', marginBottom:6 }}>
+      {/* Nine name + remove */}
+      <div style={{ display:'flex', gap:6, marginBottom:7, alignItems:'center' }}>
+        <Inp value={nine.name} onChange={v=>onChange({...nine,name:v})} placeholder="Nine name"
+          style={{ flex:1, fontSize:13, padding:'4px 8px' }}/>
+        {onRemove && <Btn small variant="danger" onClick={onRemove} style={{ padding:'3px 7px' }}>✕</Btn>}
       </div>
 
-      {/* Men's Par */}
-      <div style={{ marginBottom:8 }}>
-        <div style={{ fontSize:10, fontWeight:700, color:'#555', marginBottom:3 }}>
-          Par — Men's <span style={{ color:'#aaa', fontWeight:400 }}>total: {parTotM}</span>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(9,1fr)', gap:3 }}>
-          {nine.pars?.map((par, h) => (
-            <div key={h} style={{ textAlign:'center' }}>
-              <div style={{ fontSize:8, color:'#aaa', marginBottom:1 }}>{idx*9+h+1}</div>
-              <select value={par}
-                onChange={e => { const p=[...nine.pars]; p[h]=parseInt(e.target.value); setPars(p); }}
-                style={{ width:'100%', border:'1px solid #ddd', borderRadius:4, fontSize:11, padding:'2px 0' }}>
-                {[3,4,5,6].map(v=><option key={v} value={v}>{v}</option>)}
-              </select>
-            </div>
-          ))}
-        </div>
+      {/* ── Par ── */}
+      {secHdr('Par', showWomens && parTotW ? `M ${parTotM} · W ${parTotW}` : `total: ${parTotM}`)}
+      {holeNumRow}
+      <div style={{ display:'grid', gridTemplateColumns:'20px repeat(9,1fr)', gap:3, marginBottom:3 }}>
+        <div style={mwLbl('#555')}>M</div>
+        {nine.pars?.map((par, h) => (
+          <select key={h} value={par}
+            onChange={e => { const p=[...nine.pars]; p[h]=parseInt(e.target.value); setPars(p); }}
+            style={cellBox()}>
+            {[3,4,5,6].map(v=><option key={v} value={v}>{v}</option>)}
+          </select>
+        ))}
       </div>
-
-      {/* Women's Par (if different) */}
       {showWomens && (
-        <div style={{ marginBottom:8 }}>
-          <div style={{ fontSize:10, fontWeight:700, color:PINK, marginBottom:3 }}>
-            Par — Women's <span style={{ color:'#aaa', fontWeight:400 }}>(leave same as men's if identical) total: {parTotW||parTotM}</span>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(9,1fr)', gap:3 }}>
-            {(nine.parsWomen || nine.pars || []).map((par, h) => (
-              <div key={h} style={{ textAlign:'center' }}>
-                <div style={{ fontSize:8, color:'#aaa', marginBottom:1 }}>{idx*9+h+1}</div>
-                <select value={par}
-                  onChange={e => {
-                    const base = nine.parsWomen ? [...nine.parsWomen] : [...nine.pars];
-                    base[h] = parseInt(e.target.value);
-                    setParsW(base);
-                  }}
-                  style={{ width:'100%', border:`1px solid ${PINK}55`, borderRadius:4, fontSize:11, padding:'2px 0', background:'#fff0f5' }}>
-                  {[3,4,5,6].map(v=><option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
-            ))}
-          </div>
+        <div style={{ display:'grid', gridTemplateColumns:'20px repeat(9,1fr)', gap:3, marginBottom:6 }}>
+          <div style={mwLbl(PINK)}>W</div>
+          {(nine.parsWomen || nine.pars || []).map((par, h) => (
+            <select key={h} value={par}
+              onChange={e => {
+                const base = nine.parsWomen ? [...nine.parsWomen] : [...nine.pars];
+                base[h] = parseInt(e.target.value);
+                setParsW(base);
+              }}
+              style={cellBox({ border:`1px solid ${PINK}55`, background:'#fff0f5' })}>
+              {[3,4,5,6].map(v=><option key={v} value={v}>{v}</option>)}
+            </select>
+          ))}
         </div>
       )}
 
-      {/* Men's Stroke Index */}
-      <div style={{ marginBottom: showWomens ? 8 : 0 }}>
-        <div style={{ fontSize:10, fontWeight:700, color:'#555', marginBottom:3 }}>Men's Stroke Index (1–18)</div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(9,1fr)', gap:3 }}>
-          {nine.handicaps?.map((hc, h) => (
-            <div key={h} style={{ textAlign:'center' }}>
-              <div style={{ fontSize:8, color:'#aaa', marginBottom:1 }}>{idx*9+h+1}</div>
-              <input type="number" min={1} max={18} value={hc}
-                onChange={e => { const hs=[...nine.handicaps]; hs[h]=parseInt(e.target.value)||1; setHcp(hs); }}
-                style={{ width:'100%', border:'1px solid #ddd', borderRadius:4, fontSize:10, textAlign:'center', padding:'2px 0' }}/>
-            </div>
-          ))}
-        </div>
+      {/* ── Stroke Index ── */}
+      {secHdr('Stroke Index')}
+      {holeNumRow}
+      <div style={{ display:'grid', gridTemplateColumns:'20px repeat(9,1fr)', gap:3, marginBottom:3 }}>
+        <div style={mwLbl('#555')}>M</div>
+        {(nine.handicaps || []).map((hc, h) => {
+          const isDup = dups.has(h);
+          return (
+            <select key={h} value={hc}
+              onChange={e => { const hs=[...nine.handicaps]; hs[h]=parseInt(e.target.value); setHcp(hs); }}
+              style={cellBox(isDup ? { border:`1.5px solid ${ERR}`, color:ERR, background:'#fce8e8' } : {})}>
+              {validSI.map(v=><option key={v} value={v}>{v}</option>)}
+            </select>
+          );
+        })}
       </div>
-
-      {/* Women's Stroke Index */}
       {showWomens && (
-        <div>
-          <div style={{ fontSize:10, fontWeight:700, color:PINK, marginBottom:3 }}>Women's Stroke Index (1–18)</div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(9,1fr)', gap:3 }}>
-            {(nine.handicapsWomen || nine.handicaps || []).map((hc, h) => (
-              <div key={h} style={{ textAlign:'center' }}>
-                <div style={{ fontSize:8, color:'#aaa', marginBottom:1 }}>{idx*9+h+1}</div>
-                <input type="number" min={1} max={18} value={hc}
-                  onChange={e => {
-                    const base = nine.handicapsWomen ? [...nine.handicapsWomen] : [...nine.handicaps];
-                    base[h] = parseInt(e.target.value)||1;
-                    setHcpW(base);
-                  }}
-                  style={{ width:'100%', border:`1px solid ${PINK}55`, borderRadius:4, fontSize:10, textAlign:'center', padding:'2px 0', background:'#fff0f5' }}/>
-              </div>
-            ))}
-          </div>
+        <div style={{ display:'grid', gridTemplateColumns:'20px repeat(9,1fr)', gap:3, marginBottom: hasSIErr ? 4 : 0 }}>
+          <div style={mwLbl(PINK)}>W</div>
+          {(nine.handicapsWomen || nine.handicaps || []).map((hc, h) => {
+            const isDup = dupsW.has(h);
+            return (
+              <select key={h} value={hc}
+                onChange={e => {
+                  const base = nine.handicapsWomen ? [...nine.handicapsWomen] : [...nine.handicaps];
+                  base[h] = parseInt(e.target.value);
+                  setHcpW(base);
+                }}
+                style={cellBox(isDup
+                  ? { border:`1.5px solid ${ERR}`, color:ERR, background:'#fce8e8' }
+                  : { border:`1px solid ${PINK}55`, background:'#fff0f5' })}>
+                {validSI.map(v=><option key={v} value={v}>{v}</option>)}
+              </select>
+            );
+          })}
+        </div>
+      )}
+
+      {hasSIErr && (
+        <div style={{ fontSize:10, color:ERR, marginTop:4, fontWeight:600 }}>
+          Duplicate stroke index — each value must appear exactly once per nine.
         </div>
       )}
     </div>
@@ -247,14 +312,14 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const [showWomens, setShowWomens] = useState(
     !!(initialData?.nines?.some(n => n.handicapsWomen?.length || n.parsWomen?.length))
   );
-  const [activeTab, setActiveTab] = useState('holes'); // 'holes' | 'tees'
+  const [activeTab, setActiveTab] = useState('holes');
+  const [saveErr,   setSaveErr]   = useState('');
 
   // B-12: Setup keypad — ScoreKeypad_Contract §10.5
   const [setupKp, setSetupKp] = useState(null);
   const setupKpRef    = useRef(null);
   const setupKpCbsRef = useRef({ onChange: null, onCommit: null });
 
-  // Global touchend dismiss
   useEffect(() => {
     if (!setupKp) return;
     const handler = (e) => {
@@ -280,11 +345,11 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const [nines, setNines] = useState(() => {
     if (initialData?.nines?.length) {
       return initialData.nines.map(n => ({
-        name:            n.name || '',
-        pars:            n.pars?.length            ? [...n.pars]            : [4,4,3,5,4,3,4,5,4],
-        parsWomen:       n.parsWomen?.length        ? [...n.parsWomen]       : null,
-        handicaps:       n.handicaps?.length        ? [...n.handicaps]       : [1,3,5,7,9,11,13,15,17],
-        handicapsWomen:  n.handicapsWomen?.length   ? [...n.handicapsWomen]  : null,
+        name:           n.name || '',
+        pars:           n.pars?.length           ? [...n.pars]           : [4,4,3,5,4,3,4,5,4],
+        parsWomen:      n.parsWomen?.length       ? [...n.parsWomen]      : null,
+        handicaps:      n.handicaps?.length       ? [...n.handicaps]      : [1,3,5,7,9,11,13,15,17],
+        handicapsWomen: n.handicapsWomen?.length  ? [...n.handicapsWomen] : null,
       }));
     }
     return [
@@ -294,16 +359,14 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   });
 
   const [tees, setTees] = useState(() => {
-    if (initialData?.tees?.length) {
-      return initialData.tees.map(t => ({ ...t }));
-    }
+    if (initialData?.tees?.length) return initialData.tees.map(t => ({ ...t }));
     return [{ name:'White', rating:'', slope:'', ratingW:'', slopeW:'', nineYards:[], totalYards:'' }];
   });
 
-  const updateNine = (i, val) => setNines(n => { const a=[...n]; a[i]=val; return a; });
+  const updateNine = (i, val) => { setSaveErr(''); setNines(n => { const a=[...n]; a[i]=val; return a; }); };
   const addNine    = () => setNines(n => [...n, {
     name:'', pars:[4,4,3,5,4,3,4,5,4], parsWomen:null,
-    handicaps:[1,3,5,7,9,11,13,15,17], handicapsWomen:null,
+    handicaps:[1,2,3,4,5,6,7,8,9], handicapsWomen:null,
   }]);
   const removeNine = (i) => setNines(n => n.filter((_,j) => j!==i));
 
@@ -311,22 +374,32 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const addTee    = () => setTees(t => [...t, { name:'', rating:'', slope:'', ratingW:'', slopeW:'', nineYards:[], totalYards:'' }]);
   const removeTee = (i) => setTees(t => t.filter((_,j) => j!==i));
 
+  const siErrorNines = () =>
+    nines.map((n, i) => {
+      const dM = dupIndices(n.handicaps || []);
+      const dW = showWomens ? dupIndices(n.handicapsWomen || n.handicaps || []) : new Set();
+      return (dM.size > 0 || dW.size > 0) ? (n.name || `Nine ${i+1}`) : null;
+    }).filter(Boolean);
+
   const handleSave = () => {
     if (!name.trim()) return;
+    const badNines = siErrorNines();
+    if (badNines.length) {
+      setSaveErr(`Fix duplicate stroke index values in: ${badNines.join(', ')}`);
+      setActiveTab('holes');
+      return;
+    }
+    setSaveErr('');
     const cleanNines = nines.map(n => {
-      // Spread all nine fields to avoid accidentally dropping any
       const out = { ...n, name: n.name, pars: n.pars, handicaps: n.handicaps };
-      if (showWomens && n.parsWomen)      out.parsWomen      = n.parsWomen;
-      else                               delete out.parsWomen;
-      if (showWomens && n.handicapsWomen) out.handicapsWomen = n.handicapsWomen;
-      else                               delete out.handicapsWomen;
+      if (showWomens && n.parsWomen)       out.parsWomen      = n.parsWomen;
+      else                                delete out.parsWomen;
+      if (showWomens && n.handicapsWomen)  out.handicapsWomen = n.handicapsWomen;
+      else                                delete out.handicapsWomen;
       return out;
     });
     const cleanTees = tees.map(t => {
-      // Spread all existing tee fields first so nothing is silently dropped,
-      // then parse/coerce the editable numeric fields.
       const out = { ...t };
-      // Coerce numeric fields — keep as numbers, or delete if blank
       if (t.rating  !== '' && t.rating  != null) out.rating  = parseFloat(t.rating);
       else delete out.rating;
       if (t.slope   !== '' && t.slope   != null) out.slope   = parseInt(t.slope);
@@ -335,7 +408,6 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
       else delete out.ratingW;
       if (t.slopeW  !== '' && t.slopeW  != null) out.slopeW  = parseInt(t.slopeW);
       else delete out.slopeW;
-      // nineYards — rebuild from TeeRow state, compute totalYards
       const cleanNY = (t.nineYards||[]).map(y => parseInt(y)||0);
       if (cleanNY.some(y => y > 0)) {
         out.nineYards  = cleanNY;
@@ -353,9 +425,9 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   };
 
   const tabStyle = active => ({
-    flex:1, padding:'8px 4px', fontSize:12, fontWeight:700, border:'none', cursor:'pointer',
+    flex:1, padding:'7px 4px', fontSize:12, fontWeight:700, border:'none', cursor:'pointer',
     background: active ? G : '#f0f8f0', color: active ? '#fff' : '#888',
-    borderRadius: active ? 8 : 0, transition: 'all .15s',
+    borderRadius: active ? 8 : 0, transition:'all .15s',
   });
 
   return (
@@ -366,16 +438,13 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
           <button onClick={onClose} style={{ border:'none', background:'none', fontSize:24, cursor:'pointer', color:'#aaa' }}>×</button>
         </div>
 
-        {/* Basic info */}
-        <Inp value={name}    onChange={setName}    placeholder="Course name *" style={{ marginBottom:6 }}/>
+        <Inp value={name}    onChange={setName}    placeholder="Course name *"          style={{ marginBottom:6 }}/>
         <Inp value={loc}     onChange={setLoc}     placeholder="City, State (optional)" style={{ marginBottom:6 }}/>
-        <Inp value={website} onChange={setWebsite} placeholder="Website (optional)" style={{ marginBottom:12 }}/>
+        <Inp value={website} onChange={setWebsite} placeholder="Website (optional)"     style={{ marginBottom:12 }}/>
 
         {/* Women's data toggle */}
-        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, padding:'8px 12px', background:'#f8f8f8', borderRadius:10 }}>
-          <div style={{ flex:1, fontSize:12, color:'#555' }}>
-            <strong>Include women's data</strong> — separate par & stroke index for women
-          </div>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12, padding:'7px 12px', background:'#f8f8f8', borderRadius:10 }}>
+          <div style={{ flex:1, fontSize:12, color:'#555' }}><strong>Include women's data</strong></div>
           <button onClick={() => setShowWomens(v => !v)}
             style={{ width:40, height:22, borderRadius:11, border:'none', cursor:'pointer',
               background: showWomens ? PINK : '#ddd', position:'relative', flexShrink:0 }}>
@@ -386,14 +455,15 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
 
         {/* Tab switcher */}
         <div style={{ display:'flex', background:'#f0f8f0', borderRadius:10, padding:3, marginBottom:12, gap:3 }}>
-          <button style={tabStyle(activeTab==='holes')} onClick={()=>setActiveTab('holes')}>Holes & Handicaps</button>
-          <button style={tabStyle(activeTab==='tees')}  onClick={()=>setActiveTab('tees')}>Tee Boxes & Yardage</button>
+          <button style={tabStyle(activeTab==='holes')} onClick={()=>setActiveTab('holes')}>Holes &amp; Handicaps</button>
+          <button style={tabStyle(activeTab==='tees')}  onClick={()=>setActiveTab('tees')}>Tee Boxes &amp; Yardage</button>
         </div>
 
         {activeTab === 'holes' && (
           <div>
             {nines.map((nine, ni) => (
               <NineEditor key={ni} nine={nine} idx={ni}
+                nineCount={nines.length}
                 onChange={v => updateNine(ni, v)}
                 onRemove={nines.length > 1 ? () => removeNine(ni) : null}
                 showWomens={showWomens}
@@ -414,6 +484,12 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
               />
             ))}
             <Btn small variant="outline" onClick={addTee} style={{ marginBottom:8 }}>+ Add Tee</Btn>
+          </div>
+        )}
+
+        {saveErr && (
+          <div style={{ background:'#fce8e8', color:ERR, borderRadius:8, padding:'8px 12px', fontSize:12, marginTop:8, fontWeight:600 }}>
+            {saveErr}
           </div>
         )}
 

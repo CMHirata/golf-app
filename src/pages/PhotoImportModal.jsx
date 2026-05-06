@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { Btn, Inp, G, GA, AMB, AMBBG, RED } from '../components/ui.jsx';
 import { aiParseScorecard } from '../services/courseLib.js';
 import { ls, SK } from '../services/storage.js';
+import ManualCourseModal from './ManualCourseModal.jsx';
 
 const IMPORT_PROMPT = `You are analyzing a golf scorecard image. Extract all data and return a single JSON object. Do not include any explanation, markdown, or code fences — just the raw JSON.
 
@@ -75,6 +76,9 @@ export default function PhotoImportModal({ onImport, onClose }) {
   const [keyPrompt, setKeyPrompt]     = useState(false);
   const [parseStatus, setParseStatus] = useState('');
   const [keyDraft, setKeyDraft]       = useState('');
+
+  // Review step state
+  const [reviewing, setReviewing] = useState(false);
 
   // Assistant mode state
   const [promptCopied, setPromptCopied] = useState(false);
@@ -224,13 +228,17 @@ export default function PhotoImportModal({ onImport, onClose }) {
   // ── Shared finish ───────────────────────────────────────────────────────────
 
   const finish = () => {
+    setReviewing(true);
+  };
+
+  // Build initialData for ManualCourseModal from parsed + manFill overrides
+  const buildInitialData = () => {
     const c = JSON.parse(JSON.stringify(parsed || { courseName: 'Imported', nines: [], tees: [{ name: "Men's" }] }));
     if (!c.tees?.length) c.tees = [{ name: "Men's" }];
     if (manFill.rating) c.tees[0].rating = parseFloat(manFill.rating);
     if (manFill.slope)  c.tees[0].slope  = parseInt(manFill.slope);
-    const out = { name: c.courseName, location: c.location || '', nines: c.nines || [], tees: c.tees || [] };
-    if (c.nineComboNames?.length) out.nineComboNames = c.nineComboNames;
-    onImport(out);
+    return { name: c.courseName, location: c.location || '', nines: c.nines || [], tees: c.tees || [],
+      ...(c.nineComboNames?.length ? { nineComboNames: c.nineComboNames } : {}) };
   };
 
   // ── Styles ──────────────────────────────────────────────────────────────────
@@ -304,10 +312,22 @@ export default function PhotoImportModal({ onImport, onClose }) {
       )}
       <div style={{ display:'flex', gap:8 }}>
         <Btn variant="outline" onClick={() => { setParsed(null); setErr(''); setJsonErr(''); setPasteSuccess(false); setJsonDraft(''); }} style={{ flex:1 }}>Retake</Btn>
-        <Btn onClick={finish} style={{ flex:2 }}>Save Course</Btn>
+        <Btn onClick={finish} style={{ flex:2 }}>Review &amp; Save</Btn>
       </div>
     </div>
   );
+
+  // ── Review step ─────────────────────────────────────────────────────────────
+
+  if (reviewing && parsed) {
+    return (
+      <ManualCourseModal
+        initialData={buildInitialData()}
+        onSave={data => { onImport(data); }}
+        onClose={onClose}
+      />
+    );
+  }
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -357,7 +377,7 @@ export default function PhotoImportModal({ onImport, onClose }) {
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
                 {[1,2].map(slot => {
                   const photo  = slot === 1 ? photo1 : photo2;
-                  const labels = ['Front (Ratings)', 'Back (Holes)'];
+                  const labels = ['Front', 'Back'];
                   return (
                     <div key={slot}>
                       <div style={{ fontSize:10, fontWeight:700, color:'#666', marginBottom:4, textAlign:'center' }}>
