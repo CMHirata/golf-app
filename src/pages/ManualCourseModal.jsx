@@ -498,9 +498,8 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   return (
   <>
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center',
-      padding: setupKp ? `16px 16px ${KP_HEIGHT + 8}px` : '16px 16px 80px',
-      overflowY:'auto', maxHeight: setupKp ? `calc(100vh - ${KP_HEIGHT}px)` : '100vh',
-      transition:'max-height .2s, padding .2s' }}>
+      padding:`16px 16px ${setupKp ? KP_HEIGHT + 16 : 80}px`,
+      overflowY:'auto' }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
