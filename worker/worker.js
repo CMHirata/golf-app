@@ -1,268 +1,309 @@
-// Cloudflare Worker — Golf Scorecard Parser (Coordinate + Cross-Anchor)
-// Pass 1: Spatial survey — course name, panel bounding boxes, tee names, ratings
-// Pass 2: Per-panel microscope transcription using coordinates
-// JS: Assemble panels, validate with printed TOT, trigger Pass 3 if mismatch
-// GEMINI_API_KEY set via: wrangler secret put GEMINI_API_KEY
+// Cloudflare Worker — Golf Scorecard Parser (Mistral OCR)
+// Uses Mistral OCR API for table extraction, then Gemini for structured interpretation
+// MISTRAL_API_KEY and GEMINI_API_KEY set via: wrangler secret put KEY_NAME
 
-const MODEL    = 'gemini-2.5-flash';
-const BASE_URL = 'https://generativelanguage.googleapis.com';
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_URL   = 'https://generativelanguage.googleapis.com';
 
-const SCORECARD_SI =
-  'You are an OCR transcription engine for golf scorecards. ' +
-  'Read numbers exactly as printed. Never guess or interpolate. ' +
-  'Each nine-hole panel is an independent data island. ' +
-  'Use null for any illegible value.';
+// ── Mistral OCR ───────────────────────────────────────────────────────────────
 
-async function uploadImage(b64, mediaType, name, apiKey) {
-  const binary  = atob(b64);
-  const bytes   = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const byteLen = bytes.length;
-
-  const initRes = await fetch(
-    `${BASE_URL}/upload/v1beta/files?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'X-Goog-Upload-Protocol':              'resumable',
-        'X-Goog-Upload-Command':               'start',
-        'X-Goog-Upload-Header-Content-Type':   mediaType,
-        'X-Goog-Upload-Header-Content-Length': byteLen.toString(),
-        'Content-Type':                        'application/json',
-      },
-      body: JSON.stringify({ file: { display_name: name } }),
-    }
-  );
-  if (!initRes.ok) throw new Error(`Files API init (${initRes.status}): ${await initRes.text()}`);
-  const uploadUrl = initRes.headers.get('x-goog-upload-url');
-  if (!uploadUrl) throw new Error('No upload URL from Files API');
-
-  const uploadRes = await fetch(uploadUrl, {
+async function mistralOCR(b64, mediaType, apiKey) {
+  const res = await fetch('https://api.mistral.ai/v1/ocr', {
     method: 'POST',
     headers: {
-      'Content-Type':          mediaType,
-      'Content-Length':        byteLen.toString(),
-      'X-Goog-Upload-Offset':  '0',
-      'X-Goog-Upload-Command': 'upload, finalize',
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${apiKey}`,
     },
-    body: bytes,
+    body: JSON.stringify({
+      model:    'mistral-ocr-latest',
+      document: {
+        type:      'image_url',
+        image_url: `data:${mediaType};base64,${b64}`,
+      },
+      table_format: 'html',
+    }),
   });
-  if (!uploadRes.ok) throw new Error(`Files API upload (${uploadRes.status}): ${await uploadRes.text()}`);
-  const fileData = await uploadRes.json();
-  const uri = fileData?.file?.uri;
-  if (!uri) throw new Error(`No URI from Files API: ${JSON.stringify(fileData)}`);
-  return { uri, mimeType: mediaType };
+
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Mistral OCR ${res.status}: ${txt}`);
+  }
+
+  const data = await res.json();
+  console.log('Mistral raw response keys:', Object.keys(data).join(','));
+
+  // Debug: check page structure
+  if (data.pages && data.pages[0]) {
+    const p0 = data.pages[0];
+    console.log('Page 0 keys:', Object.keys(p0).join(','));
+    console.log('Page 0 tables type:', typeof p0.tables, Array.isArray(p0.tables) ? 'array len:'+p0.tables.length : '');
+    if (p0.tables && p0.tables.length > 0) {
+      console.log('First table keys:', Object.keys(p0.tables[0]).join(','));
+      console.log('First table id:', p0.tables[0].id);
+      console.log('First table content preview:', (p0.tables[0].content || '').slice(0, 100));
+    }
+  }
+
+  // Tables are in page.tables as array of {id, content} objects
+  let markdown = (data.pages || []).map(p => {
+    let text = p.markdown || '';
+    const tables = p.tables || [];
+    for (const table of tables) {
+      const placeholder = `[${table.id}](${table.id})`;
+      text = text.replace(placeholder, table.content || '');
+    }
+    return text;
+  }).join('\n\n');
+
+  console.log('Mistral OCR markdown length:', markdown.length);
+  console.log('Mistral OCR preview:', markdown.slice(0, 500));
+  return markdown;
 }
 
-async function geminiText(imageParts, prompt, apiKey, attempt = 1) {
-  const body = {
-    system_instruction: { parts: [{ text: SCORECARD_SI }] },
-    contents: [{ parts: [...imageParts, { text: prompt }] }],
-    generationConfig: { temperature: 0 },
-  };
-  const res = await fetch(
-    `${BASE_URL}/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-  );
-  if (res.status === 503 && attempt < 4) {
-    const delay = attempt * 5000;
-    console.log(`503 attempt ${attempt}, retry in ${delay}ms`);
-    await new Promise(r => setTimeout(r, delay));
-    return geminiText(imageParts, prompt, apiKey, attempt + 1);
-  }
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-  const d    = await res.json();
-  const text = d.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  if (!text) throw new Error('Gemini returned no content');
-  return text.trim();
-}
+// ── Parse Mistral OCR output ──────────────────────────────────────────────────
 
 function normalizeTee(name) {
   return name.split('/').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join('/');
 }
 
-// Parse Pass 1 layout response
-function parseLayout(text) {
-  const result = { courseName: null, location: null, panels: [], tees: [], ratingsText: null };
-  for (const line of text.split('\n').map(l => l.trim()).filter(Boolean)) {
-    if (line.toUpperCase().startsWith('COURSE:')) {
-      result.courseName = line.slice(line.indexOf(':') + 1).trim();
-    } else if (line.toUpperCase().startsWith('LOCATION:')) {
-      const raw   = line.slice(line.indexOf(':') + 1).trim();
-      const parts = raw.split(',').map(p => p.trim());
-      if (parts.length >= 2) {
-        const state = parts[parts.length - 1].replace(/\d{5}(-\d{4})?/, '').trim();
-        const city  = parts[parts.length - 2].replace(/^\d+\s+\S+\s+/, '').trim();
-        result.location = `${city}, ${state}`;
-      } else {
-        result.location = raw;
-      }
-    } else if (line.toUpperCase().startsWith('PANELS:')) {
-      // Parse: PANELS: South:[0,0,1000,333], North:[0,334,1000,666]
-      const panelStr = line.slice(line.indexOf(':') + 1).trim();
-      // Split on pattern: ], followed by optional space and a word character
-      const panelParts = panelStr.split(/\],\s*(?=[A-Za-z])/);
-      for (const part of panelParts) {
-        const bracketIdx = part.indexOf(':[');
-        if (bracketIdx === -1) continue;
-        const name   = part.slice(0, bracketIdx).trim();
-        const coords = part.slice(bracketIdx + 1).replace(/[\[\]]/g, '').trim();
-        if (name && coords) result.panels.push({ name, coords });
-      }
-    } else if (line.toUpperCase().startsWith('TEES:')) {
-      result.tees = line.slice(line.indexOf(':') + 1)
-        .split(',').map(t => t.replace(/[\[\]]/g, '').trim()).filter(Boolean);
-    } else if (line.toUpperCase().startsWith('RATINGS:')) {
-      result.ratingsText = line.slice(line.indexOf(':') + 1).trim();
-    }
+function parseHTMLTable(html) {
+  // Extract rows from HTML table
+  const rows = [];
+  const rowMatches = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
+  for (const rowMatch of rowMatches) {
+    const cells = [...rowMatch[1].matchAll(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi)]
+      .map(m => m[1].replace(/<[^>]+>/g, '').trim());
+    if (cells.length > 0) rows.push(cells);
   }
-  return result;
+  return rows;
 }
 
-// Parse a single panel transcription into arrays
-function parsePanel(text, teeNames) {
-  const panel = { par: [], parWomen: [], handicapMen: [], handicapWomen: [], parTot: null, tees: {} };
+function parseOCROutput(markdown) {
+  const data = {
+    courseName:    null,
+    location:      null,
+    nines:         [],
+    par:           [],
+    parWomen:      [],
+    handicapMen:   [],
+    handicapWomen: [],
+    tees:          {},
+    ratings:       {},
+  };
 
-  for (const line of text.split('\n').map(l => l.trim()).filter(Boolean)) {
-    if (line.match(/^Hole\s+\d+/i)) {
-      const getVal = (key) => {
-        let m = line.match(new RegExp(key + '\\[([^\\]]*?)\\]'));
-        if (!m) m = line.match(new RegExp(key + '(\\d+(?:\\.\\d+)?)(?:[,\\s]|$)'));
-        if (!m) return null;
-        const v = m[1].trim();
-        if (v === 'null' || v === '' || v === '-') return null;
-        const n = parseFloat(v);
+  // Extract course name and location from text before tables
+  const lines = markdown.split('\n').map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    if (line.match(/^#\s+/)) {
+      // Markdown heading — likely course name
+      if (!data.courseName) data.courseName = line.replace(/^#+\s+/, '').trim();
+    }
+  }
+
+  // Extract HTML tables
+  const tableMatches = [...markdown.matchAll(/<table[\s\S]*?<\/table>/gi)];
+  console.log('Tables found:', tableMatches.length);
+
+  for (const tableMatch of tableMatches) {
+    const rows = parseHTMLTable(tableMatch[0]);
+    if (rows.length === 0) continue;
+
+    // Determine what kind of table this is
+    const firstRow = rows[0].map(c => c.toUpperCase());
+    const hasHole  = firstRow.some(c => c === 'HOLE' || c === '#');
+    const hasPar   = rows.some(r => r[0]?.toUpperCase() === 'PAR');
+    const hasRating = rows.some(r => r[0]?.toUpperCase() === 'RATING' || r[0]?.toUpperCase() === 'TEE');
+
+    if (hasRating && !hasPar) {
+      // Ratings table
+      parseRatingsTable(rows, data.ratings);
+    } else if (hasHole || hasPar) {
+      // Scorecard grid — parse hole data
+      parseScorecardTable(rows, data);
+    }
+  }
+
+  return data;
+}
+
+function parseScorecardTable(rows, data) {
+  // Find header row with hole numbers
+  let holeRow = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const upper = rows[i].map(c => c.toUpperCase());
+    if (upper[0] === 'HOLE' || upper[0] === '#') { holeRow = i; break; }
+    if (rows[i].some(c => c === '1' || c === '10')) { holeRow = i; break; }
+  }
+
+  // Find TOT column index
+  let totIdx = -1;
+  if (holeRow >= 0) {
+    const hr = rows[holeRow];
+    totIdx = hr.findIndex(c => c.toUpperCase() === 'TOT' || c.toUpperCase() === 'OUT' || c.toUpperCase() === 'TOTAL');
+  }
+
+  // Find nine name
+  for (const row of rows) {
+    const label = row[0]?.toUpperCase();
+    if (label === 'SOUTH' || label === 'NORTH' || label === 'EAST' ||
+        label === 'FRONT' || label === 'BACK'  || label === 'THIRD') {
+      if (!data.nines.includes(row[0])) data.nines.push(row[0]);
+    }
+  }
+
+  // Parse data rows
+  for (const row of rows) {
+    if (row.length < 2) continue;
+    const label = row[0]?.toUpperCase().trim();
+    if (!label) continue;
+
+    // Get hole values (skip label and TOT columns)
+    const getVals = () => {
+      const end = totIdx > 0 ? totIdx : row.length;
+      return row.slice(1, end).map(v => {
+        const n = parseFloat(v.replace(/,/g, ''));
         return isNaN(n) ? null : n;
-      };
-
-      panel.par.push(getVal('PAR'));
-      const pw = getVal('PAR_W');
-      if (pw !== null) panel.parWomen.push(pw);
-      panel.handicapMen.push(getVal('HCP_M'));
-      panel.handicapWomen.push(getVal('HCP_W'));
-
-      // Yardages: Y_TeeName[value] or Y_TeeName512
-      const yMatches = [...line.matchAll(/Y_([A-Za-z/]+)(?:\[([^\]]*?)\]|(\d+))/g)];
-      for (const m of yMatches) {
-        const teeName = normalizeTee(m[1].trim());
-        if (!panel.tees[teeName]) panel.tees[teeName] = [];
-        const v = (m[2] !== undefined ? m[2] : m[3] || '').trim();
-        panel.tees[teeName].push(v === 'null' || v === '' ? null : parseFloat(v));
-      }
-    } else if (line.match(/^Summary/i)) {
-      const m = line.match(/PAR\[(\d+)\]/);
-      if (m) panel.parTot = parseInt(m[1]);
-    }
-  }
-  return panel;
-}
-
-function parseRatings(str, tees) {
-  if (!str) return;
-  const pm  = /([\w/]+)\s+men\s+([\d.]+)\/([\d]+)/gi;
-  const pw  = /([\w/]+)\s+women\s+([\d.]+)\/([\d]+)/gi;
-  let m;
-  while ((m = pm.exec(str))  !== null) {
-    const k = normalizeTee(m[1]);
-    if (!tees[k]) tees[k] = {};
-    tees[k].menRating = parseFloat(m[2]);
-    tees[k].menSlope  = parseInt(m[3]);
-  }
-  while ((m = pw.exec(str)) !== null) {
-    const k = normalizeTee(m[1]);
-    if (!tees[k]) tees[k] = {};
-    tees[k].womenRating = parseFloat(m[2]);
-    tees[k].womenSlope  = parseInt(m[3]);
-  }
-}
-
-function validate(panels) {
-  const issues = [];
-  panels.forEach((panel, i) => {
-    const sum    = panel.par.filter(v => v != null).reduce((a, b) => a + b, 0);
-    const target = panel.parTot;
-    const name   = panel.name || `Nine ${i+1}`;
-    if (target !== null && sum !== target) {
-      issues.push({ nine: i, name, sum, target, message: `${name} par sum ${sum} but card shows ${target}` });
-    } else if (target === null && (sum < 27 || sum > 40)) {
-      issues.push({ nine: i, name, sum, target: null, message: `${name} par sum ${sum} outside 27-40` });
-    }
-    // Handicap uniqueness 1-9
-    const mh = panel.handicapMen.filter(v => v != null);
-    if (mh.length === 9) {
-      const sorted = [...mh].sort((a,b) => a-b);
-      if (JSON.stringify(sorted) !== JSON.stringify([1,2,3,4,5,6,7,8,9])) {
-        const dups = mh.filter((v,j,a) => a.indexOf(v) !== j);
-        issues.push({ nine: i, name, message: `${name} mens HCP not unique 1-9${dups.length ? ', dups: '+dups : ''}` });
-      }
-    }
-    const wh = panel.handicapWomen.filter(v => v != null);
-    if (wh.length === 9) {
-      const sorted = [...wh].sort((a,b) => a-b);
-      if (JSON.stringify(sorted) !== JSON.stringify([1,2,3,4,5,6,7,8,9])) {
-        const dups = wh.filter((v,j,a) => a.indexOf(v) !== j);
-        issues.push({ nine: i, name, message: `${name} womens HCP not unique 1-9${dups.length ? ', dups: '+dups : ''}` });
-      }
-    }
-  });
-  return issues;
-}
-
-function buildSchema(courseName, location, panels, teesData) {
-  const nineSize = 9;
-  const n        = panels.length * nineSize;
-  const nines    = panels.map(panel => {
-    const nine = { name: panel.name };
-    const pars = panel.par.filter(v => v != null);
-    if (pars.length) nine.pars = pars;
-    const parsW = panel.parWomen.filter(v => v != null);
-    if (parsW.length && JSON.stringify(parsW) !== JSON.stringify(pars)) nine.parsWomen = parsW;
-    const hcpM = panel.handicapMen.filter(v => v != null);
-    if (hcpM.length) nine.handicaps = hcpM;
-    const hcpW = panel.handicapWomen.filter(v => v != null);
-    if (hcpW.length) nine.handicapsWomen = hcpW;
-    return nine;
-  });
-
-  // Merge per-panel tee yardages into full-course tee objects
-  const teeMap = {};
-  // Start with ratings — map internal field names to courseLib field names
-  for (const [name, info] of Object.entries(teesData)) {
-    teeMap[name] = {
-      name,
-      rating:  info.menRating,
-      slope:   info.menSlope,
-      ratingW: info.womenRating,
-      slopeW:  info.womenSlope,
+      });
     };
-    // Remove undefined fields
-    for (const k of Object.keys(teeMap[name])) {
-      if (teeMap[name][k] === undefined) delete teeMap[name][k];
+
+    if (label === 'PAR' || label === "MEN'S PAR" || label === 'MENS PAR') {
+      const vals = getVals();
+      data.par = [...data.par, ...vals];
+    } else if (label === "WOMEN'S PAR" || label === 'WOMENS PAR' || label === 'PAR_W') {
+      const vals = getVals();
+      data.parWomen = [...data.parWomen, ...vals];
+    } else if (label === "MEN'S HCP" || label === 'MENS HCP' || label === 'HCP' ||
+               label === "MEN'S HANDICAP" || label === 'HCP_M') {
+      const vals = getVals();
+      data.handicapMen = [...data.handicapMen, ...vals];
+    } else if (label === "WOMEN'S HCP" || label === 'WOMENS HCP' || label === "LADIES' HCP" ||
+               label === "WOMEN'S HANDICAP" || label === 'HCP_W') {
+      const vals = getVals();
+      data.handicapWomen = [...data.handicapWomen, ...vals];
+    } else if (label.match(/^(BLACK|BLUE|WHITE|RED|GOLD|GREEN|SILVER)/i)) {
+      // Yardage row
+      const teeName = normalizeTee(row[0].trim());
+      const vals    = getVals();
+      if (!data.tees[teeName]) data.tees[teeName] = { yardages: [] };
+      data.tees[teeName].yardages = [...(data.tees[teeName].yardages || []), ...vals];
     }
   }
-  // Add yardages from panels
-  for (const [teeName, info] of Object.entries(teeMap)) {
-    const allYards = panels.flatMap(p => p.tees[teeName] || Array(9).fill(null));
-    if (allYards.length === n && allYards.some(v => v != null)) {
-      const nineYards = panels.map((p, i) => {
-        const slice = p.tees[teeName] || Array(9).fill(null);
-        const sum   = slice.filter(v => v != null).reduce((a,b) => a+b, 0);
-        return sum > 0 ? sum : null;
-      }).filter(v => v != null);
-      if (nineYards.length === panels.length) {
+}
+
+function parseRatingsTable(rows, ratings) {
+  for (const row of rows) {
+    if (row.length < 3) continue;
+    const tee = normalizeTee(row[0].trim());
+    if (!tee || tee.toUpperCase() === 'TEE') continue;
+
+    // Try to find rating and slope
+    const nums = row.slice(1).map(v => parseFloat(v)).filter(n => !isNaN(n));
+    if (nums.length >= 2) {
+      if (!ratings[tee]) ratings[tee] = {};
+      // Assume first number is rating, second is slope
+      if (nums[0] > 50 && nums[0] < 90) ratings[tee].menRating = nums[0];
+      if (nums[1] > 50 && nums[1] < 160) ratings[tee].menSlope  = nums[1];
+    }
+  }
+}
+
+// ── Gemini for ratings/course info ───────────────────────────────────────────
+
+async function geminiText(imageB64, mediaType, prompt, apiKey) {
+  const body = {
+    contents: [{ parts: [
+      { inline_data: { mime_type: mediaType, data: imageB64 } },
+      { text: prompt },
+    ]}],
+    generationConfig: { temperature: 0 },
+  };
+  const res = await fetch(
+    `${GEMINI_URL}/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+  );
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
+  const d = await res.json();
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+// ── Build courseLib schema ────────────────────────────────────────────────────
+
+function buildSchema(data, ratingsText) {
+  const n        = data.par.length;
+  const nineSize = 9;
+  const nineCount = Math.ceil(n / nineSize);
+  const defaultNames = ['Front', 'Back', 'Third'];
+  const nineNames = data.nines.length === nineCount ? data.nines : defaultNames;
+  const nines = [];
+
+  for (let i = 0; i < nineCount; i++) {
+    const start = i * nineSize;
+    const end   = Math.min(start + nineSize, n);
+    const nine  = { name: nineNames[i] || `Nine ${i+1}` };
+
+    const pars = data.par.slice(start, end).filter(v => v != null);
+    if (pars.length) nine.pars = pars;
+
+    const parsW = data.parWomen.slice(start, end).filter(v => v != null);
+    if (parsW.length && JSON.stringify(parsW) !== JSON.stringify(pars)) nine.parsWomen = parsW;
+
+    const hcpM = data.handicapMen.slice(start, end).filter(v => v != null);
+    if (hcpM.length) nine.handicaps = hcpM;
+
+    const hcpW = data.handicapWomen.slice(start, end).filter(v => v != null);
+    if (hcpW.length) nine.handicapsWomen = hcpW;
+
+    nines.push(nine);
+  }
+
+  // Build tees from ratings text + yardages
+  const teeMap = {};
+
+  // Parse ratings from Gemini text response
+  if (ratingsText) {
+    const pm = /([\w/]+)\s+men\s+([\d.]+)\/([\d]+)/gi;
+    const pw = /([\w/]+)\s+women\s+([\d.]+)\/([\d]+)/gi;
+    let m;
+    while ((m = pm.exec(ratingsText)) !== null) {
+      const k = normalizeTee(m[1]);
+      if (!teeMap[k]) teeMap[k] = { name: k };
+      teeMap[k].rating = parseFloat(m[2]);
+      teeMap[k].slope  = parseInt(m[3]);
+    }
+    while ((m = pw.exec(ratingsText)) !== null) {
+      const k = normalizeTee(m[1]);
+      if (!teeMap[k]) teeMap[k] = { name: k };
+      teeMap[k].ratingW = parseFloat(m[2]);
+      teeMap[k].slopeW  = parseInt(m[3]);
+    }
+  }
+
+  // Add yardages
+  for (const [teeName, info] of Object.entries(data.tees)) {
+    if (!teeMap[teeName]) teeMap[teeName] = { name: teeName };
+    if (Array.isArray(info.yardages) && info.yardages.length === n) {
+      const nineYards = [];
+      for (let i = 0; i < nineCount; i++) {
+        const slice = info.yardages.slice(i * nineSize, (i + 1) * nineSize);
+        const sum   = slice.filter(v => v != null).reduce((a, b) => a + b, 0);
+        if (sum > 0) nineYards.push(sum);
+      }
+      if (nineYards.length === nineCount) {
         teeMap[teeName].nineYards  = nineYards;
-        teeMap[teeName].totalYards = nineYards.reduce((a,b) => a+b, 0);
+        teeMap[teeName].totalYards = nineYards.reduce((a, b) => a + b, 0);
       }
     }
   }
 
   return {
-    courseName: courseName || 'Imported Course',
-    location:   location  || '',
+    courseName: data.courseName || 'Imported Course',
+    location:   data.location  || '',
     nines,
     tees: Object.values(teeMap),
   };
 }
+
+// ── Main handler ──────────────────────────────────────────────────────────────
 
 export default {
   async fetch(request, env) {
@@ -274,8 +315,10 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
     if (request.method !== 'POST')   return new Response('Method Not Allowed', { status: 405, headers: cors });
 
-    const apiKey = env.GEMINI_API_KEY;
-    if (!apiKey) return new Response(JSON.stringify({ error: 'GEMINI_API_KEY not configured' }), {
+    const mistralKey = env.MISTRAL_API_KEY;
+    const geminiKey  = env.GEMINI_API_KEY;
+    console.log('Mistral key present:', !!mistralKey, 'length:', mistralKey?.length);
+    if (!mistralKey) return new Response(JSON.stringify({ error: 'MISTRAL_API_KEY not configured' }), {
       status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
     });
 
@@ -291,123 +334,54 @@ export default {
 
     try {
       const t0 = Date.now();
+      console.log('Processing', photos.length, 'photos with Mistral OCR');
 
-      console.log('Uploading', photos.length, 'images...');
-      const fileUris = await Promise.all(
-        photos.map((p, i) => uploadImage(p.b64, p.mediaType, `scorecard_${i+1}`, apiKey))
+      // Run Mistral OCR on all photos in parallel
+      const ocrResults = await Promise.all(
+        photos.map(p => mistralOCR(p.b64, p.mediaType, mistralKey))
       );
-      console.log('Upload done:', Date.now() - t0, 'ms');
+      console.log('OCR done:', Date.now() - t0, 'ms');
 
-      const imageParts = fileUris.map(f => ({
-        file_data: { mime_type: f.mimeType, file_uri: f.uri },
-      }));
+      // Combine all OCR output
+      const combined = ocrResults.join('\n\n---\n\n');
 
-      // Pass 1 — Spatial survey: panels, tees, ratings
-      console.log('Pass 1 start');
-      const layoutText = await geminiText(
-        imageParts,
-        'Survey this scorecard and output ONLY the following:\n' +
-        'COURSE: (full course name)\n' +
-        'LOCATION: (city, state)\n' +
-        'PANELS: (nine name):[ymin,xmin,ymax,xmax], (nine name):[ymin,xmin,ymax,xmax], ...\n' +
-        '  Use 0-1000 scale. Each panel covers exactly one 9-hole grid.\n' +
-        'TEES: (tee names in order top to bottom, comma separated)\n' +
-        'RATINGS: (tee) men (rating)/(slope), (tee) women (rating)/(slope), ...\n' +
-        'Nothing else. No descriptions.',
-        apiKey
-      );
-      console.log('Pass 1 done:', Date.now() - t0, 'ms');
-      console.log('Layout:', layoutText);
+      // Parse OCR output
+      const data = parseOCROutput(combined);
+      console.log('Parsed:', data.par.length, 'holes,', Object.keys(data.tees).length, 'tees');
+      console.log('PAR:', data.par.join(','));
+      console.log('HCP_M:', data.handicapMen.join(','));
 
-      const layout = parseLayout(layoutText);
-      console.log('Panels:', layout.panels.map(p => `${p.name}:[${p.coords}]`).join(', '));
-      console.log('Tees:', layout.tees.join(', '));
-
-      // Fallback if no panels detected
-      if (layout.panels.length === 0) {
-        layout.panels = [
-          { name: 'Front', coords: '0,0,1000,500' },
-          { name: 'Back',  coords: '0,500,1000,1000' },
-        ];
-        console.log('No panels detected, using default Front/Back split');
-      }
-
-      // Normalize generic panel names to Front/Back/Third
-      const defaultNames = ['Front', 'Back', 'Third'];
-      layout.panels = layout.panels.map((p, i) => {
-        const u = p.name.toUpperCase();
-        if (u.includes('FRONT') || u.includes('1-9')   || u.includes('OUT'))   return { ...p, name: 'Front' };
-        if (u.includes('BACK')  || u.includes('10-18') || u.includes('IN'))     return { ...p, name: 'Back'  };
-        if (u.includes('THIRD') || u.includes('19-27'))                         return { ...p, name: 'Third' };
-        if (/^[A-Z][a-z]+$/.test(p.name))                                       return p; // real name like North/South
-        return { ...p, name: defaultNames[i] || p.name };
-      });
-      console.log('Panels:', layout.panels.map(p => `${p.name}:[${p.coords}]`).join(', '));
-      const teesData = {};
-      if (layout.ratingsText) parseRatings(layout.ratingsText, teesData);
-
-      // Pass 2 — Per-panel microscope transcription
-      const panels = [];
-      for (const panel of layout.panels) {
-        console.log(`Pass 2 panel "${panel.name}" [${panel.coords}] start`);
-        const panelText = await geminiText(
-          imageParts,
-          `Focus strictly on the "${panel.name}" nine-hole panel at coordinates [${panel.coords}] (0-1000 scale).\n` +
-          `This panel contains exactly 9 holes. For each hole number printed at the TOP of its column,\n` +
-          `look STRAIGHT DOWN that column and read: par, womens par (if different row exists), mens handicap, womens handicap, and yardage for every tee.\n\n` +
-          `CRITICAL: Number your output holes 1-9 regardless of what hole numbers are printed on the card.\n` +
-          `Output one line per hole:\n` +
-          `Hole [1]: PAR[value], PAR_W[value], HCP_M[value], HCP_W[value], Y_${layout.tees[0] || 'Tee1'}[value], Y_${layout.tees[1] || 'Tee2'}[value]...\n\n` +
-          `After all 9 holes, you MUST include this summary line using the printed OUT or TOT column total:\n` +
-          `Summary TOT: PAR[value]\n` +
-          `Example: Summary TOT: PAR[36]\n\n` +
-          `CRITICAL: Read exactly 9 holes. Always include Summary TOT. Use null for illegible values. No other output.`,
-          apiKey
+      // Use Gemini for ratings/course info if we have a key
+      let ratingsText = '';
+      if (geminiKey) {
+        console.log('Getting ratings from Gemini...');
+        ratingsText = await geminiText(
+          photos[0].b64, photos[0].mediaType,
+          'Extract ONLY the course name, location, and all tee ratings/slopes from this scorecard.\n' +
+          'Format: COURSE: name\nLOCATION: city, state\n' +
+          'RATINGS: TeeName men rating/slope, TeeName women rating/slope,...\n' +
+          'Nothing else.',
+          geminiKey
         );
-        console.log(`Pass 2 panel "${panel.name}" done:`, Date.now() - t0, 'ms');
-        console.log(`Panel "${panel.name}" text:`, panelText.slice(0, 200));
+        console.log('Ratings:', ratingsText.slice(0, 200));
 
-        const parsed   = parsePanel(panelText, layout.tees);
-        parsed.name    = panel.name;
-        parsed.coords  = panel.coords;
-        panels.push(parsed);
-      }
-
-      // Validate all panels
-      const issues = validate(panels);
-      console.log('Validation:', issues.length ? issues.map(i => i.message).join('; ') : 'none');
-
-      // Pass 3 — Re-read par for panels with sum mismatch
-      const parIssues = issues.filter(i => i.message.includes('par sum'));
-      for (const issue of parIssues) {
-        const panel = panels[issue.nine];
-        console.log(`Pass 3 "${panel.name}" par correction start`);
-        const fix = await geminiText(
-          imageParts,
-          `The "${panel.name}" nine at [${panel.coords}] has a par sum of ${issue.sum} but the card shows ${issue.target}.\n` +
-          `Re-read ONLY the PAR row for this panel. For each hole number at the top of its column,\n` +
-          `look straight down to the PAR row and read the value.\n` +
-          `Output corrected lines only:\n` +
-          `Hole [N]: PAR[corrected value]\n` +
-          `Nothing else.`,
-          apiKey
-        );
-        console.log(`Pass 3 "${panel.name}" done:`, Date.now() - t0, 'ms', fix.slice(0, 150));
-
-        // Merge corrections
-        for (const line of fix.split('\n').map(l => l.trim()).filter(Boolean)) {
-          if (line.match(/^Hole\s+\d+/i)) {
-            const idx = parseInt(line.match(/\d+/)[0]) - 1;
-            const m   = line.match(/PAR\[(\d+)\]/);
-            if (m && idx >= 0 && idx < panel.par.length) {
-              panel.par[idx] = parseFloat(m[1]);
-            }
+        // Extract course name and location from Gemini response
+        for (const line of ratingsText.split('\n')) {
+          if (line.toUpperCase().startsWith('COURSE:') && !data.courseName) {
+            data.courseName = line.slice(line.indexOf(':') + 1).trim();
+          }
+          if (line.toUpperCase().startsWith('LOCATION:') && !data.location) {
+            const raw   = line.slice(line.indexOf(':') + 1).trim();
+            const parts = raw.split(',').map(p => p.trim());
+            data.location = parts.length >= 2
+              ? `${parts[parts.length-2]}, ${parts[parts.length-1].replace(/\d{5}/, '').trim()}`
+              : raw;
           }
         }
       }
 
-      const result = buildSchema(layout.courseName, layout.location, panels, teesData);
-      console.log('Done:', Date.now() - t0, 'ms', result.courseName, result.nines.length, 'nines', result.tees.length, 'tees');
+      const result = buildSchema(data, ratingsText);
+      console.log('Done:', Date.now() - t0, 'ms', result.courseName);
 
       return new Response(JSON.stringify(result), {
         status: 200, headers: { ...cors, 'Content-Type': 'application/json' },
