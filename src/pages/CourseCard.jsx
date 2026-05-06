@@ -50,7 +50,7 @@ export default function CourseCard({ course }) {
             <div style={{ display:'grid', gridTemplateColumns:'repeat(9,1fr)', gap:3, textAlign:'center' }}>
               {pars?.map((par, h) => (
                 <div key={h} style={{ background: isW ? '#fff0f5' : '#fafafa', borderRadius:4, padding:'3px 0' }}>
-                  <div style={{ fontSize:8, color:'#aaa' }}>{ni*9+h+1}</div>
+                  <div style={{ fontSize:8, color:'#aaa' }}>{h+1}</div>
                   <div style={{ fontSize:12, fontWeight:700, color:accentColor }}>{par}</div>
                   <div style={{ fontSize:9, color: isW ? `${PINK}99` : '#bbb' }}>{hcps?.[h] ?? ''}</div>
                 </div>
@@ -80,8 +80,31 @@ export default function CourseCard({ course }) {
                 {course.tees.map((t, ti) => {
                   const rating = isW ? (t.ratingW ?? '—') : (t.rating ?? '—');
                   const slope  = isW ? (t.slopeW  ?? '—') : (t.slope  ?? '—');
-                  const yards  = t.totalYards || t.nineYards?.reduce((a,b) => a+b, 0) || '—';
-                  const nineStr = t.nineYards?.length ? t.nineYards.join(' / ') : null;
+                  const nineCount = course.nines?.length || 2;
+                  const ny = t.nineYards;
+
+                  // Yardage display — depends on number of nines
+                  let yardsMain, yardsSub;
+                  if (nineCount === 3 && ny?.length === 3) {
+                    // 27-hole: show three 18-hole combos
+                    const comboTotals = `${ny[0]+ny[1]} / ${ny[1]+ny[2]} / ${ny[2]+ny[0]}`;
+                    yardsMain = comboTotals;
+                    if (course.nineComboNames?.length === 3) {
+                      // Use combo names from card (e.g. South/North, North/East, East/South)
+                      yardsSub = course.nineComboNames.join(' · ');
+                    } else {
+                      // Fallback: derive from nine names
+                      const names = course.nines.map(n => n.name?.[0] || '?');
+                      yardsSub = `${names[0]}/${names[1]} · ${names[1]}/${names[2]} · ${names[2]}/${names[0]}`;
+                    }
+                  } else if (ny?.length) {
+                    yardsMain = t.totalYards || ny.reduce((a,b) => a+b, 0);
+                    yardsSub  = ny.join(' / ');
+                  } else {
+                    yardsMain = t.totalYards || '—';
+                    yardsSub  = null;
+                  }
+
                   // Dim rows that have no women's data when in women's mode
                   const dimmed = isW && !t.ratingW;
                   return (
@@ -94,8 +117,8 @@ export default function CourseCard({ course }) {
                       <td style={{ textAlign:'center', padding:'5px 6px', color:'#333' }}>{rating}</td>
                       <td style={{ textAlign:'center', padding:'5px 6px', color:'#333' }}>{slope}</td>
                       <td style={{ textAlign:'center', padding:'5px 6px', color:'#555' }}>
-                        <span style={{ fontWeight:700 }}>{yards}</span>
-                        {nineStr && <div style={{ fontSize:9, color:'#aaa', marginTop:1 }}>{nineStr}</div>}
+                        <span style={{ fontWeight:700 }}>{yardsMain}</span>
+                        {yardsSub && <div style={{ fontSize:9, color:'#aaa', marginTop:1 }}>{yardsSub}</div>}
                       </td>
                     </tr>
                   );

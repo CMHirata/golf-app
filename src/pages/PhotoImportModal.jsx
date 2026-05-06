@@ -197,7 +197,8 @@ export default function PhotoImportModal({ onImport, onClose }) {
       if (!text?.trim()) { setJsonErr('Clipboard is empty — copy the JSON from Gemini first.'); return; }
       processJsonText(text.trim());
     } catch(e) {
-      setJsonErr('Could not read clipboard — paste the JSON into the box below instead.');
+      // iOS requires user permission — if denied or unavailable, show manual paste area
+      setJsonErr('Tap the field below and use Paste to enter the JSON manually.');
     }
   };
 
@@ -226,7 +227,9 @@ export default function PhotoImportModal({ onImport, onClose }) {
     if (!c.tees?.length) c.tees = [{ name: "Men's" }];
     if (manFill.rating) c.tees[0].rating = parseFloat(manFill.rating);
     if (manFill.slope)  c.tees[0].slope  = parseInt(manFill.slope);
-    onImport({ name: c.courseName, location: c.location || '', nines: c.nines || [], tees: c.tees || [] });
+    const out = { name: c.courseName, location: c.location || '', nines: c.nines || [], tees: c.tees || [] };
+    if (c.nineComboNames?.length) out.nineComboNames = c.nineComboNames;
+    onImport(out);
   };
 
   // ── Styles ──────────────────────────────────────────────────────────────────
@@ -275,8 +278,8 @@ export default function PhotoImportModal({ onImport, onClose }) {
         ))}
         {parsed.tees?.map((t,i) => (
           <div key={i} style={{ fontSize:12, color:'#555', marginBottom:2 }}>
-            • {t.name}: M {t.rating||'—'}/{t.slope||'—'}
-            {t.ratingW ? ` · W ${t.ratingW}/${t.slopeW||'—'}` : ''}
+            • {t.name}: M {t.rating != null ? Number(t.rating).toFixed(1) : '—'}/{t.slope||'—'}
+            {t.ratingW ? ` · W ${Number(t.ratingW).toFixed(1)}/${t.slopeW||'—'}` : ''}
             {t.totalYards ? ` · ${t.totalYards} yds` : ''}
           </div>
         ))}
@@ -323,11 +326,17 @@ export default function PhotoImportModal({ onImport, onClose }) {
         {/* Mode tabs */}
         {!parsed && (
           <div style={{ display:'flex', gap:4, background:'#f0f0f0', borderRadius:10, padding:3, marginBottom:14 }}>
-            <button style={tabStyle(aiMode==='photo')}    onClick={() => { setAiMode('photo');     setErr(''); setJsonErr(''); }}>📷 Auto Scan</button>
-            <button style={tabStyle(aiMode==='assistant')} onClick={() => { setAiMode('assistant'); setErr(''); setJsonErr(''); }}>🤖 AI Assistant</button>
+            <button style={tabStyle(aiMode==='photo')}    onClick={() => { setAiMode('photo');     setErr(''); setJsonErr(''); }}>Auto Scan</button>
+            <button style={tabStyle(aiMode==='assistant')} onClick={() => { setAiMode('assistant'); setErr(''); setJsonErr(''); }}>AI Assistant</button>
           </div>
         )}
 
+        {/* Auto Scan in-development notice */}
+        {aiMode === 'photo' && !parsed && !loading && (
+          <div style={{ background:'#fff3cd', border:'1px solid #ffc107', borderRadius:8, padding:'8px 11px', fontSize:12, color:'#856404', marginBottom:10 }}>
+            Auto Scan is in development and may produce inaccurate results. Use AI Assistant for reliable imports.
+          </div>
+        )}
         {err     && <div style={{ background:'#fce8e8', color:RED, borderRadius:8, padding:'9px 12px', fontSize:13, marginBottom:10 }}>{err}</div>}
         {jsonErr && <div style={{ background:'#fce8e8', color:RED, borderRadius:8, padding:'9px 12px', fontSize:13, marginBottom:10 }}>{jsonErr}</div>}
 
@@ -340,9 +349,6 @@ export default function PhotoImportModal({ onImport, onClose }) {
             </div>
           ) : parsed ? renderParsedResult() : (
             <div>
-              <div style={{ background:AMBBG, color:AMB, borderRadius:8, padding:'8px 11px', fontSize:12, marginBottom:14 }}>
-                💡 Capture all panels — tee/rating side, par/handicap side, and women's data if on a separate panel.
-              </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
                 {[1,2].map(slot => {
                   const photo  = slot === 1 ? photo1 : photo2;
@@ -355,7 +361,7 @@ export default function PhotoImportModal({ onImport, onClose }) {
                       <label style={slotStyle(!!photo)}>
                         {photo
                           ? <img src={photo.thumb} alt={`Side ${slot}`} style={{ width:'100%', height:72, objectFit:'cover', borderRadius:6 }}/>
-                          : <><span style={{ fontSize:20 }}>📄</span><span>Tap to add</span></>
+                          : <><span style={{ fontSize:16, color:'#bbb' }}>+</span><span>Tap to add</span></>
                         }
                         <input type="file" accept="image/*" style={{ position:'absolute', opacity:0, inset:0, cursor:'pointer' }}
                           onChange={e => { handleFile(e.target.files?.[0], slot); e.target.value=''; }}/>
@@ -392,7 +398,7 @@ export default function PhotoImportModal({ onImport, onClose }) {
         {aiMode === 'assistant' && !parsed && (
           <div>
             <div style={{ background:AMBBG, color:AMB, borderRadius:8, padding:'8px 11px', fontSize:12, marginBottom:16 }}>
-              💡 Use Gemini to read your scorecard and paste the result back here.
+              Use Gemini to read your scorecard and paste the result back here.
             </div>
 
             {/* Step 1 */}
