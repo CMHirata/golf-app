@@ -72,7 +72,6 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
     />
   );
 
-  const sublbl = { fontSize:9, color:'#aaa', marginBottom:1 };
 
   return (
     <div style={{ border:'1.5px solid #e0ece0', borderRadius:10, padding:'8px 10px', marginBottom:6 }}>
@@ -83,10 +82,9 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
         {onRemove && <Btn small variant="danger" onClick={onRemove} style={{ padding:'3px 7px', fontSize:11 }}>✕</Btn>}
       </div>
 
-      {/* M — Rating + Slope on one line */}
-      <div style={{ display:'flex', gap:4, alignItems:'center', marginBottom:4 }}>
+      {/* M  [rating] / [slope]   W  [rating] / [slope] */}
+      <div style={{ display:'flex', gap:4, alignItems:'center', marginBottom:5 }}>
         <span style={{ fontSize:10, fontWeight:700, color:'#555', width:14, flexShrink:0 }}>M</span>
-        <span style={{ fontSize:9, color:'#aaa', width:38, flexShrink:0 }}>Rating</span>
         <div style={{ flex:1 }}>
           {onActivate
             ? kpField(`tee${teeIdx}_ratingM`, tee.rating, 'handicap-decimal', '72.3',
@@ -94,19 +92,14 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
             : numInput(tee.rating, '72.3', v => onChange({...tee, rating:v}))
           }
         </div>
-        <span style={{ fontSize:9, color:'#aaa', width:32, flexShrink:0, textAlign:'right' }}>Slope</span>
+        <span style={{ fontSize:11, color:'#bbb', flexShrink:0 }}>/</span>
         <div style={{ flex:1 }}>
           {onActivate
             ? kpField(`tee${teeIdx}_slopeM`, tee.slope, 'integer', '131', v => onChange({...tee, slope:v}))
             : numInput(tee.slope, '131', v => onChange({...tee, slope:v}))
           }
         </div>
-      </div>
-
-      {/* W — Rating + Slope on one line */}
-      <div style={{ display:'flex', gap:4, alignItems:'center', marginBottom:6 }}>
-        <span style={{ fontSize:10, fontWeight:700, color:PINK, width:14, flexShrink:0 }}>W</span>
-        <span style={{ fontSize:9, color:'#aaa', width:38, flexShrink:0 }}>Rating</span>
+        <span style={{ fontSize:10, fontWeight:700, color:PINK, width:14, flexShrink:0, textAlign:'right' }}>W</span>
         <div style={{ flex:1 }}>
           {onActivate
             ? kpField(`tee${teeIdx}_ratingW`, tee.ratingW, 'handicap-decimal', '74.1',
@@ -114,7 +107,7 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
             : numInput(tee.ratingW, '74.1', v => onChange({...tee, ratingW:v}))
           }
         </div>
-        <span style={{ fontSize:9, color:'#aaa', width:32, flexShrink:0, textAlign:'right' }}>Slope</span>
+        <span style={{ fontSize:11, color:'#bbb', flexShrink:0 }}>/</span>
         <div style={{ flex:1 }}>
           {onActivate
             ? kpField(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', '128', v => onChange({...tee, slopeW:v}))
@@ -123,20 +116,18 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
         </div>
       </div>
 
-      {/* Yardage */}
-      <div style={{ display:'flex', gap:4, alignItems:'flex-end' }}>
-        <div style={{ fontSize:9, color:'#aaa', width:14, paddingBottom:2, flexShrink:0 }}>yds</div>
+      {/* Yardage  [Front]  [Back]  [Total] */}
+      <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+        <span style={{ fontSize:10, fontWeight:700, color:'#555', flexShrink:0, paddingRight:2 }}>Yardage</span>
         {nineNames.map((nineName, ni) => (
           <div key={ni} style={{ flex:1 }}>
-            <div style={sublbl}>{nineName}</div>
             {onActivate
-              ? kpField(`tee${teeIdx}_yds${ni}`, nineYards[ni], 'integer', '3200', v => setNineYard(ni, v))
-              : numInput(nineYards[ni], '3200', v => setNineYard(ni, v))
+              ? kpField(`tee${teeIdx}_yds${ni}`, nineYards[ni], 'integer', nineName, v => setNineYard(ni, v))
+              : numInput(nineYards[ni], nineName, v => setNineYard(ni, v))
             }
           </div>
         ))}
         <div style={{ flex:1 }}>
-          <div style={{ fontSize:9, color:G, fontWeight:700, marginBottom:1 }}>Total</div>
           <div style={{ fontSize:11, fontWeight:700, color:G, padding:'3px 4px', background:GB, borderRadius:5, textAlign:'center' }}>
             {nineYards.reduce((s,y) => s+(parseInt(y)||0), 0) || '—'}
           </div>
