@@ -594,7 +594,15 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
       {setupKp && (
         <ScoreKeypad containerRef={setupKpRef} visible={true}
           value={setupKp.kpValue} kpPlus={setupKp.kpPlus} mode={setupKp.mode} noPlus={true}
-          onChange={val => { setSetupKp(kp => { if (!kp) return null; setupKpCbsRef.current.onChange?.(val); return { ...kp, kpValue: val }; }); }}
+          onChange={val => {
+            // Guard: ignore onChange if kpValue already matches (spurious double-fire on mount)
+            setSetupKp(kp => {
+              if (!kp) return null;
+              if (val === kp.kpValue) return kp; // duplicate — discard
+              setupKpCbsRef.current.onChange?.(val);
+              return { ...kp, kpValue: val };
+            });
+          }}
           onPlusToggle={() => {}}
           onBackspace={() => { setSetupKp(kp => { if (!kp) return null; const next = kp.kpValue.slice(0,-1); setupKpCbsRef.current.onChange?.(next); return { ...kp, kpValue: next }; }); }}
           onCommit={() => { setupKpCbsRef.current.onCommit?.(); setSetupKp(null); }}
