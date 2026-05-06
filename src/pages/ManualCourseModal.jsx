@@ -317,14 +317,10 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
           </colgroup>
           <thead>
             <tr>
-              <th style={{ ...hdrSt, textAlign:'left' }}></th>
-              <th style={{ ...hdrSt, color:'#555' }}>M</th>
               <th></th>
-              <th style={hdrSt}>Slope</th>
+              <th colSpan={3} style={{ ...hdrSt, color:'#555', textAlign:'center', paddingBottom:4 }}>Men</th>
               {showWomens && <th></th>}
-              {showWomens && <th style={{ ...hdrSt, color:PINK }}>W</th>}
-              {showWomens && <th></th>}
-              {showWomens && <th style={hdrSt}>Slope</th>}
+              {showWomens && <th colSpan={3} style={{ ...hdrSt, color:PINK, textAlign:'center', paddingBottom:4 }}>Women</th>}
               <th></th>
             </tr>
           </thead>
