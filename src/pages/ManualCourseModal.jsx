@@ -498,15 +498,16 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   return (
   <>
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center',
-      padding:`16px 16px ${setupKp ? KP_HEIGHT + 16 : 80}px`,
-      overflowY:'auto' }}>
+      padding:'16px 16px 16px' }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
         input[type=number] { -moz-appearance:textfield; }
         select { -webkit-appearance:none; -moz-appearance:none; appearance:none; }
       `}</style>
-      <div style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:10, position:'relative' }} onClick={e=>e.stopPropagation()}>
+      <div style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:10, position:'relative',
+        maxHeight: setupKp ? `calc(100vh - ${KP_HEIGHT + 32}px)` : 'calc(100vh - 32px)',
+        overflowY:'auto', transition:'max-height .2s' }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
           <div style={{ fontWeight:800, fontSize:17, color:G }}>{initialData ? 'Edit Course' : 'Enter Manually'}</div>
           <button onClick={() => setConfirmDiscard(true)} style={{ border:'none', background:'none', fontSize:24, cursor:'pointer', color:'#aaa' }}>×</button>
