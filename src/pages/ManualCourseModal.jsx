@@ -493,8 +493,13 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
     borderRadius: active ? 8 : 0, transition:'all .15s',
   });
 
+  const KP_HEIGHT = 300; // approximate ScoreKeypad height in px
+
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'16px 16px 80px', overflowY:'auto' }}>
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center',
+      padding: setupKp ? `16px 16px ${KP_HEIGHT + 8}px` : '16px 16px 80px',
+      overflowY:'auto', maxHeight: setupKp ? `calc(100vh - ${KP_HEIGHT}px)` : '100vh',
+      transition:'max-height .2s, padding .2s' }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
