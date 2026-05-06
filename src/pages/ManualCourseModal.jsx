@@ -114,7 +114,6 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
           {kp(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', 'Slope',
             v => onChange({...tee, slopeW: v}))}
         </div>
-        </div>
       </div>
 
       <div style={{ display:'flex', gap:4, alignItems:'center' }}>
