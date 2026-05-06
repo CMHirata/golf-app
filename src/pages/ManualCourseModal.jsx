@@ -39,6 +39,22 @@ function dupIndices(handicaps) {
   return dups;
 }
 
+// ─── Module-level kpField helper ─────────────────────────────────────────────
+// Renders a readOnly tap-to-edit field that opens ScoreKeypad (H-14: no system keyboard)
+function KpField({ fieldId, value, mode, placeholder, activeFieldId, onActivate, onCommit, style={} }) {
+  const display  = value !== '' && value != null ? String(value) : '';
+  const isActive = activeFieldId === fieldId;
+  return (
+    <input type="text" inputMode="none" readOnly value={display} placeholder={placeholder}
+      onFocus={e => { e.target.blur(); onActivate(fieldId, display, false, mode, onCommit, ()=>{}); }}
+      style={{ border: isActive ? `2px solid ${G}` : '1px solid #ddd', borderRadius:5,
+        padding:'3px 4px', fontSize:11, fontFamily:'inherit', background: isActive ? GA : '#fff',
+        color: display ? '#222' : '#aaa', cursor:'pointer', width:'100%', boxSizing:'border-box',
+        textAlign:'center', ...style }}
+    />
+  );
+}
+
 // ─── TeeRow ───────────────────────────────────────────────────────────────────
 function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, activeFieldId }) {
   const nineCount = nineNames.length;
@@ -50,81 +66,48 @@ function TeeRow({ tee, nineNames, onChange, onRemove, onActivate, teeIdx = 0, ac
     onChange({ ...tee, nineYards: next, totalYards: next.reduce((s,y) => s+(parseInt(y)||0), 0) || '' });
   };
 
-  const kpField = (fieldId, currentVal, mode, placeholder, onCommit) => {
-    const display  = currentVal !== '' && currentVal != null ? String(currentVal) : '';
-    const isActive = activeFieldId === fieldId;
-    return (
-      <input type="text" inputMode="none" readOnly value={display} placeholder={placeholder}
-        onFocus={e => { e.target.blur(); onActivate(fieldId, display, false, mode, v => onCommit(v), ()=>{}); }}
-        style={{ border: isActive ? `2px solid ${G}` : '1px solid #ddd', borderRadius:5,
-          padding:'3px 4px', fontSize:11, fontFamily:'inherit', background: isActive ? GA : '#fff',
-          color: display ? '#222' : '#aaa', cursor:'pointer', width:'100%', boxSizing:'border-box', textAlign:'center' }}
-      />
-    );
-  };
-
-  const numInput = (val, placeholder, onCh) => (
-    <input type="number" value={val||''} placeholder={placeholder}
-      onChange={e => onCh(e.target.value)} onFocus={e => e.target.select()}
-      style={{ width:'100%', boxSizing:'border-box', border:'1px solid #ddd', borderRadius:5,
-        fontSize:11, padding:'3px 4px', textAlign:'center',
-        WebkitAppearance:'none', MozAppearance:'textfield', appearance:'textfield' }}
-    />
+  const kp = (fieldId, value, mode, placeholder, onCommit) => (
+    <KpField fieldId={fieldId} value={value} mode={mode} placeholder={placeholder}
+      activeFieldId={activeFieldId} onActivate={onActivate} onCommit={onCommit}/>
   );
-
 
   return (
     <div style={{ border:'1.5px solid #e0ece0', borderRadius:10, padding:'8px 10px', marginBottom:6 }}>
-      {/* Name + remove */}
       <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:7 }}>
         <Inp value={tee.name} onChange={v=>onChange({...tee,name:v})} placeholder="Tee name"
           style={{ flex:1, fontSize:13, padding:'4px 8px' }}/>
         {onRemove && <Btn small variant="danger" onClick={onRemove} style={{ padding:'3px 7px', fontSize:11 }}>✕</Btn>}
       </div>
 
-      {/* M  [rating] / [slope]   W  [rating] / [slope] */}
       <div style={{ display:'flex', gap:4, alignItems:'center', marginBottom:5 }}>
         <span style={{ fontSize:10, fontWeight:700, color:'#555', width:14, flexShrink:0 }}>M</span>
         <div style={{ flex:1 }}>
-          {onActivate
-            ? kpField(`tee${teeIdx}_ratingM`, tee.rating, 'handicap-decimal', 'Rating',
-                v => { const n=parseInt(v||'0'); onChange({...tee, rating: isNaN(n)?'':String(n/10)}); })
-            : numInput(tee.rating, 'Rating', v => onChange({...tee, rating:v}))
-          }
+          {kp(`tee${teeIdx}_ratingM`, tee.rating, 'handicap-decimal', 'Rating',
+            v => { const n=parseInt(v||'0'); onChange({...tee, rating: isNaN(n)?'':String(n/10)}); })}
         </div>
         <span style={{ fontSize:11, color:'#bbb', flexShrink:0 }}>/</span>
         <div style={{ flex:1 }}>
-          {onActivate
-            ? kpField(`tee${teeIdx}_slopeM`, tee.slope, 'integer', 'Slope', v => onChange({...tee, slope:v}))
-            : numInput(tee.slope, 'Slope', v => onChange({...tee, slope:v}))
-          }
+          {kp(`tee${teeIdx}_slopeM`, tee.slope, 'integer', 'Slope',
+            v => onChange({...tee, slope: v ? parseInt(v) : ''}))}
         </div>
         <span style={{ fontSize:10, fontWeight:700, color:PINK, width:14, flexShrink:0, textAlign:'right' }}>W</span>
         <div style={{ flex:1 }}>
-          {onActivate
-            ? kpField(`tee${teeIdx}_ratingW`, tee.ratingW, 'handicap-decimal', 'Rating',
-                v => { const n=parseInt(v||'0'); onChange({...tee, ratingW: isNaN(n)?'':String(n/10)}); })
-            : numInput(tee.ratingW, 'Rating', v => onChange({...tee, ratingW:v}))
-          }
+          {kp(`tee${teeIdx}_ratingW`, tee.ratingW, 'handicap-decimal', 'Rating',
+            v => { const n=parseInt(v||'0'); onChange({...tee, ratingW: isNaN(n)?'':String(n/10)}); })}
         </div>
         <span style={{ fontSize:11, color:'#bbb', flexShrink:0 }}>/</span>
         <div style={{ flex:1 }}>
-          {onActivate
-            ? kpField(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', 'Slope', v => onChange({...tee, slopeW:v}))
-            : numInput(tee.slopeW, 'Slope', v => onChange({...tee, slopeW:v}))
-          }
+          {kp(`tee${teeIdx}_slopeW`, tee.slopeW, 'integer', 'Slope',
+            v => onChange({...tee, slopeW: v ? parseInt(v) : ''}))}
         </div>
       </div>
 
-      {/* Yardage  [Front]  [Back]  [Total] */}
       <div style={{ display:'flex', gap:4, alignItems:'center' }}>
         <span style={{ fontSize:10, fontWeight:700, color:'#555', flexShrink:0, paddingRight:2 }}>Yardage</span>
         {nineNames.map((nineName, ni) => (
           <div key={ni} style={{ flex:1 }}>
-            {onActivate
-              ? kpField(`tee${teeIdx}_yds${ni}`, nineYards[ni], 'integer', nineName, v => setNineYard(ni, v))
-              : numInput(nineYards[ni], nineName, v => setNineYard(ni, v))
-            }
+            {kp(`tee${teeIdx}_yds${ni}`, nineYards[ni], 'integer', nineName,
+              v => setNineYard(ni, v))}
           </div>
         ))}
         <div style={{ flex:1 }}>
@@ -258,45 +241,14 @@ function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
 // Tees 2: two aligned tables — Rating/Slope, then Yardage — one row per tee
 function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRemoveTee, setupKp, onActivate }) {
   const nineNames = nines.map((n,i) => n.name || `Nine ${i+1}`);
-
-  const cellSt = (extra={}) => ({
-    border:'1px solid #ddd', borderRadius:4, fontSize:11, padding:'3px 4px',
-    textAlign:'center', background:'#fff', width:'100%', boxSizing:'border-box',
-    WebkitAppearance:'none', MozAppearance:'textfield', appearance:'textfield',
-    ...extra,
-  });
+  const activeFieldId = setupKp?.fieldId;
 
   const hdrSt = { fontSize:9, fontWeight:700, color:'#888', textAlign:'center', paddingBottom:3 };
-  const lblSt = { fontSize:11, fontWeight:700, color:'#333', paddingRight:4, whiteSpace:'nowrap', display:'flex', alignItems:'center' };
-  const mwSt  = (color) => ({ fontSize:9, fontWeight:700, color, textAlign:'center', paddingBottom:1 });
 
-  const numCell = (val, ph, onChange) => (
-    <input type="number" value={val||''} placeholder={ph}
-      onChange={e=>onChange(e.target.value)} onFocus={e=>e.target.select()}
-      style={cellSt()}/>
+  const kp = (fieldId, value, mode, placeholder, onCommit) => (
+    <KpField fieldId={fieldId} value={value} mode={mode} placeholder={placeholder}
+      activeFieldId={activeFieldId} onActivate={onActivate} onCommit={onCommit}/>
   );
-
-  // Rating cell — displays one decimal place; on blur, formats "70" → "70.0"
-  const ratingCell = (val, ph, onChange) => {
-    const display = (val !== '' && val != null) ? Number(val).toFixed(1) : '';
-    return (
-      <input type="number" step="0.1" value={display} placeholder={ph}
-        onChange={e=>onChange(e.target.value)}
-        onFocus={e=>e.target.select()}
-        onBlur={e=>{
-          const v = e.target.value;
-          if (v === '' || v == null) return;
-          const n = parseFloat(v);
-          if (!isNaN(n)) onChange(n.toFixed(1));
-        }}
-        style={cellSt()}/>
-    );
-  };
-
-  // Rating / Slope table
-  const rsCols = showWomens
-    ? ['M Rating','M Slope','W Rating','W Slope']
-    : ['M Rating','M Slope'];
 
   return (
     <div>
@@ -305,15 +257,15 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
       <div style={{ marginBottom:12 }}>
         <table style={{ width:'100%', borderCollapse:'collapse', tableLayout:'fixed' }}>
           <colgroup>
-            <col style={{ width:'24%' }}/>                  {/* tee name */}
-            <col style={{ width:'14%' }}/>                  {/* M rating */}
-            <col style={{ width:'3%'  }}/>                  {/* / */}
-            <col style={{ width:'14%' }}/>                  {/* M slope */}
-            {showWomens && <col style={{ width:'4%'  }}/>}  {/* M↔W gap */}
-            {showWomens && <col style={{ width:'14%' }}/>}  {/* W rating */}
-            {showWomens && <col style={{ width:'3%'  }}/>}  {/* / */}
-            {showWomens && <col style={{ width:'14%' }}/>}  {/* W slope */}
-            <col style={{ width:'24px' }}/>                 {/* ✕ fixed */}
+            <col style={{ width:'24%' }}/>
+            <col style={{ width:'14%' }}/>
+            <col style={{ width:'3%'  }}/>
+            <col style={{ width:'14%' }}/>
+            {showWomens && <col style={{ width:'4%'  }}/>}
+            {showWomens && <col style={{ width:'14%' }}/>}
+            {showWomens && <col style={{ width:'3%'  }}/>}
+            {showWomens && <col style={{ width:'14%' }}/>}
+            <col style={{ width:'24px' }}/>
           </colgroup>
           <thead>
             <tr>
@@ -334,16 +286,19 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                       padding:'3px 5px', width:'100%', boxSizing:'border-box' }}/>
                 </td>
                 <td style={{ paddingBottom:3 }}>
-                  {ratingCell(t.rating, 'Rating', v=>onUpdateTee(ti,{...t,rating:v}))}
+                  {kp(`ttl${ti}_rM`, t.rating, 'handicap-decimal', 'Rating',
+                    v => { const n=parseInt(v||'0'); onUpdateTee(ti,{...t, rating: isNaN(n)?'':String(n/10)}); })}
                 </td>
                 <td style={{ fontSize:11, color:'#bbb', textAlign:'center', padding:'0 1px 3px' }}>/</td>
                 <td style={{ paddingBottom:3 }}>
-                  {numCell(t.slope, 'Slope', v=>onUpdateTee(ti,{...t,slope:v}))}
+                  {kp(`ttl${ti}_sM`, t.slope, 'integer', 'Slope',
+                    v => onUpdateTee(ti,{...t, slope: v ? parseInt(v) : ''}))}
                 </td>
                 {showWomens && <td style={{ paddingBottom:3 }}/>}
                 {showWomens && (
                   <td style={{ paddingBottom:3 }}>
-                    {ratingCell(t.ratingW, 'Rating', v=>onUpdateTee(ti,{...t,ratingW:v}))}
+                    {kp(`ttl${ti}_rW`, t.ratingW, 'handicap-decimal', 'Rating',
+                      v => { const n=parseInt(v||'0'); onUpdateTee(ti,{...t, ratingW: isNaN(n)?'':String(n/10)}); })}
                   </td>
                 )}
                 {showWomens && (
@@ -351,7 +306,8 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                 )}
                 {showWomens && (
                   <td style={{ paddingBottom:3 }}>
-                    {numCell(t.slopeW, 'Slope', v=>onUpdateTee(ti,{...t,slopeW:v}))}
+                    {kp(`ttl${ti}_sW`, t.slopeW, 'integer', 'Slope',
+                      v => onUpdateTee(ti,{...t, slopeW: v ? parseInt(v) : ''}))}
                   </td>
                 )}
                 <td style={{ paddingLeft:4, paddingBottom:3, textAlign:'right' }}>
@@ -397,7 +353,8 @@ function TeesTableLayout({ tees, nines, showWomens, onUpdateTee, onAddTee, onRem
                   </td>
                   {nineNames.map((nineName, ni) => (
                     <td key={ni} style={{ paddingRight:2 }}>
-                      {numCell(nineYards[ni], nineName, v=>setYard(ni,v))}
+                      {kp(`tty${ti}_y${ni}`, nineYards[ni], 'integer', nineName,
+                        v => setYard(ni, v))}
                     </td>
                   ))}
                   <td>
