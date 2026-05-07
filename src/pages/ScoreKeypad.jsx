@@ -132,24 +132,26 @@ export function ScoreKeypad({
     if (onCommit) onCommit();
   }, [mode, noPlus, value, onChange, onPlusToggle, onCommit, handleXTap]);
 
-  // ── Touch handlers for digit/backspace (A-1 scroll-jump fix) ──────────────
-  // Mirror the X button's onTouchStart/onTouchEnd pattern exactly.
-  // Each button gets a touch-start ref to track if touch is in progress,
-  // and a touch-end that calls preventDefault + fires the action.
+  // ── Touch handlers for digit/backspace ────────────────────────────────────
+  // H-35: React 18 passive touch listeners ignore preventDefault(), so the
+  // synthetic click fires ~300ms after touchEnd and would double-fire every
+  // digit/backspace tap. Guard: record the touchEnd timestamp and bail in
+  // onClick when a touch was handled within the last 600ms.
+  const touchHandledRef = useRef(0);
 
   // Generic tap handlers with touch support (no long press)
   const makeTouchHandlers = useCallback((action) => ({
     onTouchStart: () => { /* no long-press needed */ },
-    onTouchEnd: (e) => {
-      e.preventDefault();
+    onTouchEnd: () => {
+      touchHandledRef.current = Date.now();
       action();
     },
     onTouchCancel: () => { /* no cleanup needed */ },
     onMouseUp: action,     // desktop fallback
-    // No onClick needed since onTouchEnd+preventDefault suppresses click on mobile
-    // and onMouseUp handles desktop. But we keep onClick for pointer events on
-    // non-touch devices that don't fire mouseup reliably (e.g. pointer cancel).
-    onClick: action,
+    onClick: () => {
+      if (Date.now() - touchHandledRef.current < 600) return;
+      action();
+    },
   }), []);
 
   // ── X button touch / mouse long-press (score mode only) ───────────────────

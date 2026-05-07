@@ -173,7 +173,7 @@ export function DotsTable({
       const parts = key.split('_');
       if (parseInt(parts[1]) !== pi) return;
       if (parts[2] === 'team' && parts.length > 3) return;
-      const sp = (restored || []).find(s => s.enabled && s.id === parts[2]);
+      const sp = (restored || []).find(s => s.enabled && s.id === parts.slice(2).join('_'));
       if (sp) cnt += c;
     });
     return cnt;

@@ -19,7 +19,7 @@ function calcCompanionCount(hole, pi, entries, ens) {
     const parts = key.split('_');
     if (parseInt(parts[0]) !== hole || parseInt(parts[1]) !== pi) return;
     if (parts[2] === 'team') return;
-    const sp = ens.find(s => s.id === parts[2]);
+    const sp = ens.find(s => s.id === parts.slice(2).join('_'));
     if (sp) total += cnt;
   });
   return total;

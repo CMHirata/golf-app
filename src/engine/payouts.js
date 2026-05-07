@@ -1372,7 +1372,7 @@ export function computePayouts({
           const h     = parseInt(parts[0]);
           if (!inDotsRange(h)) return;
           const pi    = parseInt(parts[1]);
-          const id    = parts[2];
+          const id    = parts.slice(2).join('_');
           const sp    = ens.find(s => s.id === id);
           if (sp && players[pi]) indivDots[pi] += (sp.value ?? sp.pts ?? 1) * cnt;
         });
@@ -1400,7 +1400,7 @@ export function computePayouts({
             const seg   = segForHole(h);
             if (seg < 0) return;
             const pi    = parseInt(parts[1]);
-            const sp    = ens.find(s => s.id === parts[2]);
+            const sp    = ens.find(s => s.id === parts.slice(2).join('_'));
             if (!sp || !players[pi]) return;
             segDots[pi][seg] += (sp.value ?? sp.pts ?? 1) * cnt;
           });
@@ -1477,7 +1477,7 @@ export function computePayouts({
               const h  = parseInt(parts[0]);
               if (!inDotsRange(h)) return;
               const pi = parseInt(parts[1]);
-              const sp = ens.find(s => s.id === parts[2]);
+              const sp = ens.find(s => s.id === parts.slice(2).join('_'));
               if (sp && players[pi]) ownDots[pi] += (sp.value ?? sp.pts ?? 1) * cnt;
             });
 

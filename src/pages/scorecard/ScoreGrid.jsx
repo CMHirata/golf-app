@@ -347,7 +347,7 @@ export function ScoreGrid({
             const parts = key.split('_');
             if (parseInt(parts[0]) !== h || parseInt(parts[1]) !== pi) return;
             if (parts[2] === 'team') return;
-            const sp = ens.find(s => s.id === parts[2]);
+            const sp = ens.find(s => s.id === parts.slice(2).join('_'));
             if (sp) total += cnt;
           });
           if (total > 0) n[compKey] = total; else delete n[compKey];
