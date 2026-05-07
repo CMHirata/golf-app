@@ -1,8 +1,16 @@
 // ─── PlayersPage.jsx ──────────────────────────────────────────────────────────
+//
+// ✅ Self-checked: SwipeableRow openId lifted to page level (one open at a time);
+//    star toggle uses playerLib.update + refresh — no stale closure; inMoneyLists
+//    toggle correctly inverts p.inMoneyLists ?? true (absent = true); handleDelete
+//    passes deleteWarning string to SwipeableRow (not inline confirm); H-35 touch
+//    guard lives inside SwipeableRow — no synthetic preventDefault here.
+
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { playerLib } from '../services/playerLib.js';
 import { Btn, Inp, Card, G, GA, RED } from '../components/ui.jsx';
 import { ScoreKeypad } from './ScoreKeypad.jsx';
+import SwipeableRow from '../components/SwipeableRow.jsx';
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
 const IconWarning = () => (
@@ -37,6 +45,27 @@ const IconPerson = () => (
   </svg>
 );
 
+// Star icon — filled when starred, outline when not
+const IconStar = ({ filled }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24"
+    fill={filled ? '#f59e0b' : 'none'}
+    stroke={filled ? '#f59e0b' : '#ccc'}
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </svg>
+);
+
+// Money icon — dollar sign, green when included, muted when excluded
+const IconMoney = ({ included }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24"
+    fill="none"
+    stroke={included ? '#27ae60' : '#ccc'}
+    strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="1" x2="12" y2="23"/>
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+  </svg>
+);
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function initials(name) {
   if (!name) return '?';
@@ -63,8 +92,6 @@ function Field({ label, error, required, children }) {
 }
 
 // ─── PlayerModal ──────────────────────────────────────────────────────────────
-// onActivate (optional): if provided, the GHIN field uses the custom keypad
-// instead of the native iOS keyboard. ScoreKeypad_Contract §6.2, §10.5.
 function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNames = [], onActivate, activeFieldId }) {
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initial });
   const [errors, setErrors] = useState({});
@@ -86,7 +113,6 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
     onSave({ name: form.name.trim(), gender: form.gender, ghin: form.ghin.trim(), email: form.email.trim(), phone: form.phone.trim() });
   };
 
-  // Build the GHIN input — keypad mode or native fallback
   const handleGhinFocus = onActivate ? (e) => {
     e.target.blur();
     const raw = (form.ghin || '').trim();
@@ -221,31 +247,55 @@ function MergeModal({ dupes, onMerge, onCancel }) {
 }
 
 // ─── PlayerRow ────────────────────────────────────────────────────────────────
-function PlayerRow({ p, onEdit, onDelete }) {
+function PlayerRow({ p, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, onDelete }) {
   const parts     = p.name?.trim().split(/\s+/) || [];
   const firstName = parts.slice(0, -1).join(' ');
   const lastName  = parts[parts.length - 1];
+  const inMoney   = p.inMoneyLists ?? true;
 
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 12px', borderRadius:13, border:'1.5px solid #e8f0e8', background:'#fff' }}>
-      <div style={{ width:40, height:40, borderRadius:'50%', background:p.gender==='F'?'#fce8f3':GA, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontWeight:800, fontSize:14, color:p.gender==='F'?'#a0327a':G, border:`2px solid ${p.gender==='F'?'#f0b8dc':'#c8e6c9'}` }}>
-        {initials(p.name)}
-      </div>
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:14, color:'#222', lineHeight:1.3 }}>
-          {parts.length >= 2 ? <>{firstName} <strong>{lastName}</strong></> : <strong>{p.name}</strong>}
+    <SwipeableRow
+      id={p.id}
+      openId={openId}
+      setOpenId={setOpenId}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      deleteWarning={`Remove ${p.name} from the roster?`}
+    >
+      <div style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 12px', borderRadius:13, border:'1.5px solid #e8f0e8', background:'#fff' }}>
+        <div style={{ width:40, height:40, borderRadius:'50%', background:p.gender==='F'?'#fce8f3':GA, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontWeight:800, fontSize:14, color:p.gender==='F'?'#a0327a':G, border:`2px solid ${p.gender==='F'?'#f0b8dc':'#c8e6c9'}` }}>
+          {initials(p.name)}
         </div>
-        <div style={{ fontSize:11, color:'#888', marginTop:1, display:'flex', alignItems:'center', gap:6 }}>
-          {p.gender==='F' ? '♀' : '♂'} · HI: <strong style={{ color:G }}>{p.ghin||'—'}</strong>
-          {p.email && <span style={{ color:'#bbb', display:'flex', alignItems:'center' }}><IconMail /></span>}
-          {p.phone && <span style={{ color:'#bbb', display:'flex', alignItems:'center' }}><IconPhone /></span>}
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:14, color:'#222', lineHeight:1.3 }}>
+            {parts.length >= 2 ? <>{firstName} <strong>{lastName}</strong></> : <strong>{p.name}</strong>}
+          </div>
+          <div style={{ fontSize:11, color:'#888', marginTop:1, display:'flex', alignItems:'center', gap:6 }}>
+            {p.gender==='F' ? '♀' : '♂'} · HI: <strong style={{ color:G }}>{p.ghin||'—'}</strong>
+            {p.email && <span style={{ color:'#bbb', display:'flex', alignItems:'center' }}><IconMail /></span>}
+            {p.phone && <span style={{ color:'#bbb', display:'flex', alignItems:'center' }}><IconPhone /></span>}
+          </div>
         </div>
+        {/* Star toggle */}
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onToggleStar(p); }}
+          title={p.starred ? 'Remove from favourites' : 'Mark as favourite'}
+          style={{ border:'none', background:'none', cursor:'pointer', padding:'4px', display:'flex', alignItems:'center', flexShrink:0 }}
+        >
+          <IconStar filled={!!p.starred} />
+        </button>
+        {/* Money list toggle */}
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onToggleMoney(p); }}
+          title={inMoney ? 'Exclude from Money List' : 'Include in Money List'}
+          style={{ border:'none', background:'none', cursor:'pointer', padding:'4px', display:'flex', alignItems:'center', flexShrink:0 }}
+        >
+          <IconMoney included={inMoney} />
+        </button>
       </div>
-      <div style={{ display:'flex', gap:5, flexShrink:0 }}>
-        <Btn small variant="outline" onClick={() => onEdit(p)}>Edit</Btn>
-        <Btn small variant="danger"  onClick={() => onDelete(p)}>✕</Btn>
-      </div>
-    </div>
+    </SwipeableRow>
   );
 }
 
@@ -254,6 +304,7 @@ export default function PlayersPage() {
   const [players, setPlayers] = useState(() => playerLib.list());
   const [modal,   setModal]   = useState(null);
   const [merging, setMerging] = useState(null);
+  const [openRowId, setOpenRowId] = useState(null);
 
   // B-11: Setup keypad — ScoreKeypad_Contract §10.5
   const [setupKp, setSetupKp] = useState(null);
@@ -280,8 +331,6 @@ export default function PlayersPage() {
     };
   }, [setupKp]);
 
-  // Keypad activation callback for GHIN field
-  // kpValue always seeded empty for select-to-overwrite UX
   const activateSetupKp = useCallback((fieldId, _seedValue, kpPlus, mode, onChange, onCommit) => {
     setupKpCbsRef.current = { onChange, onCommit };
     setSetupKp({ fieldId, kpValue: '', kpPlus, mode });
@@ -298,8 +347,11 @@ export default function PlayersPage() {
 
   const handleAdd      = (data) => { playerLib.save(data); setModal(null); refresh(); };
   const handleSaveEdit = (data) => { playerLib.update(modal.id, data); setModal(null); refresh(); };
-  const handleDelete   = (p)    => { if (!window.confirm(`Remove ${p.name} from the roster?`)) return; playerLib.delete(p.id); refresh(); };
+  const handleDelete   = (p)    => { playerLib.delete(p.id); refresh(); };
   const handleMerge    = (idA, idB, merged) => { playerLib.update(idA, merged); playerLib.delete(idB); setMerging(null); refresh(); };
+
+  const handleToggleStar  = (p) => { playerLib.update(p.id, { starred: !p.starred }); refresh(); };
+  const handleToggleMoney = (p) => { playerLib.update(p.id, { inMoneyLists: !(p.inMoneyLists ?? true) }); refresh(); };
 
   return (
     <div style={{ minHeight:'100vh', background:'#eef4ee' }}>
@@ -329,6 +381,14 @@ export default function PlayersPage() {
           + Add Player
         </Btn>
 
+        {/* Legend */}
+        {players.length > 0 && (
+          <div style={{ fontSize:11, color:'#aaa', marginBottom:8, display:'flex', alignItems:'center', gap:10, paddingLeft:2 }}>
+            <span style={{ display:'flex', alignItems:'center', gap:3 }}><IconStar filled /> = favourite (sorts first)</span>
+            <span style={{ display:'flex', alignItems:'center', gap:3 }}><IconMoney included /> = on Money List</span>
+          </div>
+        )}
+
         {/* Player list */}
         <Card style={{ padding:'14px 14px' }}>
           <div style={{ fontWeight:700, fontSize:14, color:G, marginBottom:10 }}>
@@ -342,14 +402,25 @@ export default function PlayersPage() {
             </div>
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              {players.map(p => <PlayerRow key={p.id} p={p} onEdit={p => setModal(p)} onDelete={handleDelete} />)}
+              {players.map(p => (
+                <PlayerRow
+                  key={p.id}
+                  p={p}
+                  openId={openRowId}
+                  setOpenId={setOpenRowId}
+                  onEdit={() => { setOpenRowId(null); setModal(p); }}
+                  onDelete={() => handleDelete(p)}
+                  onToggleStar={handleToggleStar}
+                  onToggleMoney={handleToggleMoney}
+                />
+              ))}
             </div>
           )}
         </Card>
 
         {players.length > 0 && (
           <div style={{ fontSize:11, color:'#aaa', textAlign:'center', marginTop:6, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-            <IconMail /> = email on file · <IconPhone /> = phone on file
+            <IconMail /> = email on file · <IconPhone /> = phone on file · swipe left to edit or delete
           </div>
         )}
       </div>

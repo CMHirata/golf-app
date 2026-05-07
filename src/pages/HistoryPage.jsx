@@ -1,6 +1,11 @@
 // ─── pages/HistoryPage.jsx ────────────────────────────────────────────────────
-// Round history: list, filter, cumulative winnings, export/import.
+// Round history: list, filter, export/import.
+// Cumulative winnings moved to HomePage (Money List) in 15-E.
 //
+// ✅ Self-checked: cumulative useMemo, showWinningsDetail state, winnings display
+//    block, and winnings detail modal all removed; fmtMoney removed (unused);
+//    GA still imported and used by range selector; no dangling references to
+//    removed state remain.
 // 13-E.3: `SwipeableRoundRow` extracted to `pages/history/SwipeableRoundRow.jsx`
 // (with its strip color constants and `REVEAL_W`); the five action icons
 // extracted to `pages/history/HistoryIcons.jsx`. Per Architectural Decision #23
@@ -34,10 +39,6 @@ import { IconDownload, IconUpload } from './history/HistoryIcons.jsx';
 
 const RANGES = [['ytd','YTD'],['week','7d'],['month','30d'],['year','12mo'],['all','All']];
 
-function fmtMoney(v) {
-  return v > 0 ? `+$${Math.abs(v).toFixed(2)}` : v < 0 ? `-$${Math.abs(v).toFixed(2)}` : '$0';
-}
-
 function mergeById(existing, incoming) {
   const map = new Map(existing.map(r => [r.id, r]));
   incoming.forEach(r => { if (r.id) map.set(r.id, r); });
@@ -52,7 +53,6 @@ export default function HistoryPage({ onLoadRound }) {
   const [openRowId,          setOpenRowId]          = useState(null);
   const [importModal,        setImportModal]        = useState(null);
   const [conflictModal,      setConflictModal]      = useState(null);
-  const [showWinningsDetail, setShowWinningsDetail] = useState(false);
 
   const [shareRound,    setShareRound]    = useState(null);
   const [shareStatus,   setShareStatus]   = useState('idle');
@@ -109,18 +109,6 @@ export default function HistoryPage({ onLoadRound }) {
   }).sort((a, b) => new Date(b.date) - new Date(a.date)), [rounds, range]);
 
   const mostRecentDate = filtered[0]?.date || null;
-
-  const cumulative = useMemo(() => {
-    const byGame = {}, byPlayer = {};
-    filtered.forEach(r => (r.breakdown || []).forEach(({ game, rows }) => {
-      if (!byGame[game]) byGame[game] = {};
-      (rows || []).filter(row => row.net != null).forEach(({ name, net }) => {
-        byGame[game][name] = (byGame[game][name] || 0) + net;
-        byPlayer[name]     = (byPlayer[name]     || 0) + net;
-      });
-    }));
-    return { byGame, byPlayer };
-  }, [filtered]);
 
   const handleDelete = useCallback((id) => { roundLib.delete(id); setRounds(roundLib.list()); }, []);
 
@@ -301,31 +289,6 @@ export default function HistoryPage({ onLoadRound }) {
           {filtered.length} round{filtered.length !== 1 ? 's' : ''} in range
         </div>
 
-        {/* ── Cumulative winnings ── */}
-        {filtered.length > 0 && Object.keys(cumulative.byPlayer).length > 0 && (() => {
-          const sp = Object.entries(cumulative.byPlayer).sort((a,b) => b[1] - a[1]);
-          return (
-            <div onClick={() => setShowWinningsDetail(true)}
-              style={{ background:'#fff', borderRadius:14, boxShadow:'0 1px 5px rgba(0,0,0,.07)', overflow:'hidden', cursor:'pointer' }}>
-              <div style={{ padding:'10px 14px 7px' }}>
-                <div style={{ fontWeight:700, fontSize:13, color:G }}>Cumulative Winnings</div>
-              </div>
-              <table style={{ borderCollapse:'collapse', fontSize:13, width:'100%' }}>
-                <thead><tr>
-                  <th style={{ textAlign:'left', padding:'4px 8px 4px 14px', background:'#f0f4f0', color:'#666', fontSize:11 }}>Player</th>
-                  <th style={{ textAlign:'right', padding:'4px 14px 4px 8px', background:'#f0f4f0', color:'#666', fontSize:11, fontWeight:700 }}>Total</th>
-                </tr></thead>
-                <tbody>{sp.map(([name, total], i) => (
-                  <tr key={i} style={{ height:32, background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
-                    <td style={{ padding:'4px 8px 4px 14px', fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:220 }}>{name}</td>
-                    <td style={{ padding:'4px 14px 4px 8px', textAlign:'right', fontWeight:700, color: total > 0 ? '#27ae60' : total < 0 ? RED : '#666' }}>{fmtMoney(total)}</td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </div>
-          );
-        })()}
-
         {/* ── Round rows ── */}
         <Card>
           <div style={{ fontWeight:700, fontSize:13, color:G, marginBottom:9 }}>Rounds</div>
@@ -423,58 +386,6 @@ export default function HistoryPage({ onLoadRound }) {
           {shareError} (tap to dismiss)
         </div>
       )}
-
-      {/* Winnings detail modal — unchanged */}
-      {showWinningsDetail && (() => {
-        const bgn=(g)=>g.replace(/[^\w\s]/g,'').trim().split(/\s+/)[0];
-        const gk=Object.keys(cumulative.byGame);const seen=new Set();
-        const games=gk.map(g=>({key:g,base:bgn(g)})).filter(({base})=>{if(seen.has(base))return false;seen.add(base);return true;}).sort((a,b)=>a.base.localeCompare(b.base));
-        const gt=(base,name)=>gk.filter(g=>bgn(g)===base).reduce((s,g)=>s+(cumulative.byGame[g]?.[name]||0),0);
-        const sp=Object.entries(cumulative.byPlayer).sort((a,b)=>b[1]-a[1]);
-        const RH=34, HH=30;
-        return (
-          <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.55)',zIndex:500,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:16 }} onClick={()=>setShowWinningsDetail(false)}>
-            <div style={{ background:'#fff',borderRadius:18,width:'100%',maxWidth:600,maxHeight:'85vh',display:'flex',flexDirection:'column',overflow:'hidden' }} onClick={e=>e.stopPropagation()}>
-              <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 18px 12px',borderBottom:'1px solid #eee',flexShrink:0 }}>
-                <div><div style={{ fontWeight:800,fontSize:16,color:G }}>Cumulative Winnings</div><div style={{ fontSize:11,color:'#aaa',marginTop:1 }}>swipe right to see all games</div></div>
-                <button onClick={()=>setShowWinningsDetail(false)} style={{ border:'none',background:'none',fontSize:20,color:'#bbb',cursor:'pointer',lineHeight:1,padding:'0 4px' }}>✕</button>
-              </div>
-              <div style={{ flex:1,overflowY:'auto',display:'flex',alignItems:'stretch' }}>
-                <div style={{ flexShrink:0,zIndex:2,boxShadow:'2px 0 6px rgba(0,0,0,.06)' }}>
-                  <table style={{ borderCollapse:'collapse',fontSize:13,tableLayout:'fixed' }}>
-                    <thead><tr style={{ height:HH }}>
-                      <th style={{ textAlign:'left',padding:'4px 8px 4px 16px',background:'#f0f4f0',color:'#555',fontSize:11,whiteSpace:'nowrap',minWidth:110 }}>Player</th>
-                      <th style={{ textAlign:'right',padding:'4px 14px 4px 6px',background:'#f0f4f0',color:'#555',fontSize:11,fontWeight:800,whiteSpace:'nowrap',minWidth:72 }}>Total</th>
-                    </tr></thead>
-                    <tbody>{sp.map(([name,total],i)=>(
-                      <tr key={i} style={{ height:RH,background:i%2===0?'#fff':'#fafafa' }}>
-                        <td style={{ padding:'4px 8px 4px 16px',fontWeight:600,whiteSpace:'nowrap',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis' }}>{name}</td>
-                        <td style={{ padding:'4px 14px 4px 6px',textAlign:'right',fontWeight:700,whiteSpace:'nowrap',color:total>0?'#27ae60':total<0?RED:'#555' }}>{fmtMoney(total)}</td>
-                      </tr>
-                    ))}</tbody>
-                  </table>
-                </div>
-                <div style={{ width:1,background:'#d8ead8',flexShrink:0 }}/>
-                <div style={{ overflowX:'auto',flex:1 }}>
-                  {games.length===0?<div style={{ padding:'20px 16px',fontSize:12,color:'#aaa' }}>No game breakdown available.</div>:(
-                    <table style={{ borderCollapse:'collapse',fontSize:12,tableLayout:'fixed' }}>
-                      <thead><tr style={{ height:HH }}>{games.map(({base})=><th key={base} style={{ textAlign:'center',padding:'4px 10px',background:'#f0f4f0',color:'#555',fontSize:11,whiteSpace:'nowrap',minWidth:80 }}>{base}</th>)}</tr></thead>
-                      <tbody>{sp.map(([name],i)=>(
-                        <tr key={i} style={{ height:RH,background:i%2===0?'#fff':'#fafafa' }}>
-                          {games.map(({base})=>{const v=gt(base,name);return <td key={base} style={{ padding:'4px 10px',textAlign:'center',whiteSpace:'nowrap',color:v>0?'#27ae60':v<0?RED:'#999',fontWeight:v!==0?600:400 }}>{v!==0?fmtMoney(v):'—'}</td>;})}
-                        </tr>
-                      ))}</tbody>
-                    </table>
-                  )}
-                </div>
-              </div>
-              <div style={{ padding:'10px 18px',borderTop:'1px solid #eee',flexShrink:0 }}>
-                <button onClick={()=>setShowWinningsDetail(false)} style={{ width:'100%',padding:'10px',borderRadius:10,border:`1.5px solid ${G}`,background:GA,color:G,fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'inherit' }}>Close</button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {importModal && <ImportModal parsed={importModal.parsed} onConfirm={handleImportConfirmSections} onClose={() => setImportModal(null)}/>}
       {conflictModal && <ImportConflictModal conflicts={conflictModal.conflicts} onResolved={handleConflictsResolved} onClose={() => { setConflictModal(null); alert('Import cancelled.'); }}/>}

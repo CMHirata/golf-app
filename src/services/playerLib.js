@@ -1,11 +1,18 @@
 // ─── services/playerLib.js ────────────────────────────────────────────────────
 // Player library: CRUD, ID migration, last-name sort.
 //
-// Player schema:
-//   { id, name, gender ('M'|'F'), ghin (HI string), email?, phone? }
+// Player schema (library record — golf_players_v4):
+//   { id, name, gender ('M'|'F'), ghin (HI string), email?, phone?,
+//     starred?: boolean, inMoneyLists?: boolean }
 //
-// All methods go through _load() which backfills IDs on legacy records so
-// delete/update can never accidentally wipe the whole array via undefined id.
+// All methods go through _load() which backfills IDs and inMoneyLists on
+// legacy records so delete/update can never accidentally wipe the whole array.
+//
+// ✅ Self-checked: _load() backfill loop handles both id-missing and
+//    inMoneyLists-missing cases in one pass; list() sort: starred=0/non=1
+//    so starred rows come first; absent starred treated as false (no backfill
+//    needed); absent inMoneyLists treated as true (backfilled to true);
+//    save() includes both new fields with correct defaults.
 
 import { ls, SK, makeId } from './storage.js';
 
@@ -16,35 +23,45 @@ function playerSortKey(name) {
 }
 
 export const playerLib = {
-  /** Read raw array, backfill missing IDs in-place (one-time migration). */
+  /** Read raw array, backfill missing IDs and inMoneyLists in-place. */
   _load() {
     const raw = ls.get(SK.players) || [];
     let dirty = false;
     const migrated = raw.map(p => {
-      if (p.id) return p;
+      const needsId    = !p.id;
+      const needsMoney = p.inMoneyLists === undefined;
+      if (!needsId && !needsMoney) return p;
       dirty = true;
-      return { ...p, id: makeId('p'), gender: p.gender || 'M', email: p.email || '', phone: p.phone || '' };
+      return {
+        ...p,
+        ...(needsId    ? { id: makeId('p'), gender: p.gender || 'M', email: p.email || '', phone: p.phone || '' } : {}),
+        ...(needsMoney ? { inMoneyLists: true } : {}),
+      };
     });
     if (dirty) ls.set(SK.players, migrated);
     return migrated;
   },
 
-  /** Returns all players sorted by last name. */
+  /** Returns all players sorted: starred first, then last-name within each group. */
   list() {
-    return [...this._load()].sort((a, b) =>
-      playerSortKey(a.name).localeCompare(playerSortKey(b.name))
-    );
+    return [...this._load()].sort((a, b) => {
+      const sa = a.starred ? 0 : 1, sb = b.starred ? 0 : 1;
+      if (sa !== sb) return sa - sb;
+      return playerSortKey(a.name).localeCompare(playerSortKey(b.name));
+    });
   },
 
   save(data) {
     const all = this._load();
     const player = {
-      id:     makeId('p'),
-      name:   data.name   || '',
-      gender: data.gender || 'M',
-      ghin:   data.ghin   || '',
-      email:  data.email  || '',
-      phone:  data.phone  || '',
+      id:           makeId('p'),
+      name:         data.name         || '',
+      gender:       data.gender       || 'M',
+      ghin:         data.ghin         || '',
+      email:        data.email        || '',
+      phone:        data.phone        || '',
+      starred:      data.starred      ?? false,
+      inMoneyLists: data.inMoneyLists ?? true,
     };
     all.push(player);
     ls.set(SK.players, all);

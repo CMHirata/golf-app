@@ -277,6 +277,23 @@ Player order in `activePlayers` is set at round start and never
 changes. All score arrays, courseHcps, and player index references
 throughout the app use this order.
 
+**Player library record** (stored in `golf_players_v4` via `playerLib`):
+```js
+{
+  id:            string,   // stable ID
+  name:          string,
+  gender:        string,   // 'M' | 'F' | ''
+  ghin:          string,   // handicap index as string
+  email?:        string,
+  phone?:        string,
+  starred?:      boolean,  // absent = false; sorts above non-starred in playerLib.list()
+  inMoneyLists?: boolean,  // absent = true; included in Money List on Home page
+}
+```
+
+- `starred` — library-only. Not copied into `activePlayers` snapshot. Absent = `false`. Starred players sort before non-starred; last-name order preserved within each group. Surfaces in `playerLib.list()` and all player-picker UIs.
+- `inMoneyLists` — library-only. Not copied into `activePlayers` snapshot. Absent = `true`. Controls whether a player's cumulative winnings appear on the Home page Money List. Toggle set on Players page only.
+
 ### 5.4 Games
 
 | Field | Type | Notes |

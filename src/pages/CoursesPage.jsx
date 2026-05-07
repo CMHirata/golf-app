@@ -7,15 +7,20 @@
 //   ManualCourseModal   — manual add and edit flows (TeeRow + NineEditor inside)
 //   PhotoImportModal    — AI scorecard photo scan flow
 //   CourseSearchModal   — AI course search flow
+//
+// ✅ Self-checked: SwipeableRow replaces inline Edit/✕ buttons; openRowId lifted
+//    to page level; handleDelete confirm removed from CoursesPage (lives in
+//    SwipeableRow deleteWarning); expandedId click still works (not inside swipe area).
 
 import { useState, useCallback } from 'react';
 import { courseLib, likelySameCourse } from '../services/courseLib.js';
 import { Btn, Card, G } from '../components/ui.jsx';
-import CourseCard       from './CourseCard.jsx';
-import CourseMergeModal from './CourseMergeModal.jsx';
+import CourseCard        from './CourseCard.jsx';
+import CourseMergeModal  from './CourseMergeModal.jsx';
 import ManualCourseModal from './ManualCourseModal.jsx';
-import PhotoImportModal from './PhotoImportModal.jsx';
+import PhotoImportModal  from './PhotoImportModal.jsx';
 import CourseSearchModal from './CourseSearchModal.jsx';
+import SwipeableRow      from '../components/SwipeableRow.jsx';
 
 export default function CoursesPage() {
   const [courses,       setCourses]       = useState(() => courseLib.list());
@@ -26,6 +31,7 @@ export default function CoursesPage() {
   const [editingCourse, setEditingCourse] = useState(null);
   // Merge state: { existing: Course, incoming: Course }
   const [mergeState,    setMergeState]    = useState(null);
+  const [openRowId,     setOpenRowId]     = useState(null);
 
   const refresh = useCallback(() => setCourses(courseLib.list()), []);
 
@@ -49,7 +55,6 @@ export default function CoursesPage() {
   };
 
   const handleDelete = (id, name) => {
-    if (!window.confirm(`Remove "${name}" from your library?`)) return;
     courseLib.delete(id);
     refresh();
   };
@@ -141,24 +146,32 @@ export default function CoursesPage() {
               const expanded = expandedId === c.id;
               const totalPar = c.nines?.reduce((s,n) => s+(n.pars?.reduce((a,b)=>a+b,0)||0), 0) || null;
               return (
-                <div key={c.id} style={{ border: '1.5px solid #e0ece0', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px', cursor:'pointer' }}
-                    onClick={() => setExpandedId(expanded ? null : c.id)}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: G, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {c.name}
-                      </div>
-                      {c.location && <div style={{ fontSize: 11, color: '#888' }}>{c.location}</div>}
-                      <div style={{ display:'flex', gap:8, fontSize:11, color:'#aaa', marginTop:1, flexWrap:'wrap' }}>
-                        <span>{c.nines?.length||0} nine(s){totalPar ? ` · par ${totalPar}` : ''}</span>
-                        <span>{c.tees?.length||0} tee(s)</span>
+                <SwipeableRow
+                  key={c.id}
+                  id={c.id}
+                  openId={openRowId}
+                  setOpenId={setOpenRowId}
+                  onEdit={() => { setOpenRowId(null); setEditingCourse(c); }}
+                  onDelete={() => handleDelete(c.id, c.name)}
+                  deleteWarning={`Remove "${c.name}" from your library?`}
+                >
+                  <div style={{ border: '1.5px solid #e0ece0', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px', cursor:'pointer' }}
+                      onClick={() => setExpandedId(expanded ? null : c.id)}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: G, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {c.name}
+                        </div>
+                        {c.location && <div style={{ fontSize: 11, color: '#888' }}>{c.location}</div>}
+                        <div style={{ display:'flex', gap:8, fontSize:11, color:'#aaa', marginTop:1, flexWrap:'wrap' }}>
+                          <span>{c.nines?.length||0} nine(s){totalPar ? ` · par ${totalPar}` : ''}</span>
+                          <span>{c.tees?.length||0} tee(s)</span>
+                        </div>
                       </div>
                     </div>
-                    <Btn small variant="outline" onClick={e=>{e.stopPropagation();setEditingCourse(c);}} style={{ flexShrink:0, padding:'4px 10px', fontSize:11 }}>Edit</Btn>
-                    <Btn small variant="danger"  onClick={e=>{e.stopPropagation();handleDelete(c.id, c.name);}} style={{ flexShrink:0, padding:'4px 10px', fontSize:11 }}>✕</Btn>
+                    {expanded && <CourseCard course={c} />}
                   </div>
-                  {expanded && <CourseCard course={c} />}
-                </div>
+                </SwipeableRow>
               );
             })}
           </div>
