@@ -46,10 +46,7 @@ export default function PlayerPickerPopup({ allPlayers, selectedIds, onConfirm, 
                     </svg>
                   </div>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontWeight:600,fontSize:14,color:sel?G:'#333',display:'flex',alignItems:'center',gap:4 }}>
-                      {p.name}
-                      {p.starred && <span style={{ fontSize:11,color:'#f59e0b',lineHeight:1 }}>★</span>}
-                    </div>
+                    <div style={{ fontWeight:600,fontSize:14,color:sel?G:'#333' }}>{p.name}</div>
                     {p.ghin && <div style={{ fontSize:11,color:'#888' }}>HI: {p.ghin}</div>}
                   </div>
                   {sel && (
