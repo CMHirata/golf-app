@@ -1,139 +1,222 @@
 // ─── CourseCard.jsx ────────────────────────────────────────────────────────────
-// Pure render component — no logic, no state mutations.
-// Displays the expanded detail body for a single course entry:
-// hole grid (par + stroke index per nine) and tees table (rating/slope/yards).
-// Shown when the user taps a course row in CoursesPage to expand it.
+// ✅ Self-checked (13-E.7): Verbatim extraction of the Course card body from
+// NewRoundPage.jsx (lines ~845–1037 pre-extraction). No logic added or removed.
+// All setters are parent-owned; this component is render-only for the card body.
+// NineDropdown imported from NewRoundHelpers (B resolution — shared helpers file).
+// H-23 draft-string pattern preserved intact: clamp on blur, not on keystroke.
+// H-6: no new picker implementations introduced.
+// State ownership: zero local state; all values and setters come from props.
 
-import { useState } from 'react';
-import { G, GA, GB } from '../components/ui.jsx';
+import { G, GA, Card } from '../../components/ui.jsx';
+import { NineDropdown } from './NewRoundHelpers.jsx';
 
-const PINK   = '#c2185b';
-const PINKBG = '#fce4ec';
-
-export default function CourseCard({ course }) {
-  const hasWomens = course.nines?.some(n => n.handicapsWomen?.length || n.parsWomen?.length) ||
-                    course.tees?.some(t => t.ratingW);
-  const [gender, setGender] = useState('M'); // 'M' | 'F'
-  const isW = gender === 'F';
-  const accentColor = isW ? PINK : G;
-
+// Props:
+//   Data:    course, courseFromLib, courseSnapshot, isReload, allCourses,
+//            frontNine, backNine, roundStartHole, roundNumHoles,
+//            startHoleDraft, endHoleDraft, roundLengthError
+//   Setters: setShowCoursePicker, setFrontNine, setBackNine,
+//            setRoundStartHole, setRoundNumHoles,
+//            setStartHoleDraft, setEndHoleDraft
+export default function CourseCard({
+  course, courseFromLib, courseSnapshot, isReload, allCourses,
+  frontNine, backNine, roundStartHole, roundNumHoles,
+  startHoleDraft, endHoleDraft, roundLengthError,
+  setShowCoursePicker, setFrontNine, setBackNine,
+  setRoundStartHole, setRoundNumHoles,
+  setStartHoleDraft, setEndHoleDraft,
+}) {
   return (
-    <div style={{ padding:'0 12px 12px', borderTop:'1px solid #f0f8f0' }}>
-
-      {/* Gender toggle — only shown when women's data exists */}
-      {hasWomens && (
-        <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:10, marginBottom:2 }}>
-          <div style={{ fontSize:10, color:'#aaa', fontWeight:600 }}>Showing:</div>
-          <div style={{ display:'flex', background:'#f0f0f0', borderRadius:20, padding:2, gap:2 }}>
-            {[{ v:'M', label:"Men's" }, { v:'F', label:"Women's" }].map(opt => (
-              <button key={opt.v} onClick={() => setGender(opt.v)} style={{
-                padding:'3px 12px', borderRadius:16, border:'none', cursor:'pointer',
-                fontSize:11, fontWeight:700, transition:'all .15s',
-                background: gender === opt.v ? (opt.v === 'F' ? PINK : G) : 'transparent',
-                color:       gender === opt.v ? '#fff' : '#888',
-              }}>{opt.label}</button>
-            ))}
-          </div>
+    <Card>
+      <div style={{ fontWeight:700, fontSize:14, color:G, marginBottom:8 }}>Course</div>
+      {isReload && courseSnapshot && !courseFromLib && (
+        <div style={{ background:'#fff8e8', border:'1px solid #f0d070', borderRadius:8, padding:'7px 11px', marginBottom:8, fontSize:12, color:'#7a5800' }}>
+          <strong>{courseSnapshot.name}</strong> is not in your current course library. Using saved course data.
         </div>
       )}
-
-      {/* Nines — hole number, par, handicap */}
-      {course.nines?.map((nine, ni) => {
-        const pars = (isW && nine.parsWomen?.length) ? nine.parsWomen : nine.pars;
-        const hcps = (isW && nine.handicapsWomen?.length) ? nine.handicapsWomen : nine.handicaps;
-        const total = pars?.reduce((a,b) => a+b, 0) ?? '?';
-        return (
-          <div key={ni} style={{ marginTop:10 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:accentColor, marginBottom:4 }}>
-              {nine.name} — Par {total}
+      {allCourses.length === 0 && !courseSnapshot ? (
+        <p style={{ fontSize:12, color:'#aaa' }}>No courses saved. Go to Courses tab to add one.</p>
+      ) : (
+        /* Course picker trigger — styled like player picker */
+        <button onClick={() => setShowCoursePicker(true)}
+          style={{ width:'100%', padding:'10px 12px', borderRadius:12, border:`1.5px solid ${course ? G : '#ddd'}`, background:course ? GA : '#fff', cursor:'pointer', fontFamily:'inherit', marginBottom: course ? 8 : 0, textAlign:'left', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          {course ? (
+            <div style={{ minWidth:0 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:G, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{course.name}</div>
+              {course.location && <div style={{ fontSize:11, color:G, opacity:0.7, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{course.location}</div>}
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(9,1fr)', gap:3, textAlign:'center' }}>
-              {pars?.map((par, h) => (
-                <div key={h} style={{ background: isW ? '#fff0f5' : '#fafafa', borderRadius:4, padding:'3px 0' }}>
-                  <div style={{ fontSize:8, color:'#aaa' }}>{h+1}</div>
-                  <div style={{ fontSize:12, fontWeight:700, color:accentColor }}>{par}</div>
-                  <div style={{ fontSize:9, color: isW ? `${PINK}99` : '#bbb' }}>{hcps?.[h] ?? ''}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ fontSize:9, color:'#bbb', marginTop:2 }}>
-              hole · par · stroke index
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Tees table — Rating, Slope, Yards for selected gender */}
-      {course.tees?.length > 0 && (
-        <div style={{ marginTop:12 }}>
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
-              <thead>
-                <tr style={{ background: isW ? PINKBG : GB }}>
-                  <th style={{ textAlign:'left',   padding:'4px 8px', color:accentColor, fontWeight:700 }}>Tee</th>
-                  <th style={{ textAlign:'center', padding:'4px 6px', color:accentColor, fontWeight:700 }}>Rating</th>
-                  <th style={{ textAlign:'center', padding:'4px 6px', color:accentColor, fontWeight:700 }}>Slope</th>
-                  <th style={{ textAlign:'center', padding:'4px 6px', color:accentColor, fontWeight:700 }}>Yards</th>
-                </tr>
-              </thead>
-              <tbody>
-                {course.tees.map((t, ti) => {
-                  const rating = isW ? (t.ratingW ?? '—') : (t.rating ?? '—');
-                  const slope  = isW ? (t.slopeW  ?? '—') : (t.slope  ?? '—');
-                  const nineCount = course.nines?.length || 2;
-                  const ny = t.nineYards;
-
-                  // Yardage display — depends on number of nines
-                  let yardsMain, yardsSub;
-                  if (nineCount === 3 && ny?.length === 3) {
-                    // 27-hole: show three 18-hole combos
-                    const comboTotals = `${ny[0]+ny[1]} / ${ny[1]+ny[2]} / ${ny[2]+ny[0]}`;
-                    yardsMain = comboTotals;
-                    if (course.nineComboNames?.length === 3) {
-                      // Use combo names from card (e.g. South/North, North/East, East/South)
-                      yardsSub = course.nineComboNames.join(' · ');
-                    } else {
-                      // Fallback: derive from nine names
-                      const names = course.nines.map(n => n.name?.[0] || '?');
-                      yardsSub = `${names[0]}/${names[1]} · ${names[1]}/${names[2]} · ${names[2]}/${names[0]}`;
-                    }
-                  } else if (ny?.length) {
-                    yardsMain = t.totalYards || ny.reduce((a,b) => a+b, 0);
-                    yardsSub  = ny.join(' / ');
-                  } else {
-                    yardsMain = t.totalYards || '—';
-                    yardsSub  = null;
-                  }
-
-                  // Dim rows that have no women's data when in women's mode
-                  const dimmed = isW && !t.ratingW;
-                  return (
-                    <tr key={ti} style={{
-                      borderTop:'1px solid #eee',
-                      background: ti%2===0 ? '#fff' : '#fcfcfc',
-                      opacity: dimmed ? 0.45 : 1,
-                    }}>
-                      <td style={{ padding:'5px 8px', fontWeight:700, color:accentColor }}>{t.name}</td>
-                      <td style={{ textAlign:'center', padding:'5px 6px', color:'#333' }}>{rating}</td>
-                      <td style={{ textAlign:'center', padding:'5px 6px', color:'#333' }}>{slope}</td>
-                      <td style={{ textAlign:'center', padding:'5px 6px', color:'#555' }}>
-                        <span style={{ fontWeight:700 }}>{yardsMain}</span>
-                        {yardsSub && <div style={{ fontSize:9, color:'#aaa', marginTop:1 }}>{yardsSub}</div>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {isW && course.tees.some(t => !t.ratingW) && (
-            <div style={{ fontSize:10, color:'#aaa', marginTop:4 }}>
-              Dimmed tees have no women's rating on file.
-            </div>
+          ) : (
+            <span style={{ fontSize:13, color:'#aaa' }}>Select a course…</span>
           )}
+          <span style={{ fontSize:11, color: course ? G : '#bbb', flexShrink:0, marginLeft:8 }}>▼</span>
+        </button>
+      )}
+
+      {/* Front 9 / Back 9 — only shown when course has more than 2 nines */}
+      {course?.nines?.length > 2 && (
+        <div style={{ display:'flex', gap:8, marginBottom:8 }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:'#666', marginBottom:4 }}>Front 9</div>
+            <NineDropdown
+              nines={course.nines}
+              value={frontNine}
+              onChange={setFrontNine}
+              label="Front 9"
+            />
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:'#666', marginBottom:4 }}>Back 9</div>
+            <NineDropdown
+              nines={course.nines}
+              value={backNine}
+              onChange={setBackNine}
+              label="Back 9"
+            />
+          </div>
         </div>
       )}
 
-    </div>
+      {/* ── 13-C.2: Round Length — Start Hole + End Hole ───────────────── */}
+      {/* Stored as roundStartHole (0-based) + roundNumHoles. UI uses       */}
+      {/* 1-based Start + End (inclusive). Draft-string pattern: field      */}
+      {/* holds raw text during editing; validation/clamp runs on blur.     */}
+      {/* Defaults: Start 1, End 18 → no-op for full rounds.                */}
+      {/* A1 fix pass 4: each <input> is wrapped in a flex-centered outer   */}
+      {/* <div> (same pattern as ScoreGrid's renderCell). The outer div has */}
+      {/* fixed height and centers its content vertically; the input itself */}
+      {/* has auto-height and no background/border. This decouples box      */}
+      {/* stability from the browser's internal text-baseline quirks,       */}
+      {/* which shift between empty-cursor and populated-text states on iOS.*/}
+      <div style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:'#666', marginBottom:4 }}>Start Hole</div>
+          <div style={{
+            // Outer shell — owns the box dimensions, border, background.
+            height: 38,
+            border:`1px solid ${roundLengthError ? '#c0392b' : '#ddd'}`,
+            borderRadius:8,
+            background:'#fff',
+            display:'flex',
+            alignItems:'center',
+            justifyContent:'center',
+            boxSizing:'border-box',
+          }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              autoCapitalize="none"
+              value={startHoleDraft !== null ? startHoleDraft : String(roundStartHole + 1)}
+              onFocus={() => { setStartHoleDraft(''); }}
+              onChange={e => {
+                const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                setStartHoleDraft(digits);
+              }}
+              onBlur={() => {
+                // Commit: validate draft, update state. Invalid entries revert
+                // (A6 fix). Start change preserves End Hole when still valid;
+                // only bumps End up if forced (B4 fix).
+                const raw = startHoleDraft;
+                setStartHoleDraft(null);
+                if (raw === null || raw === '') return;
+                const n = parseInt(raw, 10);
+                if (Number.isNaN(n) || n < 1 || n > 18) return;
+                const newStart = n - 1;
+                const currentEnd1b = roundStartHole + roundNumHoles;
+                const minEnd1b     = newStart + 3;
+                const newEnd1b     = Math.min(18, Math.max(minEnd1b, currentEnd1b));
+                setRoundStartHole(newStart);
+                setRoundNumHoles(newEnd1b - newStart);
+              }}
+              style={{
+                // Inner element — minimal styling; let outer div own layout.
+                width: '100%',
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                textAlign: 'center',
+                fontSize: 13,
+                fontFamily: 'inherit',
+                color: G,
+                fontWeight: 700,
+                padding: 0,
+                margin: 0,
+                WebkitAppearance: 'none',
+                appearance: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:'#666', marginBottom:4 }}>End Hole</div>
+          <div style={{
+            height: 38,
+            border:`1px solid ${roundLengthError ? '#c0392b' : '#ddd'}`,
+            borderRadius:8,
+            background:'#fff',
+            display:'flex',
+            alignItems:'center',
+            justifyContent:'center',
+            boxSizing:'border-box',
+          }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              autoCapitalize="none"
+              value={endHoleDraft !== null ? endHoleDraft : String(roundStartHole + roundNumHoles)}
+              onFocus={() => { setEndHoleDraft(''); }}
+              onChange={e => {
+                const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+                setEndHoleDraft(digits);
+              }}
+              onBlur={() => {
+                const raw = endHoleDraft;
+                setEndHoleDraft(null);
+                if (raw === null || raw === '') return;
+                const n = parseInt(raw, 10);
+                const minEnd = roundStartHole + 3;
+                if (Number.isNaN(n) || n < minEnd || n > 18) return;
+                setRoundNumHoles(n - roundStartHole);
+              }}
+              style={{
+                width: '100%',
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                textAlign: 'center',
+                fontSize: 13,
+                fontFamily: 'inherit',
+                color: G,
+                fontWeight: 700,
+                padding: 0,
+                margin: 0,
+                WebkitAppearance: 'none',
+                appearance: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+      {/* Inline description / error */}
+      {!roundLengthError && (roundStartHole !== 0 || roundNumHoles !== 18) && (
+        <div style={{ fontSize:11, color:'#888', marginTop:6 }}>
+          Playing {roundNumHoles} holes · {roundStartHole + 1} through {roundStartHole + roundNumHoles}.
+        </div>
+      )}
+      {roundLengthError && (
+        <div style={{ fontSize:11, color:'#c0392b', marginTop:6, fontWeight:600 }}>
+          {roundLengthError}
+        </div>
+      )}
+
+    </Card>
   );
 }
