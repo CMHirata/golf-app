@@ -42,7 +42,13 @@ function dupIndices(handicaps) {
 // ─── Module-level kpField helper ─────────────────────────────────────────────
 // Renders a readOnly tap-to-edit field that opens ScoreKeypad (H-14: no system keyboard)
 function KpField({ fieldId, value, mode, placeholder, activeFieldId, onActivate, onCommit, style={} }) {
-  const display  = value !== '' && value != null ? String(value) : '';
+  const raw     = value !== '' && value != null ? String(value) : '';
+  // Always show one decimal place for ratings (e.g. "68" → "68.0")
+  const display = (mode === 'handicap-decimal' && raw && !raw.includes('.'))
+    ? raw + '.0'
+    : (mode === 'handicap-decimal' && raw)
+      ? parseFloat(raw).toFixed(1)
+      : raw;
   const isActive = activeFieldId === fieldId;
   return (
     <input type="text" inputMode="none" readOnly value={display} placeholder={placeholder}
@@ -388,7 +394,15 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const setupKpRef    = useRef(null);
   const setupKpCbsRef = useRef({ onChange: null, onCommit: null });
 
-  const setupKpStateRef = useRef(null);
+  const backdropRef = useRef(null);
+
+  useEffect(() => {
+    const el = backdropRef.current;
+    if (!el) return;
+    const prevent = (e) => e.preventDefault();
+    el.addEventListener('touchmove', prevent, { passive: false });
+    return () => el.removeEventListener('touchmove', prevent);
+  }, []);
   const modalCardRef    = useRef(null);
   setupKpStateRef.current = setupKp;
 
@@ -502,10 +516,8 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
 
   return (
   <>
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center',
-      padding:'8px 16px 16px' }}
-      onTouchMove={e => e.preventDefault()}
-      onTouchStart={e => { if (e.target === e.currentTarget) e.preventDefault(); }}>
+    <div ref={backdropRef} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center',
+      padding:'8px 16px 16px' }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
@@ -611,6 +623,10 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
           setSetupKp(kp => {
             if (!kp) return null;
             if (val === kp.kpValue) return kp;
+            // Slope fields: 3-digit max (55–155)
+            const isSlope = kp.fieldId.includes('_sM') || kp.fieldId.includes('_sW') ||
+                            kp.fieldId.includes('slopeM') || kp.fieldId.includes('slopeW');
+            if (isSlope && val.length > 3) return kp;
             setupKpCbsRef.current.onChange?.(val);
             return { ...kp, kpValue: val };
           });
