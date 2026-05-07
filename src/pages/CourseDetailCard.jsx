@@ -1,4 +1,4 @@
-// ─── CourseCard.jsx ────────────────────────────────────────────────────────────
+// ─── CourseDetailCard.jsx ─────────────────────────────────────────────────────
 // Pure render component — no logic, no state mutations.
 // Displays the expanded detail body for a single course entry:
 // hole grid (par + stroke index per nine) and tees table (rating/slope/yards).
