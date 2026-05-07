@@ -498,12 +498,12 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
     borderRadius: active ? 8 : 0, transition:'all .15s',
   });
 
-  const KP_HEIGHT = 300;
+  const KP_HEIGHT = 260;
 
   return (
   <>
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center',
-      padding:'16px 16px 16px' }}
+      padding:'8px 16px 16px' }}
       onTouchMove={e => e.preventDefault()}
       onTouchStart={e => { if (e.target === e.currentTarget) e.preventDefault(); }}>
       <style>{`
@@ -512,8 +512,8 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
         input[type=number] { -moz-appearance:textfield; }
         select { -webkit-appearance:none; -moz-appearance:none; appearance:none; }
       `}</style>
-      <div ref={modalCardRef} style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:10, position:'relative',
-        maxHeight: setupKp ? `calc(100vh - ${KP_HEIGHT + 32}px)` : 'calc(100vh - 32px)',
+      <div ref={modalCardRef} style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:4, position:'relative',
+        maxHeight: setupKp ? `calc(100vh - ${KP_HEIGHT + 24}px)` : 'calc(100vh - 24px)',
         overflowY:'auto', transition:'max-height .2s' }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
           <div style={{ fontWeight:800, fontSize:17, color:G }}>{initialData ? 'Edit Course' : 'Enter Manually'}</div>
