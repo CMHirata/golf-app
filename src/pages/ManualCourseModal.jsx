@@ -389,14 +389,19 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const setupKpCbsRef = useRef({ onChange: null, onCommit: null });
 
   const setupKpStateRef = useRef(null);
+  const modalCardRef    = useRef(null);
   setupKpStateRef.current = setupKp;
 
   useEffect(() => {
     const handler = (e) => {
       if (!setupKpStateRef.current) return;
       const t = e.target;
+      // Ignore taps on KpField inputs
       if (t && t.tagName === 'INPUT' && t.readOnly && t.getAttribute('inputmode') === 'none') return;
+      // Ignore taps inside keypad
       if (setupKpRef.current && setupKpRef.current.contains(t)) return;
+      // Ignore taps inside modal card (e.g. scrolling) — only close on taps outside modal entirely
+      if (modalCardRef.current && modalCardRef.current.contains(t)) return;
       setupKpCbsRef.current.onCommit?.();
       setSetupKp(null);
     };
@@ -498,14 +503,16 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   return (
   <>
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:300, display:'flex', alignItems:'flex-start', justifyContent:'center',
-      padding:'16px 16px 16px' }}>
+      padding:'16px 16px 16px' }}
+      onTouchMove={e => e.preventDefault()}
+      onTouchStart={e => { if (e.target === e.currentTarget) e.preventDefault(); }}>
       <style>{`
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
         input[type=number] { -moz-appearance:textfield; }
         select { -webkit-appearance:none; -moz-appearance:none; appearance:none; }
       `}</style>
-      <div style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:10, position:'relative',
+      <div ref={modalCardRef} style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:10, position:'relative',
         maxHeight: setupKp ? `calc(100vh - ${KP_HEIGHT + 32}px)` : 'calc(100vh - 32px)',
         overflowY:'auto', transition:'max-height .2s' }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
