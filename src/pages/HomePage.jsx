@@ -1,9 +1,8 @@
 // ─── pages/HomePage.jsx ───────────────────────────────────────────────────────
 //
-// ✅ Self-checked: Money List filters by p.inMoneyLists ?? true (absent = included);
-//    player name lookup falls back gracefully when a name in bank has no matching
-//    library record (treats as included); fmtDollar used for consistent formatting;
-//    YTD leader widget and Recent Rounds card removed per 15-E scope.
+// ✅ Self-checked: Money List filters by rosterNames (deleted players excluded)
+//    AND inMoneyLists !== false; IconTrophy and star/#1 special case removed;
+//    rosterNames set built from live playerLib data.
 
 import { useMemo } from 'react';
 import { ls, SK } from '../services/storage.js';
@@ -19,21 +18,17 @@ const IconPlus = () => (
   </svg>
 );
 
-const IconTrophy = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-    stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="8 21 12 17 16 21"/>
-    <line x1="12" y1="17" x2="12" y2="11"/>
-    <path d="M7 4H4a2 2 0 0 0-2 2v1a5 5 0 0 0 5 5h1"/>
-    <path d="M17 4h3a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1"/>
-    <rect x="7" y="2" width="10" height="9" rx="1"/>
-  </svg>
-);
-
 export default function HomePage({ onNewRound, onResume, onHistory, inProgress }) {
   const rounds  = useMemo(() => roundLib.list(), []);
   const players = useMemo(() => ls.get(SK.players) || [], []);
   const courses = useMemo(() => ls.get(SK.courses) || [], []);
+
+  // Build set of names currently on the roster
+  const rosterNames = useMemo(() => {
+    const names = new Set();
+    players.forEach(p => names.add(p.name));
+    return names;
+  }, [players]);
 
   // Build a set of player names excluded from Money List
   const excludedNames = useMemo(() => {
@@ -44,18 +39,19 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
     return excluded;
   }, [players]);
 
-  // Cumulative winnings across all rounds, filtered by inMoneyLists
+  // Cumulative winnings — roster members only, filtered by inMoneyLists
   const moneyList = useMemo(() => {
     const totals = {};
     rounds.forEach(r => {
       Object.entries(r.bank || {}).forEach(([name, v]) => {
+        if (!rosterNames.has(name)) return;
         if (excludedNames.has(name)) return;
         totals[name] = (totals[name] || 0) + v;
       });
     });
     return Object.entries(totals)
       .sort((a, b) => b[1] - a[1]);
-  }, [rounds, excludedNames]);
+  }, [rounds, rosterNames, excludedNames]);
 
   const hasData = rounds.length > 0 && moneyList.length > 0;
 
@@ -134,7 +130,6 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
         {hasData && (
           <Card>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <IconTrophy />
               <div style={{ fontWeight: 700, fontSize: 14, color: G, flex: 1 }}>Money List</div>
               <div style={{ fontSize: 11, color: '#aaa' }}>{rounds.length} round{rounds.length !== 1 ? 's' : ''}</div>
             </div>
@@ -149,8 +144,8 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
               <tbody>
                 {moneyList.map(([name, total], i) => (
                   <tr key={name} style={{ borderTop: i === 0 ? 'none' : '1px solid #f0f0f0' }}>
-                    <td style={{ padding: '7px 8px 7px 0', color: i === 0 ? '#f59e0b' : '#bbb', fontWeight: 700, fontSize: i === 0 ? 14 : 12, verticalAlign: 'middle' }}>
-                      {i === 0 ? '★' : i + 1}
+                    <td style={{ padding: '7px 8px 7px 0', color: '#999', fontWeight: 600, fontSize: 12, verticalAlign: 'middle' }}>
+                      {i + 1}
                     </td>
                     <td style={{ padding: '7px 8px', fontWeight: i === 0 ? 700 : 500, color: '#222', verticalAlign: 'middle' }}>
                       {name}
