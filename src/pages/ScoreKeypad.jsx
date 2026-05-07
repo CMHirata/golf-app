@@ -147,7 +147,6 @@ export function ScoreKeypad({
       action();
     },
     onTouchCancel: () => { /* no cleanup needed */ },
-    onMouseUp: action,     // desktop fallback
     onClick: () => {
       if (Date.now() - touchHandledRef.current < 600) return;
       action();
