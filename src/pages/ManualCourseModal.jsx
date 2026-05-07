@@ -394,7 +394,9 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
   const setupKpRef    = useRef(null);
   const setupKpCbsRef = useRef({ onChange: null, onCommit: null });
 
-  const backdropRef = useRef(null);
+  const backdropRef     = useRef(null);
+  const setupKpStateRef = useRef(null);
+  const modalCardRef    = useRef(null);
 
   useEffect(() => {
     const el = backdropRef.current;
@@ -403,7 +405,7 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
     el.addEventListener('touchmove', prevent, { passive: false });
     return () => el.removeEventListener('touchmove', prevent);
   }, []);
-  const modalCardRef    = useRef(null);
+
   setupKpStateRef.current = setupKp;
 
   useEffect(() => {
