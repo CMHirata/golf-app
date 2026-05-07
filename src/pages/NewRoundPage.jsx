@@ -35,7 +35,7 @@ import PlayerPickerPopup from './PlayerPickerPopup.jsx';
 import GameConfig, { GameTile } from './tables/GameConfig.jsx';
 import MatchCard from './MatchCard.jsx';
 import { PlayerDropdown, StyledSel } from './PlayerDropdown.jsx';
-import CourseCard from './new-round/CourseCard.jsx';
+import CourseCard from './new-round/NewRoundCourseCard.jsx';
 import PlayersCard from './new-round/PlayersCard.jsx';
 import GamesCard from './new-round/GamesCard.jsx';
 import { ScoreKeypad } from './ScoreKeypad.jsx';
