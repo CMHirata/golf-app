@@ -133,7 +133,7 @@ export default function HistoryPage({ onLoadRound }) {
     if (!file) return;
     try {
       const parsed = JSON.parse(await file.text());
-      const n = { players: parsed.players||[], courses: parsed.courses||[], rounds: parsed.rounds||[] };
+      const n = { players: parsed.players||[], courses: parsed.courses||[], rounds: parsed.rounds||[], settings: parsed.settings||null };
       if (!n.players.length && !n.courses.length && !n.rounds.length) { alert('No importable data found.'); return; }
       setImportModal({ parsed: n });
     } catch(e) { alert(`Could not read file: ${e.message}`); }
