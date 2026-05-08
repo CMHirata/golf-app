@@ -168,7 +168,7 @@ function ScrollWheel({ items, selectedIndex, onSelect, width }) {
               height: ITEM_H,
               scrollSnapAlign: 'center',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 15,
+              fontSize: 13,
               fontWeight: i === selectedIndex ? 700 : 400,
               color: i === selectedIndex ? G : '#555',
               cursor: 'pointer',
@@ -221,7 +221,7 @@ function WheelDatePicker({ label, value, open, onToggle, onChange }) {
   const chipLabel = `${MONTHS[value.month - 1]} ${value.day}, ${value.year}`;
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ flex: 1, minWidth: 0 }}>
       {/* Chip button */}
       <button onClick={onToggle} style={{
         width: '100%', textAlign: 'left',
@@ -246,29 +246,30 @@ function WheelDatePicker({ label, value, open, onToggle, onChange }) {
         <div style={{
           border: '1.5px solid ' + G, borderRadius: 12,
           marginTop: 6, background: '#fff', overflow: 'hidden',
-          padding: '0 12px',
+          padding: '0 8px',
+          display: 'flex', justifyContent: 'center',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {/* Month */}
             <ScrollWheel
               items={monthItems}
               selectedIndex={monthIdx}
               onSelect={handleMonthSelect}
-              width={90}
+              width={60}
             />
             {/* Day */}
             <ScrollWheel
               items={dayItems}
               selectedIndex={dayIdx}
               onSelect={handleDaySelect}
-              width={52}
+              width={36}
             />
             {/* Year */}
             <ScrollWheel
               items={yearItems}
               selectedIndex={yearIdx < 0 ? 0 : yearIdx}
               onSelect={handleYearSelect}
-              width={72}
+              width={52}
             />
           </div>
         </div>
@@ -323,9 +324,9 @@ export function RangePickerRow({ rangePref, onRangePrefChange }) {
           </button>
         ))}
       </div>
-      {/* Custom date wheel pickers — stacked vertically, full width */}
+      {/* Custom date wheel pickers — side by side */}
       {isCustomActive && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10 }}>
           <WheelDatePicker
             label="From"
             value={customStart}
