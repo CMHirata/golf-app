@@ -120,23 +120,24 @@ function ScrollWheel({ items, selectedIndex, onSelect, width }) {
 
   return (
     <div style={{ position: 'relative', width: width || 64, flexShrink: 0 }}>
-      {/* Selection highlight band */}
+      {/* Selection highlight band — border only, transparent bg so text is fully visible */}
       <div style={{
-        position: 'absolute', top: ITEM_H * 2, left: 0, right: 0,
-        height: ITEM_H, background: '#eaf3de',
-        borderTop: '1px solid #c8e6c9', borderBottom: '1px solid #c8e6c9',
+        position: 'absolute', top: ITEM_H * 2, left: 4, right: 4,
+        height: ITEM_H,
+        borderTop: '1.5px solid #c8e6c9', borderBottom: '1.5px solid #c8e6c9',
+        background: 'rgba(234,243,222,0.5)',
         pointerEvents: 'none', zIndex: 1, borderRadius: 6,
       }} />
-      {/* Top fade */}
+      {/* Top fade — stops before selected row */}
       <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: ITEM_H * 2,
-        background: 'linear-gradient(to bottom, rgba(255,255,255,1), rgba(255,255,255,0))',
+        position: 'absolute', top: 0, left: 0, right: 0, height: ITEM_H * 2 - 4,
+        background: 'linear-gradient(to bottom, rgba(255,255,255,1) 40%, rgba(255,255,255,0))',
         pointerEvents: 'none', zIndex: 2,
       }} />
-      {/* Bottom fade */}
+      {/* Bottom fade — stops before selected row */}
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: ITEM_H * 2,
-        background: 'linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,0))',
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: ITEM_H * 2 - 4,
+        background: 'linear-gradient(to top, rgba(255,255,255,1) 40%, rgba(255,255,255,0))',
         pointerEvents: 'none', zIndex: 2,
       }} />
       {/* Scrollable list */}
@@ -172,7 +173,7 @@ function ScrollWheel({ items, selectedIndex, onSelect, width }) {
               color: i === selectedIndex ? G : '#555',
               cursor: 'pointer',
               userSelect: 'none',
-              position: 'relative', zIndex: 3,
+              position: 'relative', zIndex: 4,
             }}
           >
             {item}
@@ -220,7 +221,7 @@ function WheelDatePicker({ label, value, open, onToggle, onChange }) {
   const chipLabel = `${MONTHS[value.month - 1]} ${value.day}, ${value.year}`;
 
   return (
-    <div style={{ flex: 1, minWidth: 0 }}>
+    <div style={{ width: '100%' }}>
       {/* Chip button */}
       <button onClick={onToggle} style={{
         width: '100%', textAlign: 'left',
@@ -245,29 +246,29 @@ function WheelDatePicker({ label, value, open, onToggle, onChange }) {
         <div style={{
           border: '1.5px solid ' + G, borderRadius: 12,
           marginTop: 6, background: '#fff', overflow: 'hidden',
-          padding: '0 8px',
+          padding: '0 12px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {/* Month */}
             <ScrollWheel
               items={monthItems}
               selectedIndex={monthIdx}
               onSelect={handleMonthSelect}
-              width={72}
+              width={90}
             />
             {/* Day */}
             <ScrollWheel
               items={dayItems}
               selectedIndex={dayIdx}
               onSelect={handleDaySelect}
-              width={44}
+              width={52}
             />
             {/* Year */}
             <ScrollWheel
               items={yearItems}
               selectedIndex={yearIdx < 0 ? 0 : yearIdx}
               onSelect={handleYearSelect}
-              width={60}
+              width={72}
             />
           </div>
         </div>
@@ -322,9 +323,9 @@ export function RangePickerRow({ rangePref, onRangePrefChange }) {
           </button>
         ))}
       </div>
-      {/* Custom date wheel pickers */}
+      {/* Custom date wheel pickers — stacked vertically, full width */}
       {isCustomActive && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
           <WheelDatePicker
             label="From"
             value={customStart}
