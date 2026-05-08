@@ -137,22 +137,24 @@ function DateChipPicker({ label, value, open, onToggle, onChange }) {
               );
             })}
           </div>
-          {/* Year row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderTop: '0.5px solid #eee' }}>
-            {years.slice().reverse().map(y => {
-              const sel = value.year === y;
-              return (
-                <button key={y} onClick={() => {
-                  const maxDay = daysInMonth(value.month, y);
-                  onChange({ ...value, year: y, day: Math.min(value.day, maxDay) });
-                }} style={{
-                  padding: '5px 8px', fontSize: 12, borderRadius: 6,
-                  border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  background: sel ? G : 'transparent',
-                  color: sel ? '#fff' : '#555', fontWeight: sel ? 600 : 400,
-                }}>{y}</button>
-              );
-            })}
+          {/* Year row — horizontally scrollable */}
+          <div style={{ overflowX: 'auto', borderTop: '0.5px solid #eee', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ display: 'flex', gap: 3, padding: '8px 8px', width: 'max-content' }}>
+              {years.slice().reverse().map(y => {
+                const sel = value.year === y;
+                return (
+                  <button key={y} onClick={() => {
+                    const maxDay = daysInMonth(value.month, y);
+                    onChange({ ...value, year: y, day: Math.min(value.day, maxDay) });
+                  }} style={{
+                    padding: '6px 10px', fontSize: 12, borderRadius: 6, whiteSpace: 'nowrap',
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    background: sel ? G : '#f5f5f5',
+                    color: sel ? '#fff' : '#555', fontWeight: sel ? 600 : 400,
+                  }}>{y}</button>
+                );
+              })}
+            </div>
           </div>
           {/* Day row */}
           <div style={{ padding: '8px 10px 10px', borderTop: '0.5px solid #eee' }}>
