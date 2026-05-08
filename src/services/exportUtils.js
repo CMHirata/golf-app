@@ -42,7 +42,7 @@ export async function triggerExport() {
     players:    playerLib.list(),
     courses:    courseLib.list(),
     rounds:     roundLib.list(),
-    settings:   { moneyListRange: ls.get('moneyListRange') },
+    settings:   { moneyListRange: ls.get('moneyListRange'), historyRange: ls.get('historyRange') },
   };
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: 'application/json' });

@@ -10,7 +10,7 @@ import { roundLib } from '../services/roundLib.js';
 import { Btn, Card, G, RED, fmtDollar } from '../components/ui.jsx';
 import {
   loadRangePref, saveRangePref, filterByRange, rangeLabel,
-  RangePickerRow,
+  RangePickerRow, ML_KEY,
 } from '../components/RangePicker.jsx';
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
@@ -36,13 +36,12 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
   const players = useMemo(() => ls.get(SK.players) || [], []);
   const courses = useMemo(() => ls.get(SK.courses) || [], []);
 
-  const [rangePref, setRangePrefState] = useState(() => loadRangePref());
+  const [rangePref, setRangePrefState] = useState(() => loadRangePref(ML_KEY));
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const setRangePref = useCallback((pref) => {
-    saveRangePref(pref);
+    saveRangePref(pref, ML_KEY);
     setRangePrefState(pref);
-    // Close picker when non-custom range selected
     if (pref.range !== 'custom') setPickerOpen(false);
   }, []);
 

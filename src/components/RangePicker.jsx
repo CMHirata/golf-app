@@ -20,6 +20,7 @@ if (typeof document !== 'undefined' && !document.getElementById('wheel-picker-st
 }
 
 export const ML_KEY = 'moneyListRange';
+export const HISTORY_KEY = 'historyRange';
 
 export const RANGE_OPTS = [
   { v: '7days',  l: '7 Days'   },
@@ -33,13 +34,13 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 const ITEM_H = 36;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-export function loadRangePref() {
-  const saved = ls.get(ML_KEY);
+export function loadRangePref(key = ML_KEY) {
+  const saved = ls.get(key);
   if (saved && saved.range) return saved;
   return { range: 'ytd', customStart: null, customEnd: null };
 }
 
-export function saveRangePref(pref) { ls.set(ML_KEY, pref); }
+export function saveRangePref(pref, key = ML_KEY) { ls.set(key, pref); }
 
 export function rangeLabel(pref) {
   const opt = RANGE_OPTS.find(o => o.v === pref.range);

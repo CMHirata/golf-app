@@ -28,7 +28,7 @@ import { courseLib } from '../services/courseLib.js';
 import { Card, G, RED, ShareOrientationPicker } from '../components/ui.jsx';
 import {
   loadRangePref, saveRangePref, filterByRange, rangeLabel,
-  RangePickerRow,
+  RangePickerRow, HISTORY_KEY,
 } from '../components/RangePicker.jsx';
 import {
   ImportModal, ImportConflictModal,
@@ -51,7 +51,7 @@ function mergeById(existing, incoming) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function HistoryPage({ onLoadRound }) {
   const [rounds,             setRounds]             = useState(() => roundLib.list());
-  const [rangePref,          setRangePrefState]      = useState(() => loadRangePref());
+  const [rangePref,          setRangePrefState]      = useState(() => loadRangePref(HISTORY_KEY));
   const [summaryRound,       setSummaryRound]        = useState(null);
   const [openRowId,          setOpenRowId]          = useState(null);
   const [importModal,        setImportModal]        = useState(null);
@@ -101,7 +101,7 @@ export default function HistoryPage({ onLoadRound }) {
   }, [shareRound]);
 
   const setRangePref = useCallback((pref) => {
-    saveRangePref(pref);
+    saveRangePref(pref, HISTORY_KEY);
     setRangePrefState(pref);
   }, []);
 
@@ -117,7 +117,7 @@ export default function HistoryPage({ onLoadRound }) {
 
   const handleExport = async () => {
     const filename = `golf_backup_${new Date().toISOString().slice(0,10)}.json`;
-    const payload  = { exportedAt: new Date().toISOString(), appVersion: 'golf-scorekeeper-v4', players: playerLib.list(), courses: courseLib.list(), rounds: roundLib.list(), settings: { moneyListRange: ls.get('moneyListRange') } };
+    const payload  = { exportedAt: new Date().toISOString(), appVersion: 'golf-scorekeeper-v4', players: playerLib.list(), courses: courseLib.list(), rounds: roundLib.list(), settings: { moneyListRange: ls.get('moneyListRange'), historyRange: ls.get('historyRange') } };
     const json = JSON.stringify(payload, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/json' })] })) {
@@ -235,6 +235,7 @@ export default function HistoryPage({ onLoadRound }) {
     }
     if(sel.rounds&&parsed.rounds?.length){const ex=ls.get(SK.rounds)||[];ls.set(SK.rounds,mergeById(ex,parsed.rounds));setRounds(roundLib.list());summary.push(`${parsed.rounds.length} round${parsed.rounds.length!==1?'s':''}`);}
     if(parsed.settings?.moneyListRange){ls.set('moneyListRange',parsed.settings.moneyListRange);}
+    if(parsed.settings?.historyRange){ls.set('historyRange',parsed.settings.historyRange);}
     const sk=Object.values({...cr,...pr}).filter(v=>v==='skip').length;
     alert(`Imported: ${summary.join(', ')}${sk>0?` (${sk} duplicate${sk!==1?'s':''} skipped)`:''}.`);
   };
