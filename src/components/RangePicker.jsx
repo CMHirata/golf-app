@@ -1,23 +1,23 @@
 // ─── components/RangePicker.jsx ───────────────────────────────────────────────
 //
 // ✅ Self-checked: all range logic extracted from HomePage; RANGE_OPTS, helpers,
-//    DateChipPicker, and RangePickerRow are all exported; ls import uses shared
-//    storage service; G imported from ui.jsx; no page-specific logic present.
+//    WheelDatePicker, and RangePickerRow all exported; scroll-wheel picker uses
+//    scroll-snap for iOS drum-roll feel; no overflow issues; G imported from
+//    ui.jsx; no page-specific logic present.
 //
 // Shared by HomePage (Money List) and HistoryPage (round filter).
-// Single source of truth for range options, filter logic, and picker UI.
-//
-// Exports:
-//   RANGE_OPTS        — [{v, l}] array of range options
-//   loadRangePref()   — reads {range, customStart, customEnd} from localStorage
-//   saveRangePref()   — writes pref to localStorage
-//   filterByRange()   — filters an array of {date} objects by pref
-//   rangeLabel()      — human-readable label for current pref
-//   RangePickerRow    — full pill grid + custom date chips, drop-in component
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ls } from '../services/storage.js';
 import { G } from '../components/ui.jsx';
+
+// Inject scrollbar-hiding CSS once
+if (typeof document !== 'undefined' && !document.getElementById('wheel-picker-style')) {
+  const s = document.createElement('style');
+  s.id = 'wheel-picker-style';
+  s.textContent = '.wheel-scroll::-webkit-scrollbar { display: none; }';
+  document.head.appendChild(s);
+}
 
 export const ML_KEY = 'moneyListRange';
 
@@ -30,6 +30,7 @@ export const RANGE_OPTS = [
 ];
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const ITEM_H = 36;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 export function loadRangePref() {
@@ -38,16 +39,13 @@ export function loadRangePref() {
   return { range: 'ytd', customStart: null, customEnd: null };
 }
 
-export function saveRangePref(pref) {
-  ls.set(ML_KEY, pref);
-}
+export function saveRangePref(pref) { ls.set(ML_KEY, pref); }
 
 export function rangeLabel(pref) {
   const opt = RANGE_OPTS.find(o => o.v === pref.range);
   if (!opt) return 'YTD';
   if (pref.range === 'custom' && pref.customStart && pref.customEnd) {
-    const s = pref.customStart;
-    const e = pref.customEnd;
+    const s = pref.customStart; const e = pref.customEnd;
     return `${MONTHS[s.month-1]} ${s.day}, ${s.year} – ${MONTHS[e.month-1]} ${e.day}, ${e.year}`;
   }
   return opt.l;
@@ -89,23 +87,147 @@ function jan1Parts() {
   return { day: 1, month: 1, year: now.getFullYear() };
 }
 
-// ── DateChipPicker ────────────────────────────────────────────────────────────
-function DateChipPicker({ label, value, open, onToggle, onChange }) {
+// ── ScrollWheel — single scrollable column ────────────────────────────────────
+function ScrollWheel({ items, selectedIndex, onSelect, width }) {
+  const ref = useRef(null);
+  const isScrolling = useRef(false);
+  const lastIndex = useRef(selectedIndex);
+
+  // Scroll to selected index on mount and when selectedIndex changes externally
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const target = selectedIndex * ITEM_H;
+    el.scrollTop = target;
+    lastIndex.current = selectedIndex;
+  }, [selectedIndex]);
+
+  const handleScroll = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    clearTimeout(isScrolling.current);
+    isScrolling.current = setTimeout(() => {
+      const idx = Math.round(el.scrollTop / ITEM_H);
+      const clamped = Math.max(0, Math.min(idx, items.length - 1));
+      // Snap to nearest
+      el.scrollTo({ top: clamped * ITEM_H, behavior: 'smooth' });
+      if (clamped !== lastIndex.current) {
+        lastIndex.current = clamped;
+        onSelect(clamped);
+      }
+    }, 80);
+  }, [items.length, onSelect]);
+
+  return (
+    <div style={{ position: 'relative', width: width || 64, flexShrink: 0 }}>
+      {/* Selection highlight band */}
+      <div style={{
+        position: 'absolute', top: ITEM_H * 2, left: 0, right: 0,
+        height: ITEM_H, background: '#eaf3de',
+        borderTop: '1px solid #c8e6c9', borderBottom: '1px solid #c8e6c9',
+        pointerEvents: 'none', zIndex: 1, borderRadius: 6,
+      }} />
+      {/* Top fade */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: ITEM_H * 2,
+        background: 'linear-gradient(to bottom, rgba(255,255,255,1), rgba(255,255,255,0))',
+        pointerEvents: 'none', zIndex: 2,
+      }} />
+      {/* Bottom fade */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: ITEM_H * 2,
+        background: 'linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,0))',
+        pointerEvents: 'none', zIndex: 2,
+      }} />
+      {/* Scrollable list */}
+      <div
+        ref={ref}
+        className="wheel-scroll"
+        onScroll={handleScroll}
+        style={{
+          height: ITEM_H * 5,
+          overflowY: 'scroll',
+          scrollSnapType: 'y mandatory',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
+      >
+        {/* Top padding items */}
+        <div style={{ height: ITEM_H * 2, flexShrink: 0 }} />
+        {items.map((item, i) => (
+          <div
+            key={item}
+            onClick={() => {
+              ref.current?.scrollTo({ top: i * ITEM_H, behavior: 'smooth' });
+              lastIndex.current = i;
+              onSelect(i);
+            }}
+            style={{
+              height: ITEM_H,
+              scrollSnapAlign: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 15,
+              fontWeight: i === selectedIndex ? 700 : 400,
+              color: i === selectedIndex ? G : '#555',
+              cursor: 'pointer',
+              userSelect: 'none',
+              position: 'relative', zIndex: 3,
+            }}
+          >
+            {item}
+          </div>
+        ))}
+        {/* Bottom padding items */}
+        <div style={{ height: ITEM_H * 2, flexShrink: 0 }} />
+      </div>
+    </div>
+  );
+}
+
+// ── WheelDatePicker — three-column iOS-style wheel ────────────────────────────
+function WheelDatePicker({ label, value, open, onToggle, onChange }) {
   const currentYear = new Date().getFullYear();
   const years = [];
-  for (let y = currentYear; y >= currentYear - 10; y--) years.push(y);
-  const days = [];
-  for (let d = 1; d <= daysInMonth(value.month, value.year); d++) days.push(d);
+  for (let y = currentYear; y >= currentYear - 10; y--) years.push(String(y));
+  years.reverse(); // oldest first so index matches natural order
+
+  const numDays = daysInMonth(value.month, value.year);
+  const dayItems  = Array.from({ length: numDays }, (_, i) => String(i + 1));
+  const monthItems = MONTHS;
+  const yearItems  = years;
+
+  const monthIdx = value.month - 1;
+  const dayIdx   = Math.min(value.day - 1, numDays - 1);
+  const yearIdx  = yearItems.indexOf(String(value.year));
+
+  const handleMonthSelect = useCallback((idx) => {
+    const newMonth = idx + 1;
+    const maxDay = daysInMonth(newMonth, value.year);
+    onChange({ ...value, month: newMonth, day: Math.min(value.day, maxDay) });
+  }, [value, onChange]);
+
+  const handleDaySelect = useCallback((idx) => {
+    onChange({ ...value, day: idx + 1 });
+  }, [value, onChange]);
+
+  const handleYearSelect = useCallback((idx) => {
+    const newYear = parseInt(yearItems[idx]);
+    const maxDay = daysInMonth(value.month, newYear);
+    onChange({ ...value, year: newYear, day: Math.min(value.day, maxDay) });
+  }, [value, onChange, yearItems]);
+
   const chipLabel = `${MONTHS[value.month - 1]} ${value.day}, ${value.year}`;
 
   return (
-    <div style={{ flex: 1 }}>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Chip button */}
       <button onClick={onToggle} style={{
         width: '100%', textAlign: 'left',
         background: '#f0f7f0',
         border: open ? '2px solid ' + G : '1.5px solid ' + G,
         borderRadius: 10, padding: '8px 12px',
-        cursor: 'pointer', fontFamily: 'inherit',
+        cursor: 'pointer', fontFamily: 'inherit', boxSizing: 'border-box',
       }}>
         <div style={{ fontSize: 10, fontWeight: 600, color: '#3B6D11', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{label}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -117,62 +239,36 @@ function DateChipPicker({ label, value, open, onToggle, onChange }) {
           </svg>
         </div>
       </button>
+
+      {/* Wheel picker */}
       {open && (
-        <div style={{ border: '1.5px solid ' + G, borderRadius: 12, marginTop: 6, background: '#fff', overflow: 'hidden' }}>
-          {/* Month grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 4, padding: 10 }}>
-            {MONTHS.map((m, i) => {
-              const sel = value.month === i + 1;
-              return (
-                <button key={m} onClick={() => {
-                  const newMonth = i + 1;
-                  const maxDay = daysInMonth(newMonth, value.year);
-                  onChange({ ...value, month: newMonth, day: Math.min(value.day, maxDay) });
-                }} style={{
-                  padding: '7px 4px', fontSize: 12, textAlign: 'center',
-                  borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  background: sel ? G : 'transparent',
-                  color: sel ? '#fff' : '#333', fontWeight: sel ? 600 : 400,
-                }}>{m}</button>
-              );
-            })}
-          </div>
-          {/* Year row — horizontally scrollable */}
-          <div style={{ overflowX: 'auto', borderTop: '0.5px solid #eee', WebkitOverflowScrolling: 'touch' }}>
-            <div style={{ display: 'flex', gap: 3, padding: '8px 8px', width: 'max-content' }}>
-              {years.slice().reverse().map(y => {
-                const sel = value.year === y;
-                return (
-                  <button key={y} onClick={() => {
-                    const maxDay = daysInMonth(value.month, y);
-                    onChange({ ...value, year: y, day: Math.min(value.day, maxDay) });
-                  }} style={{
-                    padding: '6px 10px', fontSize: 12, borderRadius: 6, whiteSpace: 'nowrap',
-                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                    background: sel ? G : '#f5f5f5',
-                    color: sel ? '#fff' : '#555', fontWeight: sel ? 600 : 400,
-                  }}>{y}</button>
-                );
-              })}
-            </div>
-          </div>
-          {/* Day row */}
-          <div style={{ padding: '8px 10px 10px', borderTop: '0.5px solid #eee' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Day</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-              {days.map(d => {
-                const sel = value.day === d;
-                return (
-                  <button key={d} onClick={() => onChange({ ...value, day: d })} style={{
-                    width: 28, height: 28, fontSize: 11, borderRadius: '50%',
-                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                    background: sel ? G : 'transparent',
-                    color: sel ? '#fff' : '#333', fontWeight: sel ? 600 : 400,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{d}</button>
-                );
-              })}
-            </div>
+        <div style={{
+          border: '1.5px solid ' + G, borderRadius: 12,
+          marginTop: 6, background: '#fff', overflow: 'hidden',
+          padding: '0 8px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+            {/* Month */}
+            <ScrollWheel
+              items={monthItems}
+              selectedIndex={monthIdx}
+              onSelect={handleMonthSelect}
+              width={72}
+            />
+            {/* Day */}
+            <ScrollWheel
+              items={dayItems}
+              selectedIndex={dayIdx}
+              onSelect={handleDaySelect}
+              width={44}
+            />
+            {/* Year */}
+            <ScrollWheel
+              items={yearItems}
+              selectedIndex={yearIdx < 0 ? 0 : yearIdx}
+              onSelect={handleYearSelect}
+              width={60}
+            />
           </div>
         </div>
       )}
@@ -181,10 +277,6 @@ function DateChipPicker({ label, value, open, onToggle, onChange }) {
 }
 
 // ── RangePickerRow ────────────────────────────────────────────────────────────
-// Drop-in component. Renders the pill grid + custom date chips.
-// Props:
-//   rangePref        — current {range, customStart, customEnd}
-//   onRangePrefChange — called with new pref whenever user makes a selection
 export function RangePickerRow({ rangePref, onRangePrefChange }) {
   const isCustomActive = rangePref.range === 'custom';
   const [openChip, setOpenChip] = useState(null);
@@ -230,17 +322,17 @@ export function RangePickerRow({ rangePref, onRangePrefChange }) {
           </button>
         ))}
       </div>
-      {/* Custom date chips */}
+      {/* Custom date wheel pickers */}
       {isCustomActive && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10 }}>
-          <DateChipPicker
+          <WheelDatePicker
             label="From"
             value={customStart}
             open={openChip === 'start'}
             onToggle={() => setOpenChip(o => o === 'start' ? null : 'start')}
             onChange={handleCustomStartChange}
           />
-          <DateChipPicker
+          <WheelDatePicker
             label="To"
             value={customEnd}
             open={openChip === 'end'}
