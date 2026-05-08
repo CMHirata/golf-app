@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import { ls, SK } from '../services/storage.js';
 import { roundLib } from '../services/roundLib.js';
-import { Btn, Card, G, GA, RED, fmtDollar } from '../components/ui.jsx';
+import { Btn, Card, G, RED, fmtDollar } from '../components/ui.jsx';
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
 const IconPlus = () => (

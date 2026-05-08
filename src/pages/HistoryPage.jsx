@@ -25,7 +25,7 @@ import { ls, SK, makeId } from '../services/storage.js';
 import { roundLib } from '../services/roundLib.js';
 import { playerLib } from '../services/playerLib.js';
 import { courseLib } from '../services/courseLib.js';
-import { Btn, Card, G, GA, RED, ShareOrientationPicker } from '../components/ui.jsx';
+import { Card, G, GA, RED, ShareOrientationPicker } from '../components/ui.jsx';
 import {
   ImportModal, ImportConflictModal,
   likelySameCourse, likelySamePlayer, diffCourses,
