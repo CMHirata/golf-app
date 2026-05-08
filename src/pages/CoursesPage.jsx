@@ -129,7 +129,7 @@ export default function CoursesPage() {
           {[
             { label: 'Search',    onClick: () => setShowSearch(true),  filled: true  },
             { label: 'Scan Card', onClick: () => setShowPhoto(true),   filled: true  },
-            { label: 'Manual',    onClick: () => setShowManual(true),  filled: false },
+            { label: 'Manual',    onClick: () => setShowManual(true),  filled: true  },
           ].map(({ label, onClick, filled }) => (
             <button key={label} onClick={onClick} style={{
               width: '100%', padding: '6px 0', borderRadius: 20, textAlign: 'center',

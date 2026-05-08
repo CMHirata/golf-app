@@ -1,193 +1,17 @@
 // ─── pages/HomePage.jsx ───────────────────────────────────────────────────────
 //
-// ✅ Self-checked: moneyListRange saved/loaded from localStorage 'moneyListRange';
-//    default YTD; settings field preserved through import (fix: handleImportFile
-//    now passes settings through); custom date selector uses styled select wheels
-//    (day/month/year) matching app look; place numbers 13px muted; no winner
-//    highlight; each row has left accent bar; visual design refined.
+// ✅ Self-checked: all range logic delegated to RangePicker.jsx; loadRangePref,
+//    saveRangePref, filterByRange, RangePickerRow all imported; no duplicate
+//    range logic remains in this file; Money List rows unchanged.
 
 import { useMemo, useState, useCallback } from 'react';
 import { ls, SK } from '../services/storage.js';
 import { roundLib } from '../services/roundLib.js';
 import { Btn, Card, G, RED, fmtDollar } from '../components/ui.jsx';
-
-const ML_KEY = 'moneyListRange';
-
-const RANGE_OPTS = [
-  { v: '7days',  l: '7 Days'   },
-  { v: 'mtd',    l: 'MTD'      },
-  { v: 'ytd',    l: 'YTD'      },
-  { v: 'all',    l: 'All Time' },
-  { v: 'custom', l: 'Custom'   },
-];
-
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-function loadRangePref() {
-  const saved = ls.get(ML_KEY);
-  if (saved && saved.range) return saved;
-  return { range: 'ytd', customStart: null, customEnd: null };
-}
-
-function saveRangePref(pref) {
-  ls.set(ML_KEY, pref);
-}
-
-function daysInMonth(month, year) {
-  return new Date(year, month, 0).getDate();
-}
-
-function rangeLabel(pref) {
-  const opt = RANGE_OPTS.find(o => o.v === pref.range);
-  if (!opt) return 'YTD';
-  if (pref.range === 'custom' && pref.customStart && pref.customEnd) {
-    const s = pref.customStart;
-    const e = pref.customEnd;
-    return `${MONTHS[s.month-1]} ${s.day}, ${s.year} – ${MONTHS[e.month-1]} ${e.day}, ${e.year}`;
-  }
-  return opt.l;
-}
-
-function filterByRange(rounds, pref) {
-  const now = new Date();
-  if (pref.range === 'all') return rounds;
-  if (pref.range === '7days') {
-    const cutoff = new Date(now); cutoff.setDate(now.getDate() - 7);
-    return rounds.filter(r => new Date(r.date) >= cutoff);
-  }
-  if (pref.range === 'mtd') {
-    return rounds.filter(r => {
-      const d = new Date(r.date);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    });
-  }
-  if (pref.range === 'ytd') {
-    return rounds.filter(r => new Date(r.date).getFullYear() === now.getFullYear());
-  }
-  if (pref.range === 'custom' && pref.customStart && pref.customEnd) {
-    const s = new Date(pref.customStart.year, pref.customStart.month - 1, pref.customStart.day);
-    const e = new Date(pref.customEnd.year, pref.customEnd.month - 1, pref.customEnd.day, 23, 59, 59);
-    return rounds.filter(r => { const d = new Date(r.date); return d >= s && d <= e; });
-  }
-  return rounds;
-}
-
-function todayParts() {
-  const now = new Date();
-  return { day: now.getDate(), month: now.getMonth() + 1, year: now.getFullYear() };
-}
-
-function jan1Parts() {
-  const now = new Date();
-  return { day: 1, month: 1, year: now.getFullYear() };
-}
-
-// ── Custom date picker — Option A chip + dropdown ─────────────────────────────
-function DateChipPicker({ label, value, open, onToggle, onChange }) {
-  const currentYear = new Date().getFullYear();
-  const years = [];
-  for (let y = currentYear; y >= currentYear - 10; y--) years.push(y);
-  const days = [];
-  for (let d = 1; d <= daysInMonth(value.month, value.year); d++) days.push(d);
-
-  const chipLabel = `${MONTHS[value.month - 1]} ${value.day}, ${value.year}`;
-
-  return (
-    <div style={{ flex: 1 }}>
-      {/* Chip */}
-      <button
-        onClick={onToggle}
-        style={{
-          width: '100%', textAlign: 'left',
-          background: '#f0f7f0',
-          border: open ? '2px solid ' + G : '1.5px solid ' + G,
-          borderRadius: 10, padding: '8px 12px',
-          cursor: 'pointer', fontFamily: 'inherit',
-        }}
-      >
-        <div style={{ fontSize: 10, fontWeight: 600, color: '#3B6D11', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{label}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: G }}>{chipLabel}</span>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={G} strokeWidth="3"
-            strokeLinecap="round" strokeLinejoin="round"
-            style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }}>
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-        </div>
-      </button>
-
-      {/* Dropdown */}
-      {open && (
-        <div style={{
-          border: '1.5px solid ' + G, borderRadius: 12,
-          marginTop: 6, background: '#fff', overflow: 'hidden',
-        }}>
-          {/* Month grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 4, padding: 10 }}>
-            {MONTHS.map((m, i) => {
-              const sel = value.month === i + 1;
-              return (
-                <button key={m} onClick={() => {
-                  const newMonth = i + 1;
-                  const maxDay = daysInMonth(newMonth, value.year);
-                  onChange({ ...value, month: newMonth, day: Math.min(value.day, maxDay) });
-                }} style={{
-                  padding: '7px 4px', fontSize: 12, textAlign: 'center',
-                  borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  background: sel ? G : 'transparent',
-                  color: sel ? '#fff' : '#333', fontWeight: sel ? 600 : 400,
-                }}>
-                  {m}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Year row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderTop: '0.5px solid #eee' }}>
-            {years.slice().reverse().map(y => {
-              const sel = value.year === y;
-              return (
-                <button key={y} onClick={() => {
-                  const maxDay = daysInMonth(value.month, y);
-                  onChange({ ...value, year: y, day: Math.min(value.day, maxDay) });
-                }} style={{
-                  padding: '5px 8px', fontSize: 12, borderRadius: 6,
-                  border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  background: sel ? G : 'transparent',
-                  color: sel ? '#fff' : '#555', fontWeight: sel ? 600 : 400,
-                }}>
-                  {y}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Day row */}
-          <div style={{ padding: '8px 10px 10px', borderTop: '0.5px solid #eee' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Day</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-              {days.map(d => {
-                const sel = value.day === d;
-                return (
-                  <button key={d} onClick={() => onChange({ ...value, day: d })} style={{
-                    width: 28, height: 28, fontSize: 11, borderRadius: '50%',
-                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                    background: sel ? G : 'transparent',
-                    color: sel ? '#fff' : '#333', fontWeight: sel ? 600 : 400,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {d}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+import {
+  loadRangePref, saveRangePref, filterByRange, rangeLabel,
+  RangePickerRow,
+} from '../components/RangePicker.jsx';
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
 const IconPlus = () => (
@@ -214,15 +38,12 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
 
   const [rangePref, setRangePrefState] = useState(() => loadRangePref());
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [openChip, setOpenChip] = useState(null); // 'start' | 'end' | null
-
-  // Custom date state — initialise from saved pref or sensible defaults
-  const [customStart, setCustomStart] = useState(() => rangePref.customStart || jan1Parts());
-  const [customEnd,   setCustomEnd]   = useState(() => rangePref.customEnd   || todayParts());
 
   const setRangePref = useCallback((pref) => {
     saveRangePref(pref);
     setRangePrefState(pref);
+    // Close picker when non-custom range selected
+    if (pref.range !== 'custom') setPickerOpen(false);
   }, []);
 
   const rosterNames = useMemo(() => {
@@ -252,27 +73,6 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
   }, [filteredRounds, rosterNames, excludedNames]);
 
   const hasData = rounds.length > 0;
-  const isCustomActive = rangePref.range === 'custom';
-
-  const handlePickRange = (v) => {
-    if (v === 'custom') {
-      const pref = { range: 'custom', customStart, customEnd };
-      setRangePref(pref);
-    } else {
-      setRangePref({ range: v, customStart: null, customEnd: null });
-      setPickerOpen(false);
-    }
-  };
-
-  const handleCustomStartChange = (parts) => {
-    setCustomStart(parts);
-    if (isCustomActive) setRangePref({ range: 'custom', customStart: parts, customEnd });
-  };
-
-  const handleCustomEndChange = (parts) => {
-    setCustomEnd(parts);
-    if (isCustomActive) setRangePref({ range: 'custom', customStart, customEnd: parts });
-  };
 
   return (
     <div style={{ minHeight: '100vh', background: '#eef4ee' }}>
@@ -363,42 +163,7 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
             {/* Range picker */}
             {pickerOpen && (
               <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #eee' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: isCustomActive ? 12 : 0 }}>
-                  {RANGE_OPTS.map(opt => (
-                    <button
-                      key={opt.v}
-                      onClick={() => handlePickRange(opt.v)}
-                      style={{
-                        width: '100%', padding: '6px 0', borderRadius: 20, textAlign: 'center',
-                        border: '1.5px solid ' + (rangePref.range === opt.v ? G : '#ddd'),
-                        background: rangePref.range === opt.v ? G : '#fff',
-                        color: rangePref.range === opt.v ? '#fff' : '#555',
-                        fontSize: 12, fontWeight: 600,
-                        cursor: 'pointer', fontFamily: 'inherit',
-                      }}
-                    >
-                      {opt.l}
-                    </button>
-                  ))}
-                </div>
-                {isCustomActive && (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10 }}>
-                    <DateChipPicker
-                      label="From"
-                      value={customStart}
-                      open={openChip === 'start'}
-                      onToggle={() => setOpenChip(o => o === 'start' ? null : 'start')}
-                      onChange={parts => { handleCustomStartChange(parts); }}
-                    />
-                    <DateChipPicker
-                      label="To"
-                      value={customEnd}
-                      open={openChip === 'end'}
-                      onToggle={() => setOpenChip(o => o === 'end' ? null : 'end')}
-                      onChange={parts => { handleCustomEndChange(parts); }}
-                    />
-                  </div>
-                )}
+                <RangePickerRow rangePref={rangePref} onRangePrefChange={setRangePref} />
               </div>
             )}
 
@@ -412,37 +177,21 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
                   return (
                     <div key={name} style={{
                       display: 'flex', alignItems: 'center',
-                      background: '#f8faf8',
-                      borderRadius: 9,
-                      overflow: 'hidden',
-                      border: '1px solid #e8f0e8',
+                      background: '#f8faf8', borderRadius: 9,
+                      overflow: 'hidden', border: '1px solid #e8f0e8',
                     }}>
                       {/* Left accent bar */}
                       <div style={{ width: 4, alignSelf: 'stretch', background: accentColor, flexShrink: 0 }} />
                       {/* Place number */}
-                      <div style={{
-                        width: 28, textAlign: 'center', flexShrink: 0,
-                        fontSize: 12, fontWeight: 700,
-                        color: '#999',
-                        padding: '9px 0',
-                      }}>
+                      <div style={{ width: 28, textAlign: 'center', flexShrink: 0, fontSize: 12, fontWeight: 700, color: '#999', padding: '9px 0' }}>
                         {i + 1}
                       </div>
                       {/* Name */}
-                      <div style={{
-                        flex: 1, fontSize: 13, fontWeight: 500, color: '#222',
-                        padding: '9px 4px 9px 2px',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#222', padding: '9px 4px 9px 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {name}
                       </div>
                       {/* Amount */}
-                      <div style={{
-                        padding: '9px 12px 9px 8px',
-                        fontSize: 13, fontWeight: 700,
-                        color: accentColor,
-                        flexShrink: 0,
-                      }}>
+                      <div style={{ padding: '9px 12px 9px 8px', fontSize: 13, fontWeight: 700, color: accentColor, flexShrink: 0 }}>
                         {fmtDollar(total)}
                       </div>
                     </div>

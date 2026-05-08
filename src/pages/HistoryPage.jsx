@@ -25,7 +25,11 @@ import { ls, SK, makeId } from '../services/storage.js';
 import { roundLib } from '../services/roundLib.js';
 import { playerLib } from '../services/playerLib.js';
 import { courseLib } from '../services/courseLib.js';
-import { Card, G, GA, RED, ShareOrientationPicker } from '../components/ui.jsx';
+import { Card, G, RED, ShareOrientationPicker } from '../components/ui.jsx';
+import {
+  loadRangePref, saveRangePref, filterByRange, rangeLabel,
+  RangePickerRow,
+} from '../components/RangePicker.jsx';
 import {
   ImportModal, ImportConflictModal,
   likelySameCourse, likelySamePlayer, diffCourses,
@@ -37,7 +41,6 @@ import { computePayouts } from '../engine/payouts.js';
 import SwipeableRoundRow from './history/SwipeableRoundRow.jsx';
 import { IconDownload, IconUpload } from './history/HistoryIcons.jsx';
 
-const RANGES = [['ytd','YTD'],['week','7d'],['month','30d'],['year','12mo'],['all','All']];
 
 function mergeById(existing, incoming) {
   const map = new Map(existing.map(r => [r.id, r]));
@@ -48,8 +51,8 @@ function mergeById(existing, incoming) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function HistoryPage({ onLoadRound }) {
   const [rounds,             setRounds]             = useState(() => roundLib.list());
-  const [range,              setRange]              = useState('ytd');
-  const [summaryRound,       setSummaryRound]       = useState(null);
+  const [rangePref,          setRangePrefState]      = useState(() => loadRangePref());
+  const [summaryRound,       setSummaryRound]        = useState(null);
   const [openRowId,          setOpenRowId]          = useState(null);
   const [importModal,        setImportModal]        = useState(null);
   const [conflictModal,      setConflictModal]      = useState(null);
@@ -97,16 +100,16 @@ export default function HistoryPage({ onLoadRound }) {
     }
   }, [shareRound]);
 
+  const setRangePref = useCallback((pref) => {
+    saveRangePref(pref);
+    setRangePrefState(pref);
+  }, []);
+
   const now = new Date();
 
-  const filtered = useMemo(() => rounds.filter(r => {
-    const d = new Date(r.date);
-    if (range === 'week')  { const w = new Date(now); w.setDate(now.getDate()-7);         return d >= w; }
-    if (range === 'month') { const m = new Date(now); m.setMonth(now.getMonth()-1);       return d >= m; }
-    if (range === 'year')  { const y = new Date(now); y.setFullYear(now.getFullYear()-1); return d >= y; }
-    if (range === 'ytd')   return d.getFullYear() === now.getFullYear();
-    return true;
-  }).sort((a, b) => new Date(b.date) - new Date(a.date)), [rounds, range]);
+  const filtered = useMemo(() =>
+    filterByRange(rounds, rangePref).sort((a, b) => new Date(b.date) - new Date(a.date)),
+  [rounds, rangePref]);
 
   const mostRecentDate = filtered[0]?.date || null;
 
@@ -266,26 +269,8 @@ export default function HistoryPage({ onLoadRound }) {
 
       <div style={{ padding:'12px 14px', maxWidth:520, margin:'0 auto', display:'flex', flexDirection:'column', gap:10 }}>
 
-        {/* ── Date range filter — equal-width pills ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(5, 1fr)', gap:5 }}>
-          {RANGES.map(([v, l]) => (
-            <button key={v} onClick={() => setRange(v)}
-              style={{
-                padding: '5px 0',
-                borderRadius: 20,
-                border: `1.5px solid ${range === v ? G : '#ddd'}`,
-                background: range === v ? GA : '#fff',
-                cursor: 'pointer',
-                fontSize: 12,
-                fontWeight: 600,
-                color: range === v ? G : '#777',
-                fontFamily: 'inherit',
-                textAlign: 'center',
-              }}>
-              {l}
-            </button>
-          ))}
-        </div>
+        {/* ── Date range filter ── */}
+        <RangePickerRow rangePref={rangePref} onRangePrefChange={setRangePref} />
         <div style={{ fontSize:11, color:'#999', paddingLeft:2 }}>
           {filtered.length} round{filtered.length !== 1 ? 's' : ''} in range
         </div>
