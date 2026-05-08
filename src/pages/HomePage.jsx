@@ -1,13 +1,68 @@
 // ─── pages/HomePage.jsx ───────────────────────────────────────────────────────
 //
-// ✅ Self-checked: Money List filters by rosterNames (deleted players excluded)
-//    AND inMoneyLists !== false; IconTrophy and star/#1 special case removed;
-//    rosterNames set built from live playerLib data.
+// ✅ Self-checked: moneyListRange preference loaded from / saved to localStorage
+//    key 'moneyListRange'; default YTD; range picker (7 Days, MTD, YTD, All Time,
+//    Custom) with native date inputs for Custom; no table headers; place numbers
+//    prominent (16px bold green); name column tight to number; settings persist
+//    through backup/restore (written by HistoryPage applyImport).
 
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { ls, SK } from '../services/storage.js';
 import { roundLib } from '../services/roundLib.js';
 import { Btn, Card, G, RED, fmtDollar } from '../components/ui.jsx';
+
+const ML_KEY = 'moneyListRange';
+
+const RANGE_OPTS = [
+  { v: '7days',  l: '7 Days'   },
+  { v: 'mtd',    l: 'MTD'      },
+  { v: 'ytd',    l: 'YTD'      },
+  { v: 'all',    l: 'All Time' },
+  { v: 'custom', l: 'Custom'   },
+];
+
+function loadRangePref() {
+  const saved = ls.get(ML_KEY);
+  if (saved && saved.range) return saved;
+  return { range: 'ytd', customStart: '', customEnd: '' };
+}
+
+function saveRangePref(pref) {
+  ls.set(ML_KEY, pref);
+}
+
+function rangeLabel(pref) {
+  const opt = RANGE_OPTS.find(o => o.v === pref.range);
+  if (!opt) return 'YTD';
+  if (pref.range === 'custom' && pref.customStart && pref.customEnd) {
+    return pref.customStart + ' – ' + pref.customEnd;
+  }
+  return opt.l;
+}
+
+function filterByRange(rounds, pref) {
+  const now = new Date();
+  if (pref.range === 'all') return rounds;
+  if (pref.range === '7days') {
+    const cutoff = new Date(now); cutoff.setDate(now.getDate() - 7);
+    return rounds.filter(r => new Date(r.date) >= cutoff);
+  }
+  if (pref.range === 'mtd') {
+    return rounds.filter(r => {
+      const d = new Date(r.date);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
+  }
+  if (pref.range === 'ytd') {
+    return rounds.filter(r => new Date(r.date).getFullYear() === now.getFullYear());
+  }
+  if (pref.range === 'custom' && pref.customStart && pref.customEnd) {
+    const s = new Date(pref.customStart);
+    const e = new Date(pref.customEnd); e.setHours(23, 59, 59);
+    return rounds.filter(r => { const d = new Date(r.date); return d >= s && d <= e; });
+  }
+  return rounds;
+}
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
 const IconPlus = () => (
@@ -18,42 +73,67 @@ const IconPlus = () => (
   </svg>
 );
 
+const IconChevron = () => (
+  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9"/>
+  </svg>
+);
+
 export default function HomePage({ onNewRound, onResume, onHistory, inProgress }) {
   const rounds  = useMemo(() => roundLib.list(), []);
   const players = useMemo(() => ls.get(SK.players) || [], []);
   const courses = useMemo(() => ls.get(SK.courses) || [], []);
 
-  // Build set of names currently on the roster
+  const [rangePref, setRangePrefState] = useState(() => loadRangePref());
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const setRangePref = useCallback((pref) => {
+    saveRangePref(pref);
+    setRangePrefState(pref);
+  }, []);
+
   const rosterNames = useMemo(() => {
     const names = new Set();
     players.forEach(p => names.add(p.name));
     return names;
   }, [players]);
 
-  // Build a set of player names excluded from Money List
   const excludedNames = useMemo(() => {
     const excluded = new Set();
-    players.forEach(p => {
-      if (p.inMoneyLists === false) excluded.add(p.name);
-    });
+    players.forEach(p => { if (p.inMoneyLists === false) excluded.add(p.name); });
     return excluded;
   }, [players]);
 
-  // Cumulative winnings — roster members only, filtered by inMoneyLists
+  const filteredRounds = useMemo(() => filterByRange(rounds, rangePref), [rounds, rangePref]);
+
   const moneyList = useMemo(() => {
     const totals = {};
-    rounds.forEach(r => {
+    filteredRounds.forEach(r => {
       Object.entries(r.bank || {}).forEach(([name, v]) => {
         if (!rosterNames.has(name)) return;
         if (excludedNames.has(name)) return;
         totals[name] = (totals[name] || 0) + v;
       });
     });
-    return Object.entries(totals)
-      .sort((a, b) => b[1] - a[1]);
-  }, [rounds, rosterNames, excludedNames]);
+    return Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  }, [filteredRounds, rosterNames, excludedNames]);
 
-  const hasData = rounds.length > 0 && moneyList.length > 0;
+  const hasData = rounds.length > 0;
+  const isCustomActive = rangePref.range === 'custom';
+
+  const handlePickRange = (v) => {
+    if (v === 'custom') {
+      setRangePref({ ...rangePref, range: 'custom' });
+    } else {
+      setRangePref({ range: v, customStart: '', customEnd: '' });
+      setPickerOpen(false);
+    }
+  };
+
+  const handleCustomDate = (field, val) => {
+    setRangePref({ ...rangePref, range: 'custom', [field]: val });
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: '#eef4ee' }}>
@@ -129,35 +209,90 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
         {/* ── Money List ── */}
         {hasData && (
           <Card>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: pickerOpen ? 8 : 10 }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: G, flex: 1 }}>Money List</div>
-              <div style={{ fontSize: 11, color: '#aaa' }}>{rounds.length} round{rounds.length !== 1 ? 's' : ''}</div>
+              <button
+                onClick={() => setPickerOpen(o => !o)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  background: '#f0f7f0', border: '1.5px solid ' + G,
+                  borderRadius: 20, padding: '4px 10px',
+                  fontSize: 12, fontWeight: 700, color: G,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                {rangeLabel(rangePref)}
+                <IconChevron />
+              </button>
             </div>
-            <table style={{ borderCollapse: 'collapse', fontSize: 13, width: '100%' }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', padding: '4px 8px 6px 0', color: '#999', fontSize: 11, fontWeight: 600 }}>#</th>
-                  <th style={{ textAlign: 'left', padding: '4px 8px 6px', color: '#999', fontSize: 11, fontWeight: 600 }}>Player</th>
-                  <th style={{ textAlign: 'right', padding: '4px 0 6px 8px', color: '#999', fontSize: 11, fontWeight: 600 }}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {moneyList.map(([name, total], i) => (
-                  <tr key={name} style={{ borderTop: i === 0 ? 'none' : '1px solid #f0f0f0' }}>
-                    <td style={{ padding: '7px 8px 7px 0', color: '#999', fontWeight: 600, fontSize: 12, verticalAlign: 'middle' }}>
-                      {i + 1}
-                    </td>
-                    <td style={{ padding: '7px 8px', fontWeight: i === 0 ? 700 : 500, color: '#222', verticalAlign: 'middle' }}>
-                      {name}
-                    </td>
-                    <td style={{ padding: '7px 0 7px 8px', textAlign: 'right', fontWeight: 700, verticalAlign: 'middle',
-                      color: total > 0 ? '#27ae60' : total < 0 ? RED : '#888' }}>
-                      {fmtDollar(total)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+            {/* Range picker */}
+            {pickerOpen && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: isCustomActive ? 8 : 0 }}>
+                  {RANGE_OPTS.map(opt => (
+                    <button
+                      key={opt.v}
+                      onClick={() => handlePickRange(opt.v)}
+                      style={{
+                        padding: '5px 12px', borderRadius: 20,
+                        border: '1.5px solid ' + (rangePref.range === opt.v ? G : '#ddd'),
+                        background: rangePref.range === opt.v ? G : '#fff',
+                        color: rangePref.range === opt.v ? '#fff' : '#555',
+                        fontSize: 12, fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      {opt.l}
+                    </button>
+                  ))}
+                </div>
+                {isCustomActive && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
+                    <input
+                      type="date"
+                      value={rangePref.customStart}
+                      onChange={e => handleCustomDate('customStart', e.target.value)}
+                      style={{ flex: 1, padding: '6px 8px', borderRadius: 8, border: '1.5px solid #ddd', fontSize: 13, fontFamily: 'inherit' }}
+                    />
+                    <span style={{ color: '#999', fontSize: 12, flexShrink: 0 }}>to</span>
+                    <input
+                      type="date"
+                      value={rangePref.customEnd}
+                      onChange={e => handleCustomDate('customEnd', e.target.value)}
+                      style={{ flex: 1, padding: '6px 8px', borderRadius: 8, border: '1.5px solid #ddd', fontSize: 13, fontFamily: 'inherit' }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Money list rows — no headers */}
+            {moneyList.length > 0 ? (
+              <table style={{ borderCollapse: 'collapse', fontSize: 13, width: '100%' }}>
+                <tbody>
+                  {moneyList.map(([name, total], i) => (
+                    <tr key={name} style={{ borderTop: i === 0 ? 'none' : '1px solid #f0f0f0' }}>
+                      <td style={{ padding: '7px 6px 7px 0', width: 26, verticalAlign: 'middle' }}>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: G }}>{i + 1}</span>
+                      </td>
+                      <td style={{ padding: '7px 4px 7px 0', fontWeight: i === 0 ? 700 : 500, color: '#222', verticalAlign: 'middle' }}>
+                        {name}
+                      </td>
+                      <td style={{ padding: '7px 0 7px 8px', textAlign: 'right', fontWeight: 700, verticalAlign: 'middle',
+                        color: total > 0 ? '#27ae60' : total < 0 ? RED : '#888' }}>
+                        {fmtDollar(total)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '10px 0' }}>
+                No rounds in this period
+              </div>
+            )}
           </Card>
         )}
 

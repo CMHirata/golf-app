@@ -22,6 +22,7 @@
 import { playerLib } from './playerLib.js';
 import { courseLib } from './courseLib.js';
 import { roundLib }  from './roundLib.js';
+import { ls }        from './storage.js';
 
 // ── G-6: Shared export filename helper ────────────────────────────────────────
 export function makeExportFilename() {
@@ -41,6 +42,7 @@ export async function triggerExport() {
     players:    playerLib.list(),
     courses:    courseLib.list(),
     rounds:     roundLib.list(),
+    settings:   { moneyListRange: ls.get('moneyListRange') },
   };
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: 'application/json' });

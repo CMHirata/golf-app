@@ -114,7 +114,7 @@ export default function HistoryPage({ onLoadRound }) {
 
   const handleExport = async () => {
     const filename = `golf_backup_${new Date().toISOString().slice(0,10)}.json`;
-    const payload  = { exportedAt: new Date().toISOString(), appVersion: 'golf-scorekeeper-v4', players: playerLib.list(), courses: courseLib.list(), rounds: roundLib.list() };
+    const payload  = { exportedAt: new Date().toISOString(), appVersion: 'golf-scorekeeper-v4', players: playerLib.list(), courses: courseLib.list(), rounds: roundLib.list(), settings: { moneyListRange: ls.get('moneyListRange') } };
     const json = JSON.stringify(payload, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     if (navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: 'application/json' })] })) {
@@ -231,6 +231,7 @@ export default function HistoryPage({ onLoadRound }) {
       summary.push(`${tm.length} course${tm.length!==1?'s':''}`);
     }
     if(sel.rounds&&parsed.rounds?.length){const ex=ls.get(SK.rounds)||[];ls.set(SK.rounds,mergeById(ex,parsed.rounds));setRounds(roundLib.list());summary.push(`${parsed.rounds.length} round${parsed.rounds.length!==1?'s':''}`);}
+    if(parsed.settings?.moneyListRange){ls.set('moneyListRange',parsed.settings.moneyListRange);}
     const sk=Object.values({...cr,...pr}).filter(v=>v==='skip').length;
     alert(`Imported: ${summary.join(', ')}${sk>0?` (${sk} duplicate${sk!==1?'s':''} skipped)`:''}.`);
   };

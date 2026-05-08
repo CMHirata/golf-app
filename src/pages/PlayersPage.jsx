@@ -45,16 +45,6 @@ const IconPerson = () => (
   </svg>
 );
 
-// Star icon — filled when starred, outline when not
-const IconStar = ({ filled }) => (
-  <svg width="18" height="18" viewBox="0 0 24 24"
-    fill={filled ? '#f59e0b' : 'none'}
-    stroke={filled ? '#f59e0b' : '#ccc'}
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-  </svg>
-);
-
 // Money icon — dollar sign, green when included, muted when excluded
 const IconMoney = ({ included }) => (
   <svg width="16" height="16" viewBox="0 0 24 24"
@@ -263,8 +253,25 @@ function PlayerRow({ p, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, 
       deleteWarning={`Remove ${p.name} from the roster?`}
     >
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 12px', borderRadius:13, border:'1.5px solid #e8f0e8', background:'#fff' }}>
-        <div style={{ width:40, height:40, borderRadius:'50%', background:p.gender==='F'?'#fce8f3':GA, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontWeight:800, fontSize:14, color:p.gender==='F'?'#a0327a':G, border:`2px solid ${p.gender==='F'?'#f0b8dc':'#c8e6c9'}` }}>
-          {initials(p.name)}
+        {/* Tappable circle — tap to toggle favorite */}
+        <div
+          onClick={e => { e.stopPropagation(); onToggleStar(p); }}
+          title={p.starred ? 'Remove from favorites' : 'Mark as favorite'}
+          style={{ width:40, height:40, flexShrink:0, cursor:'pointer' }}
+        >
+          <svg width="40" height="40" viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="20" fill={p.gender==='F' ? '#fce8f3' : '#e8f5e9'}/>
+            {p.starred && (
+              <polygon
+                points="20,6 22.9,14.3 31.5,14.9 25,20.3 27.2,28.8 20,24.3 12.8,28.8 15,20.3 8.5,14.9 17.1,14.3"
+                fill="#fff9c4" opacity="0.95"
+              />
+            )}
+            <text x="20" y="26" textAnchor="middle" fontSize="14" fontWeight="800"
+              fill={p.gender==='F' ? '#a0327a' : '#27500A'} fontFamily="inherit">
+              {initials(p.name)}
+            </text>
+          </svg>
         </div>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:14, color:'#222', lineHeight:1.3 }}>
@@ -276,15 +283,6 @@ function PlayerRow({ p, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, 
             {p.phone && <span style={{ color:'#bbb', display:'flex', alignItems:'center' }}><IconPhone /></span>}
           </div>
         </div>
-        {/* Star toggle */}
-        <button
-          type="button"
-          onClick={e => { e.stopPropagation(); onToggleStar(p); }}
-          title={p.starred ? 'Remove from favourites' : 'Mark as favourite'}
-          style={{ border:'none', background:'none', cursor:'pointer', padding:'4px', display:'flex', alignItems:'center', flexShrink:0 }}
-        >
-          <IconStar filled={!!p.starred} />
-        </button>
         {/* Money list toggle */}
         <button
           type="button"
@@ -384,7 +382,7 @@ export default function PlayersPage() {
         {/* Legend */}
         {players.length > 0 && (
           <div style={{ fontSize:11, color:'#aaa', marginBottom:8, display:'flex', alignItems:'center', gap:10, paddingLeft:2 }}>
-            <span style={{ display:'flex', alignItems:'center', gap:3 }}><IconStar filled /> = favourite (sorts first)</span>
+            <span>Tap circle to favorite</span>
             <span style={{ display:'flex', alignItems:'center', gap:3 }}><IconMoney included /> = on Money List</span>
           </div>
         )}
