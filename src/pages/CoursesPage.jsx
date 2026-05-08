@@ -14,7 +14,7 @@
 
 import { useState, useCallback } from 'react';
 import { courseLib, likelySameCourse } from '../services/courseLib.js';
-import { Btn, Card, G } from '../components/ui.jsx';
+import { Card, G } from '../components/ui.jsx';
 import CourseCard        from './CourseCard.jsx';
 import CourseMergeModal  from './CourseMergeModal.jsx';
 import ManualCourseModal from './ManualCourseModal.jsx';
@@ -125,10 +125,23 @@ export default function CoursesPage() {
       <div style={{ padding: '14px 14px', maxWidth: 520, margin: '0 auto' }}>
 
         {/* Add buttons */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
-          <Btn onClick={()=>setShowSearch(true)} style={{ fontSize:12, padding:'10px 6px' }}>Search</Btn>
-          <Btn onClick={()=>setShowPhoto(true)}  style={{ fontSize:12, padding:'10px 6px' }}>Scan Card</Btn>
-          <Btn variant="outline" onClick={()=>setShowManual(true)} style={{ fontSize:12, padding:'10px 6px' }}>Manual</Btn>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 14 }}>
+          {[
+            { label: 'Search',    onClick: () => setShowSearch(true),  filled: true  },
+            { label: 'Scan Card', onClick: () => setShowPhoto(true),   filled: true  },
+            { label: 'Manual',    onClick: () => setShowManual(true),  filled: false },
+          ].map(({ label, onClick, filled }) => (
+            <button key={label} onClick={onClick} style={{
+              width: '100%', padding: '6px 0', borderRadius: 20, textAlign: 'center',
+              border: '1.5px solid ' + G,
+              background: filled ? G : '#fff',
+              color: filled ? '#fff' : G,
+              fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Course list */}
