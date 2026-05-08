@@ -82,65 +82,109 @@ function jan1Parts() {
   return { day: 1, month: 1, year: now.getFullYear() };
 }
 
-// ── Custom date picker ────────────────────────────────────────────────────────
-function DatePartPicker({ label, value, onChange }) {
+// ── Custom date picker — Option A chip + dropdown ─────────────────────────────
+function DateChipPicker({ label, value, open, onToggle, onChange }) {
   const currentYear = new Date().getFullYear();
   const years = [];
   for (let y = currentYear; y >= currentYear - 10; y--) years.push(y);
   const days = [];
   for (let d = 1; d <= daysInMonth(value.month, value.year); d++) days.push(d);
 
-  const selStyle = {
-    border: '1.5px solid #c8e6c9',
-    borderRadius: 8,
-    padding: '6px 4px',
-    fontSize: 13,
-    fontFamily: 'inherit',
-    color: '#222',
-    background: '#fff',
-    cursor: 'pointer',
-    appearance: 'none',
-    WebkitAppearance: 'none',
-    textAlign: 'center',
-  };
+  const chipLabel = `${MONTHS[value.month - 1]} ${value.day}, ${value.year}`;
 
   return (
     <div style={{ flex: 1 }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: '#999', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-      <div style={{ display: 'flex', gap: 4 }}>
-        {/* Month */}
-        <select
-          value={value.month}
-          onChange={e => {
-            const newMonth = parseInt(e.target.value);
-            const maxDay = daysInMonth(newMonth, value.year);
-            onChange({ ...value, month: newMonth, day: Math.min(value.day, maxDay) });
-          }}
-          style={{ ...selStyle, flex: 2 }}
-        >
-          {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-        </select>
-        {/* Day */}
-        <select
-          value={value.day}
-          onChange={e => onChange({ ...value, day: parseInt(e.target.value) })}
-          style={{ ...selStyle, flex: 1 }}
-        >
-          {days.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
-        {/* Year */}
-        <select
-          value={value.year}
-          onChange={e => {
-            const newYear = parseInt(e.target.value);
-            const maxDay = daysInMonth(value.month, newYear);
-            onChange({ ...value, year: newYear, day: Math.min(value.day, maxDay) });
-          }}
-          style={{ ...selStyle, flex: 2 }}
-        >
-          {years.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
-      </div>
+      {/* Chip */}
+      <button
+        onClick={onToggle}
+        style={{
+          width: '100%', textAlign: 'left',
+          background: '#f0f7f0',
+          border: open ? '2px solid ' + G : '1.5px solid ' + G,
+          borderRadius: 10, padding: '8px 12px',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}
+      >
+        <div style={{ fontSize: 10, fontWeight: 600, color: '#3B6D11', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{label}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: G }}>{chipLabel}</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={G} strokeWidth="3"
+            strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }}>
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div style={{
+          border: '1.5px solid ' + G, borderRadius: 12,
+          marginTop: 6, background: '#fff', overflow: 'hidden',
+        }}>
+          {/* Month grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 4, padding: 10 }}>
+            {MONTHS.map((m, i) => {
+              const sel = value.month === i + 1;
+              return (
+                <button key={m} onClick={() => {
+                  const newMonth = i + 1;
+                  const maxDay = daysInMonth(newMonth, value.year);
+                  onChange({ ...value, month: newMonth, day: Math.min(value.day, maxDay) });
+                }} style={{
+                  padding: '7px 4px', fontSize: 12, textAlign: 'center',
+                  borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  background: sel ? G : 'transparent',
+                  color: sel ? '#fff' : '#333', fontWeight: sel ? 600 : 400,
+                }}>
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Year row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderTop: '0.5px solid #eee' }}>
+            {years.slice().reverse().map(y => {
+              const sel = value.year === y;
+              return (
+                <button key={y} onClick={() => {
+                  const maxDay = daysInMonth(value.month, y);
+                  onChange({ ...value, year: y, day: Math.min(value.day, maxDay) });
+                }} style={{
+                  padding: '5px 8px', fontSize: 12, borderRadius: 6,
+                  border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  background: sel ? G : 'transparent',
+                  color: sel ? '#fff' : '#555', fontWeight: sel ? 600 : 400,
+                }}>
+                  {y}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Day row */}
+          <div style={{ padding: '8px 10px 10px', borderTop: '0.5px solid #eee' }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Day</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+              {days.map(d => {
+                const sel = value.day === d;
+                return (
+                  <button key={d} onClick={() => onChange({ ...value, day: d })} style={{
+                    width: 28, height: 28, fontSize: 11, borderRadius: '50%',
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    background: sel ? G : 'transparent',
+                    color: sel ? '#fff' : '#333', fontWeight: sel ? 600 : 400,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -170,6 +214,7 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
 
   const [rangePref, setRangePrefState] = useState(() => loadRangePref());
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [openChip, setOpenChip] = useState(null); // 'start' | 'end' | null
 
   // Custom date state — initialise from saved pref or sensible defaults
   const [customStart, setCustomStart] = useState(() => rangePref.customStart || jan1Parts());
@@ -318,13 +363,13 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
             {/* Range picker */}
             {pickerOpen && (
               <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #eee' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: isCustomActive ? 12 : 0 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: isCustomActive ? 12 : 0 }}>
                   {RANGE_OPTS.map(opt => (
                     <button
                       key={opt.v}
                       onClick={() => handlePickRange(opt.v)}
                       style={{
-                        padding: '5px 12px', borderRadius: 20,
+                        width: '100%', padding: '6px 0', borderRadius: 20, textAlign: 'center',
                         border: '1.5px solid ' + (rangePref.range === opt.v ? G : '#ddd'),
                         background: rangePref.range === opt.v ? G : '#fff',
                         color: rangePref.range === opt.v ? '#fff' : '#555',
@@ -337,9 +382,21 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
                   ))}
                 </div>
                 {isCustomActive && (
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <DatePartPicker label="From" value={customStart} onChange={handleCustomStartChange} />
-                    <DatePartPicker label="To"   value={customEnd}   onChange={handleCustomEndChange} />
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10 }}>
+                    <DateChipPicker
+                      label="From"
+                      value={customStart}
+                      open={openChip === 'start'}
+                      onToggle={() => setOpenChip(o => o === 'start' ? null : 'start')}
+                      onChange={parts => { handleCustomStartChange(parts); }}
+                    />
+                    <DateChipPicker
+                      label="To"
+                      value={customEnd}
+                      open={openChip === 'end'}
+                      onToggle={() => setOpenChip(o => o === 'end' ? null : 'end')}
+                      onChange={parts => { handleCustomEndChange(parts); }}
+                    />
                   </div>
                 )}
               </div>
@@ -351,7 +408,7 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
                 {moneyList.map(([name, total], i) => {
                   const positive = total > 0;
                   const negative = total < 0;
-                  const accentColor = positive ? '#27ae60' : negative ? RED : '#bbb';
+                  const accentColor = positive ? '#27500A' : negative ? '#A32D2D' : '#bbb';
                   return (
                     <div key={name} style={{
                       display: 'flex', alignItems: 'center',
