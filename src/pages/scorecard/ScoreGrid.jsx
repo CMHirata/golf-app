@@ -124,7 +124,7 @@ function ScoreIndicator({ level }) {
     return (
       <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
            viewBox="0 0 26 26">
-        <rect x="2.5" y="2.5" width="21" height="21" rx="3" ry="3"
+        <rect x="2.5" y="2.5" width="21" height="21" rx="0" ry="0"
           stroke={color} strokeWidth={sw} fill="none"/>
       </svg>
     );
@@ -133,9 +133,9 @@ function ScoreIndicator({ level }) {
   return (
     <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
          viewBox="0 0 26 26">
-      <rect x="2.5" y="2.5" width="21" height="21" rx="3" ry="3"
+      <rect x="2.5" y="2.5" width="21" height="21" rx="0" ry="0"
         stroke={color} strokeWidth={sw} fill="none"/>
-      <rect x="4.5" y="4.5" width="17" height="17" rx="2.5" ry="2.5"
+      <rect x="4.5" y="4.5" width="17" height="17" rx="0" ry="0"
         stroke={color} strokeWidth={sw} fill="none"/>
     </svg>
   );
