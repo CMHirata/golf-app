@@ -19,8 +19,8 @@
 // Do NOT generalize for other surfaces without a dedicated session.
 
 import { useMemo } from 'react';
-import { G, AMB } from './ui.jsx';
-import { COL_W, TOT_W, NAME_MIN } from '../pages/scorecard/scorecardUtils.js';
+import { G, AMB, BIRDIE_COLOR, BOGEY_COLOR } from './ui.jsx';
+import { COL_W, TOT_W, NAME_MIN, parRelative } from '../pages/scorecard/scorecardUtils.js';
 import { xGrossScore } from '../engine/handicap.js';
 
 const FRONT = [0,1,2,3,4,5,6,7,8];
@@ -135,6 +135,37 @@ export function ReadOnlyScorecard({ players, scores, pars, hcps, courseSnapshot,
     );
   };
 
+  // ── ScoreIndicator — par-relative SVG overlay (mirrors ScoreGrid §4.11) ──────
+  const ScoreIndicator = ({ level }) => {
+    if (!level || level === 'par') return null;
+    const isBirdie = level === 'birdie' || level === 'eagle';
+    const color = isBirdie ? BIRDIE_COLOR : BOGEY_COLOR;
+    const sw = 1.5;
+    const svgStyle = { position:'absolute', top:0, left:0, right:0, bottom:0, width:'100%', height:'100%', pointerEvents:'none', overflow:'visible' };
+    if (level === 'birdie') return (
+      <svg style={svgStyle} viewBox="0 0 26 26">
+        <circle cx="13" cy="13" r="11" stroke={color} strokeWidth={sw} fill="none"/>
+      </svg>
+    );
+    if (level === 'eagle') return (
+      <svg style={svgStyle} viewBox="0 0 26 26">
+        <circle cx="13" cy="13" r="11" stroke={color} strokeWidth={sw} fill="none"/>
+        <circle cx="13" cy="13" r="9"  stroke={color} strokeWidth={sw} fill="none"/>
+      </svg>
+    );
+    if (level === 'bogey') return (
+      <svg style={svgStyle} viewBox="0 0 26 26">
+        <rect x="2.5" y="2.5" width="21" height="21" rx="0" stroke={color} strokeWidth={sw} fill="none"/>
+      </svg>
+    );
+    return (
+      <svg style={svgStyle} viewBox="0 0 26 26">
+        <rect x="2.5" y="2.5" width="21" height="21" rx="0" stroke={color} strokeWidth={sw} fill="none"/>
+        <rect x="4.5" y="4.5" width="17" height="17" rx="0" stroke={color} strokeWidth={sw} fill="none"/>
+      </svg>
+    );
+  };
+
   // Shared styles for score cells
   const scoreTd = (h, pi) => {
     // 13-C.3: out-of-round holes render as '–' in muted gray (§12.1).
@@ -144,7 +175,6 @@ export function ReadOnlyScorecard({ players, scores, pars, hcps, courseSnapshot,
       </td>;
     }
     // 13-C.7.6: past-departure cells render as '–' per PartialGameContract §5.5.
-    // Uses the same muted-gray treatment as out-of-round cells.
     if (isPastDeparture(h, pi)) {
       return <td key={h} style={{ textAlign:'center', padding:'1px', color:'#ccc', fontSize:10, background:'#f8f8f8' }}>
         <span>–</span>
@@ -152,7 +182,7 @@ export function ReadOnlyScorecard({ players, scores, pars, hcps, courseSnapshot,
     }
     const raw  = scores[h]?.[pi];
     const isX  = raw === 'X';
-    const s    = isX ? 1 : (parseInt(raw) || 0); // truthy = has a value
+    const s    = isX ? 1 : (parseInt(raw) || 0);
     const dots = (isX || s) ? hcpDots(pi, h) : null;
     const AMB_X_BG = '#fffbe6';
     if (isX) {
@@ -167,9 +197,11 @@ export function ReadOnlyScorecard({ players, scores, pars, hcps, courseSnapshot,
         </td>
       );
     }
+    const indicator = s ? parRelative(s, pars[h]) : null;
     return <td key={h} style={{ textAlign:'center', padding:'1px', color: s ? '#222' : '#ccc', fontSize:10 }}>
-      <div style={{ position:'relative', display:'inline-block', minWidth:12 }}>
+      <div style={{ position:'relative', display:'inline-flex', alignItems:'center', justifyContent:'center', width:20, height:20 }}>
         {s||'·'}
+        {indicator && <ScoreIndicator level={indicator}/>}
         {dots && <div style={{ position:'absolute', bottom:0, right:-1, display:'flex', gap:1, pointerEvents:'none' }}>{dots}</div>}
       </div>
     </td>;

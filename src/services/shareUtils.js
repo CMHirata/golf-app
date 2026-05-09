@@ -30,6 +30,7 @@ import { StablefordTable } from '../pages/tables/StablefordTable.jsx';
 import { StrokePlayTable } from '../pages/tables/StrokePlayTable.jsx';
 import { MatchNassauTable } from '../pages/tables/MatchNassauTable.jsx';
 import { cleanGameName } from './roundUtils.js';
+import { parRelative } from '../pages/scorecard/scorecardUtils.js';
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
 const G_COLOR = '#1a472a';
@@ -232,6 +233,22 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     return cap !== null && h > cap;
   };
 
+  // Par-relative indicator SVG — inline HTML string matching ScoreGrid §4.11 geometry.
+  const indicatorSvg = (level) => {
+    if (!level || level === 'par') return '';
+    const color = (level === 'birdie' || level === 'eagle') ? '#1a6b3a' : '#c0392b';
+    const sw = 1.5;
+    const base = `position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;pointer-events:none;overflow:visible;`;
+    if (level === 'birdie')
+      return `<svg style="${base}" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" stroke="${color}" stroke-width="${sw}" fill="none"/></svg>`;
+    if (level === 'eagle')
+      return `<svg style="${base}" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" stroke="${color}" stroke-width="${sw}" fill="none"/><circle cx="13" cy="13" r="9" stroke="${color}" stroke-width="${sw}" fill="none"/></svg>`;
+    if (level === 'bogey')
+      return `<svg style="${base}" viewBox="0 0 26 26"><rect x="2.5" y="2.5" width="21" height="21" stroke="${color}" stroke-width="${sw}" fill="none"/></svg>`;
+    // double_bogey
+    return `<svg style="${base}" viewBox="0 0 26 26"><rect x="2.5" y="2.5" width="21" height="21" stroke="${color}" stroke-width="${sw}" fill="none"/><rect x="4.5" y="4.5" width="17" height="17" stroke="${color}" stroke-width="${sw}" fill="none"/></svg>`;
+  };
+
   // Wrap score + dots in a relative container so dots can be absolutely positioned.
   // X scores render as "NX" — numeric part normal color, X suffix in amber.
   const scoreCell = (pi, h) => {
@@ -247,8 +264,9 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     }
     const g = parseInt(raw) || 0;
     const dots = g ? hcpStrokesHtml(pi, h) : '';
-    if (!dots) return `<td style="text-align:center;font-size:10px;">${g||''}</td>`;
-    return `<td style="text-align:center;font-size:10px;padding:0;"><div style="position:relative;display:inline-block;min-width:14px;padding:2px 0;">${g}${dots}</div></td>`;
+    const ind = g ? indicatorSvg(parRelative(g, pars[h])) : '';
+    if (!dots && !ind) return `<td style="text-align:center;font-size:10px;">${g||''}</td>`;
+    return `<td style="text-align:center;font-size:10px;padding:0;"><div style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;">${g}${ind}${dots}</div></td>`;
   };
 
   const ninesLabel = (() => {
