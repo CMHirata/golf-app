@@ -248,9 +248,9 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     if (level === 'birdie' || level === 'bogey')
       return `<div style="${outer}"></div>`;
     // eagle or double_bogey — two concentric borders.
-    // Gap matches SVG: outer r=11, inner r=9 in 26px viewBox → 2px gap scaled to 20px = 1.5px.
-    // inner inset = outer inset (1.5) + stroke (1.5) + gap (1.5) = 4.5px
-    const inner = `position:absolute;top:4.5px;left:4.5px;right:4.5px;bottom:4.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
+    // SVG gap: outer rect x=2.5, inner rect x=4.5 → 2px between edges, stroke 1.5px centered
+    // → visible gap = 2 - 1.5 = 0.5 viewBox units ≈ hairline. inner inset = 1.5 + 1.5 + 0.5 = 3.5px
+    const inner = `position:absolute;top:3.5px;left:3.5px;right:3.5px;bottom:3.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
     return `<div style="${outer}"><div style="${inner}"></div></div>`;
   };
 
