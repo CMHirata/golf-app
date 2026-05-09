@@ -148,6 +148,19 @@ const ScorecardPage = forwardRef(function ScorecardPage(
     });
   }, []);
 
+  // 15-G: Measure ScoreGrid height when pinned so we can pad the content below it.
+  const scoreGridWrapperRef = useRef(null);
+  const [pinnedGridHeight, setPinnedGridHeight] = useState(0);
+  useEffect(() => {
+    if (!pinned || !scoreGridWrapperRef.current) { setPinnedGridHeight(0); return; }
+    const el = scoreGridWrapperRef.current;
+    const update = () => setPinnedGridHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [pinned]);
+
   const isDiscardingRef = useRef(false);
 
   // 15-G: Pin ScoreGrid to top of page (§12, App_Data_Model §1.3).
@@ -449,17 +462,25 @@ const ScorecardPage = forwardRef(function ScorecardPage(
         )}
       </div>
 
-      {/* ── ScoreGrid — lifted to page-root level so position:sticky works on iOS Safari.
-          When pinned, sticks directly below the green header. Horizontal padding matches
-          the content div above/below. Game tables sit in the div below and scroll under it. */}
+      {/* ── ScoreGrid — when pinned uses position:fixed to escape overflow-x:hidden
+          scroll-container on App.jsx root div (iOS Safari sticky limitation).
+          A ResizeObserver measures the wrapper height so the spacer div below
+          pushes game tables down by exactly the right amount. ── */}
       {activePlayers.length >= 2 && (
-        <div style={pinned ? {
-          position: 'sticky',
-          top: STICKY_HEADER_H,
-          zIndex: 5,
-          background: '#eef4ee',
-          padding: '0 12px 4px',
-        } : { padding: '0 12px' }}>
+        <div
+          ref={scoreGridWrapperRef}
+          style={pinned ? {
+            position: 'fixed',
+            top: STICKY_HEADER_H,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '100%',
+            maxWidth: 520,
+            zIndex: 5,
+            background: '#eef4ee',
+            padding: '0 12px 4px',
+          } : { padding: '0 12px' }}
+        >
           <ScoreGrid
             players={activePlayers} pars={pars} hcps={hcps} hcpsWomen={hcpsWomen || null}
             courseHcps={courseHcps} minCourseHcp={minCourseHcp}
@@ -492,6 +513,10 @@ const ScorecardPage = forwardRef(function ScorecardPage(
             onPinToggle={handlePinToggle}
           />
         </div>
+      )}
+      {/* Spacer: when pinned the ScoreGrid is fixed so we push game tables down */}
+      {pinned && activePlayers.length >= 2 && (
+        <div style={{ height: pinnedGridHeight }}/>
       )}
       {activePlayers.length < 2 && (
         <div style={{ color: '#aaa', textAlign: 'center', padding: 28 }}>Add at least 2 players in setup.</div>
