@@ -1,8 +1,8 @@
 // ─── services/shareUtils.js ───────────────────────────────────────────────────
-// ✅ Self-checked (15-G.2 refinement): indicator border insets corrected — outer now
-// top/left/right/bottom:1px (was 0px, causing border to touch adjacent cells), inner
-// now 3px (was 2px), matching SVG proportions: r=11 outer / r=9 inner in 26px viewBox
-// scales to ~1px clearance and ~1.5px gap on a 20px CSS container.
+// ✅ Self-checked (15-G.2 refinement 2): indicator border insets corrected to match SVG
+// geometry exactly. Scale factor = 20px/26px viewBox = 0.769. Outer inset: 2×0.769=1.54→1.5px.
+// Inner inset: outer(1.5) + stroke(1.5) + gap(2×0.769=1.5) = 4.5px. This reproduces the
+// same visual gap between double shapes as ScoreGrid's SVG (r=11 outer, r=9 inner).
 // ✅ Self-checked (13-G.2): hcpStrokesHtml now reads players[pi].siArray with
 // fallback to gender branch + hcps for legacy snapshots. All four xGrossScore
 // calls and the single escTotal call now pass siArrayFor(pi) instead of the
@@ -244,11 +244,13 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     const isBirdie = level === 'birdie' || level === 'eagle';
     const color = isBirdie ? '#1a6b3a' : '#c0392b';
     const radius = isBirdie ? '50%' : '0';
-    const outer = `position:absolute;top:1px;left:1px;right:1px;bottom:1px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
+    const outer = `position:absolute;top:1.5px;left:1.5px;right:1.5px;bottom:1.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
     if (level === 'birdie' || level === 'bogey')
       return `<div style="${outer}"></div>`;
-    // eagle or double_bogey — two concentric borders
-    const inner = `position:absolute;top:3px;left:3px;right:3px;bottom:3px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
+    // eagle or double_bogey — two concentric borders.
+    // Gap matches SVG: outer r=11, inner r=9 in 26px viewBox → 2px gap scaled to 20px = 1.5px.
+    // inner inset = outer inset (1.5) + stroke (1.5) + gap (1.5) = 4.5px
+    const inner = `position:absolute;top:4.5px;left:4.5px;right:4.5px;bottom:4.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
     return `<div style="${outer}"><div style="${inner}"></div></div>`;
   };
 
