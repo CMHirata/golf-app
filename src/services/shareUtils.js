@@ -244,13 +244,12 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     const isBirdie = level === 'birdie' || level === 'eagle';
     const color = isBirdie ? '#1a6b3a' : '#c0392b';
     const radius = isBirdie ? '50%' : '0';
-    const outer = `position:absolute;top:1.5px;left:1.5px;right:1.5px;bottom:1.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
+    const outer = `position:absolute;top:2.5px;left:2.5px;right:2.5px;bottom:2.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
     if (level === 'birdie' || level === 'bogey')
       return `<div style="${outer}"></div>`;
-    // eagle or double_bogey — two concentric borders.
-    // SVG gap: outer rect x=2.5, inner rect x=4.5 → 2px between edges, stroke 1.5px centered
-    // → visible gap = 2 - 1.5 = 0.5 viewBox units ≈ hairline. inner inset = 1.5 + 1.5 + 0.5 = 3.5px
-    const inner = `position:absolute;top:3.5px;left:3.5px;right:3.5px;bottom:3.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
+    // eagle or double_bogey — insets match SVG coords 1:1 (26px container = 26px viewBox).
+    // outer x=2.5, inner x=4.5 → same values here. Hairline gap between strokes.
+    const inner = `position:absolute;top:4.5px;left:4.5px;right:4.5px;bottom:4.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
     return `<div style="${outer}"><div style="${inner}"></div></div>`;
   };
 
@@ -271,7 +270,7 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     const dots = g ? hcpStrokesHtml(pi, h) : '';
     const ind = g ? indicatorHtml(parRelative(g, pars[h])) : '';
     if (!dots && !ind) return `<td style="text-align:center;font-size:10px;">${g||''}</td>`;
-    return `<td style="text-align:center;font-size:10px;padding:0;"><div style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;">${g}${ind}${dots}</div></td>`;
+    return `<td style="text-align:center;font-size:10px;padding:0;"><div style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;lineHeight:1;">${g}${ind}${dots}</div></td>`;
   };
 
   const ninesLabel = (() => {
