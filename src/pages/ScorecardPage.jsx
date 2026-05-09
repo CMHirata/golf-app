@@ -162,10 +162,6 @@ const ScorecardPage = forwardRef(function ScorecardPage(
       return next;
     });
   }, []);
-  // Approximate height of the ScoreGrid in portrait mode (Front 9 half only visible
-  // before scroll; includes par row, hcp row, player rows). Used as spacer when pinned.
-  // Generous estimate so game tables are never hidden behind the fixed grid.
-  const SCORE_GRID_SPACER = 220;
 
   // Persist mutable state on every change.
   // Read the latest activeRound from storage so we never clobber breakdown/bank
@@ -456,25 +452,14 @@ const ScorecardPage = forwardRef(function ScorecardPage(
 
         {activePlayers.length < 2
           ? <div style={{ color: '#aaa', textAlign: 'center', padding: 28 }}>Add at least 2 players in setup.</div>
-          : <>
-              {/* 15-G: When pinned, ScoreGrid is position:fixed so it stays visible
-                  while game tables scroll beneath it. A spacer div of equal height
-                  keeps the game tables pushed down. When unpinned, normal flow. */}
-              {pinned && <div style={{ height: SCORE_GRID_SPACER }}/>}
-              <div
-                style={pinned ? {
-                  position: 'fixed',
-                  top: STICKY_HEADER_H,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: '100%',
-                  maxWidth: 520,
-                  zIndex: 5,
-                  background: '#eef4ee',
-                  padding: '0 12px 4px',
-                } : {}}
-              >
-                <ScoreGrid
+          : <div style={pinned ? {
+              position: 'sticky',
+              top: STICKY_HEADER_H,
+              zIndex: 5,
+              background: '#eef4ee',
+              paddingBottom: 4,
+            } : {}}>
+              <ScoreGrid
                   players={activePlayers} pars={pars} hcps={hcps} hcpsWomen={hcpsWomen || null}
                   courseHcps={courseHcps} minCourseHcp={minCourseHcp}
                   effectiveMinCourseHcp={effectiveMinCourseHcp}
@@ -506,7 +491,6 @@ const ScorecardPage = forwardRef(function ScorecardPage(
                   onPinToggle={handlePinToggle}
                 />
               </div>
-            </>
         }
       </div>
 

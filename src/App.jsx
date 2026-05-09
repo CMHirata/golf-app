@@ -276,7 +276,7 @@ export default function App() {
       color: '#222',
       touchAction: 'pan-y',
       WebkitTextSizeAdjust: '100%',
-      overflowX: 'hidden',
+      overflowX: 'clip',
       paddingBottom: `calc(${NAV_BAR_HEIGHT}px + env(safe-area-inset-bottom))`,
     }}>
       <style>{GLOBAL_CSS}</style>
