@@ -337,11 +337,8 @@ const ScorecardPage = forwardRef(function ScorecardPage(
         </div>
       </div>
 
-      {/* ── Scrollable content ── */}
-      <div style={{
-        padding: '12px 12px',
-        paddingBottom: `calc(${bottomClearance}px + env(safe-area-inset-bottom))`,
-      }}>
+      {/* ── Scrollable content above grid (dot controls, zoom row) ── */}
+      <div style={{ padding: '12px 12px 0' }}>
         {/* ── Dot mode unified pill control (§5.6) ── */}
         {(isMixed || hasNOL) && (isMixed || nolDotOptions.length > 0) && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
@@ -450,57 +447,61 @@ const ScorecardPage = forwardRef(function ScorecardPage(
             </button>
           </div>
         )}
+      </div>
 
-        {activePlayers.length < 2
-          ? <div style={{ color: '#aaa', textAlign: 'center', padding: 28 }}>Add at least 2 players in setup.</div>
-          : (
-            <>
-              {/* 15-G: Sticky pin wrapper — when pinned, ScoreGrid sticks below the
-                  green header. position:sticky only affects ScoreGrid; game tables
-                  scroll normally beneath it. zIndex 5 keeps it above table rows but
-                  below the sticky header (zIndex 10) and fixed action bar (zIndex 20). */}
-              <div style={pinned ? {
-                position: 'sticky',
-                top: STICKY_HEADER_H,
-                zIndex: 5,
-                background: '#eef4ee',
-                paddingBottom: 4,
-              } : {}}>
-                <ScoreGrid
-                  players={activePlayers} pars={pars} hcps={hcps} hcpsWomen={hcpsWomen || null}
-                  courseHcps={courseHcps} minCourseHcp={minCourseHcp}
-                  effectiveMinCourseHcp={effectiveMinCourseHcp}
-                  nonParticipantIdxs={nonParticipantIdxs}
-                  scores={scores} setScores={setScores}
-                  dotMode={dotMode} isMixed={isMixed} setDotModeOverride={setDotModeOverride}
-                  nolDotGame={nolDotGame} setNolDotGame={setNolDotGame}
-                  nolDotOptions={nolDotOptions}
-                  primaryMode={primaryMode} activeGames={activeGames} gameOpts={gameOpts}
-                  matches={matches || []} sixesTeams={sixesTeams}
-                  strokePlayPlayers={strokePlayPlayers || []}
-                  skinsPlayers={skinsPlayers || []}
-                  stablefordPlayers={stablefordPlayers || []}
-                  ninesPlayers={ninesPlayers || []}
-                  dotsPlayers={dotsPlayers || []}
-                  dots={dots} dotEntries={dotEntries} setDotEntries={setDotEntries}
-                  manualPresses={manualPresses} setManualPresses={setManualPresses}
-                  frontLabel={frontLabel} backLabel={backLabel}
-                  isLandscape={isLandscape}
-                  zoomTriggerRef={zoomTriggerRef}
-                  roundStartHole={roundStartHole}
-                  roundNumHoles={roundNumHoles}
-                  gameRanges={ar.gameRanges ?? {}}
-                  earlyDepartureOpts={earlyDepartureOpts}
-                  onOpenDepartureResolver={onOpenDepartureResolver}
-                  onOpenReorderDeparturesModal={onOpenReorderDeparturesModal}
-                  onUndoDeparturePrompt={onUndoDeparturePrompt}
-                  pinned={pinned}
-                  onPinToggle={handlePinToggle}
-                />
-              </div>
-            </>
-          )
-        }
+      {/* ── ScoreGrid — lifted to page-root level so position:sticky works on iOS Safari.
+          When pinned, sticks directly below the green header. Horizontal padding matches
+          the content div above/below. Game tables sit in the div below and scroll under it. */}
+      {activePlayers.length >= 2 && (
+        <div style={pinned ? {
+          position: 'sticky',
+          top: STICKY_HEADER_H,
+          zIndex: 5,
+          background: '#eef4ee',
+          padding: '0 12px 4px',
+        } : { padding: '0 12px' }}>
+          <ScoreGrid
+            players={activePlayers} pars={pars} hcps={hcps} hcpsWomen={hcpsWomen || null}
+            courseHcps={courseHcps} minCourseHcp={minCourseHcp}
+            effectiveMinCourseHcp={effectiveMinCourseHcp}
+            nonParticipantIdxs={nonParticipantIdxs}
+            scores={scores} setScores={setScores}
+            dotMode={dotMode} isMixed={isMixed} setDotModeOverride={setDotModeOverride}
+            nolDotGame={nolDotGame} setNolDotGame={setNolDotGame}
+            nolDotOptions={nolDotOptions}
+            primaryMode={primaryMode} activeGames={activeGames} gameOpts={gameOpts}
+            matches={matches || []} sixesTeams={sixesTeams}
+            strokePlayPlayers={strokePlayPlayers || []}
+            skinsPlayers={skinsPlayers || []}
+            stablefordPlayers={stablefordPlayers || []}
+            ninesPlayers={ninesPlayers || []}
+            dotsPlayers={dotsPlayers || []}
+            dots={dots} dotEntries={dotEntries} setDotEntries={setDotEntries}
+            manualPresses={manualPresses} setManualPresses={setManualPresses}
+            frontLabel={frontLabel} backLabel={backLabel}
+            isLandscape={isLandscape}
+            zoomTriggerRef={zoomTriggerRef}
+            roundStartHole={roundStartHole}
+            roundNumHoles={roundNumHoles}
+            gameRanges={ar.gameRanges ?? {}}
+            earlyDepartureOpts={earlyDepartureOpts}
+            onOpenDepartureResolver={onOpenDepartureResolver}
+            onOpenReorderDeparturesModal={onOpenReorderDeparturesModal}
+            onUndoDeparturePrompt={onUndoDeparturePrompt}
+            pinned={pinned}
+            onPinToggle={handlePinToggle}
+          />
+        </div>
+      )}
+      {activePlayers.length < 2 && (
+        <div style={{ color: '#aaa', textAlign: 'center', padding: 28 }}>Add at least 2 players in setup.</div>
+      )}
+
+      {/* ── Game tables and remaining content ── */}
+      <div style={{
+        padding: '0 12px',
+        paddingBottom: `calc(${bottomClearance}px + env(safe-area-inset-bottom))`,
+      }}>
       </div>
 
       {/* ── Pinned action bar ── */}
