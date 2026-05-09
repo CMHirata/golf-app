@@ -248,7 +248,7 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     if (level === 'birdie' || level === 'bogey')
       return `<div style="${outer}"></div>`;
     // eagle or double_bogey — insets match SVG coords 1:1 (26px container = 26px viewBox).
-    // outer x=2.5, inner x=4.5 → same values here. Hairline gap between strokes.
+    // outer x=2.5, inner x=4.5 → same values here. Matches ScoreGrid SVG exactly.
     const inner = `position:absolute;top:4.5px;left:4.5px;right:4.5px;bottom:4.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
     return `<div style="${outer}"><div style="${inner}"></div></div>`;
   };
@@ -270,7 +270,7 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     const dots = g ? hcpStrokesHtml(pi, h) : '';
     const ind = g ? indicatorHtml(parRelative(g, pars[h])) : '';
     if (!dots && !ind) return `<td style="text-align:center;font-size:10px;">${g||''}</td>`;
-    return `<td style="text-align:center;font-size:10px;padding:0;"><div style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;lineHeight:1;">${g}${ind}${dots}</div></td>`;
+    return `<td style="text-align:center;font-size:10px;padding:0;"><div style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;line-height:1;">${g}${ind}${dots}</div></td>`;
   };
 
   const ninesLabel = (() => {
