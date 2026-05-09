@@ -99,52 +99,44 @@ function ScoreIndicator({ level }) {
   const isBirdie = level === 'birdie' || level === 'eagle';
   const color    = isBirdie ? BIRDIE_COLOR : BOGEY_COLOR;
   const sw       = 1.5;
-  const inset    = 1.5;   // outer shape distance from cell edge
-  const gap      = 3;     // inner shape additional inset for doubles
 
+  // Fixed 26×26 viewBox
+  // circles/squares (not stretched ovals). All shapes inset from cell edge
+  // so they clear the cell's borderRadius and never touch the border.
   if (level === 'birdie') {
     return (
       <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
-           viewBox="0 0 100 100" preserveAspectRatio="none">
-        <ellipse cx="50" cy="50" rx={50 - inset - sw/2} ry={50 - inset - sw/2}
-          stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
+           viewBox="0 0 26 26">
+        <circle cx="13" cy="13" r="11" stroke={color} strokeWidth={sw} fill="none"/>
       </svg>
     );
   }
   if (level === 'eagle') {
     return (
       <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
-           viewBox="0 0 100 100" preserveAspectRatio="none">
-        <ellipse cx="50" cy="50" rx={50 - inset - sw/2} ry={50 - inset - sw/2}
-          stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
-        <ellipse cx="50" cy="50" rx={50 - inset - gap - sw/2} ry={50 - inset - gap - sw/2}
-          stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
+           viewBox="0 0 26 26">
+        <circle cx="13" cy="13" r="11" stroke={color} strokeWidth={sw} fill="none"/>
+        <circle cx="13" cy="13" r="8"  stroke={color} strokeWidth={sw} fill="none"/>
       </svg>
     );
   }
   if (level === 'bogey') {
     return (
       <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
-           viewBox="0 0 100 100" preserveAspectRatio="none">
-        <rect x={inset + sw/2} y={inset + sw/2}
-          width={100 - 2*(inset + sw/2)} height={100 - 2*(inset + sw/2)}
-          rx="4" ry="4"
-          stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
+           viewBox="0 0 26 26">
+        <rect x="2.5" y="2.5" width="21" height="21" rx="3" ry="3"
+          stroke={color} strokeWidth={sw} fill="none"/>
       </svg>
     );
   }
   // double_bogey
   return (
     <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
-         viewBox="0 0 100 100" preserveAspectRatio="none">
-      <rect x={inset + sw/2} y={inset + sw/2}
-        width={100 - 2*(inset + sw/2)} height={100 - 2*(inset + sw/2)}
-        rx="4" ry="4"
-        stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
-      <rect x={inset + gap + sw/2} y={inset + gap + sw/2}
-        width={100 - 2*(inset + gap + sw/2)} height={100 - 2*(inset + gap + sw/2)}
-        rx="3" ry="3"
-        stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
+         viewBox="0 0 26 26">
+      <rect x="2.5" y="2.5" width="21" height="21" rx="3" ry="3"
+        stroke={color} strokeWidth={sw} fill="none"/>
+      <rect x="6" y="6" width="14" height="14" rx="2" ry="2"
+        stroke={color} strokeWidth={sw} fill="none"/>
     </svg>
   );
 }
