@@ -1,5 +1,8 @@
 // ─── components/ReadOnlyScorecard.jsx ─────────────────────────────────────────
 //
+// ✅ Self-checked (15-G.2 refinement): lineHeight:1 added to score wrapper div — fixes
+// vertical centering of score number inside inline-flex container (text node baseline
+// was adding descender space below number, making it appear low within circle/square).
 // ✅ Self-checked (13-G.2): Added siArrayFor(pi) helper — uses players[pi].siArray
 // when present (live or post-13-G.2 saved rounds) and falls back to the existing
 // gender-derived womenSI/hcps for legacy snapshots. hcpDots and the three
@@ -199,7 +202,7 @@ export function ReadOnlyScorecard({ players, scores, pars, hcps, courseSnapshot,
     }
     const indicator = s ? parRelative(s, pars[h]) : null;
     return <td key={h} style={{ textAlign:'center', padding:'1px', color: s ? '#222' : '#ccc', fontSize:10 }}>
-      <div style={{ position:'relative', display:'inline-flex', alignItems:'center', justifyContent:'center', width:20, height:20 }}>
+      <div style={{ position:'relative', display:'inline-flex', alignItems:'center', justifyContent:'center', width:20, height:20, lineHeight:1 }}>
         {s||'·'}
         {indicator && <ScoreIndicator level={indicator}/>}
         {dots && <div style={{ position:'absolute', bottom:0, right:-1, display:'flex', gap:1, pointerEvents:'none' }}>{dots}</div>}

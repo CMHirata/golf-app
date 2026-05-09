@@ -1,4 +1,8 @@
 // ─── services/shareUtils.js ───────────────────────────────────────────────────
+// ✅ Self-checked (15-G.2 refinement): indicator border insets corrected — outer now
+// top/left/right/bottom:1px (was 0px, causing border to touch adjacent cells), inner
+// now 3px (was 2px), matching SVG proportions: r=11 outer / r=9 inner in 26px viewBox
+// scales to ~1px clearance and ~1.5px gap on a 20px CSS container.
 // ✅ Self-checked (13-G.2): hcpStrokesHtml now reads players[pi].siArray with
 // fallback to gender branch + hcps for legacy snapshots. All four xGrossScore
 // calls and the single escTotal call now pass siArrayFor(pi) instead of the
@@ -240,11 +244,11 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     const isBirdie = level === 'birdie' || level === 'eagle';
     const color = isBirdie ? '#1a6b3a' : '#c0392b';
     const radius = isBirdie ? '50%' : '0';
-    const outer = `position:absolute;top:0;left:0;right:0;bottom:0;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
+    const outer = `position:absolute;top:1px;left:1px;right:1px;bottom:1px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
     if (level === 'birdie' || level === 'bogey')
       return `<div style="${outer}"></div>`;
     // eagle or double_bogey — two concentric borders
-    const inner = `position:absolute;top:2px;left:2px;right:2px;bottom:2px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
+    const inner = `position:absolute;top:3px;left:3px;right:3px;bottom:3px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
     return `<div style="${outer}"><div style="${inner}"></div></div>`;
   };
 
