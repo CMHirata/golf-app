@@ -247,9 +247,9 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     const outer = `position:absolute;top:2.5px;left:2.5px;right:2.5px;bottom:2.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
     if (level === 'birdie' || level === 'bogey')
       return `<div style="${outer}"></div>`;
-    // eagle or double_bogey — insets match SVG coords 1:1 (26px container = 26px viewBox).
-    // outer x=2.5, inner x=4.5 → same values here. Matches ScoreGrid SVG exactly.
-    const inner = `position:absolute;top:4.5px;left:4.5px;right:4.5px;bottom:4.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
+    // eagle or double_bogey — outer at 2.5px inset (21px shape), inner at 3.5px (19px shape).
+    // 1px gap between outer and inner stroke edges. Inner large enough to not clip font-size:10 numbers.
+    const inner = `position:absolute;top:3.5px;left:3.5px;right:3.5px;bottom:3.5px;border:1.5px solid ${color};border-radius:${radius};pointer-events:none;box-sizing:border-box;`;
     return `<div style="${outer}"><div style="${inner}"></div></div>`;
   };
 
