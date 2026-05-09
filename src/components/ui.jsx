@@ -11,7 +11,9 @@ export const GB   = '#f2faf4';  // green wash
 export const RED  = '#c0392b';
 export const AMB  = '#b7770d';
 export const AMBBG = '#fff8e1';
-export const PALE_YELLOW = '#fff9e6'; // reserved: swipe-menu Edit button bg; future cell highlight use
+export const PALE_YELLOW  = '#fff9e6'; // reserved: swipe-menu Edit button bg; future cell highlight use
+export const BIRDIE_COLOR = '#1a6b3a'; // score indicator green — birdie/eagle circle overlays (§3.6)
+export const BOGEY_COLOR  = '#c0392b'; // score indicator red  — bogey/double-bogey square overlays (§3.6)
 
 // ─── Atoms ───────────────────────────────────────────────────────────────────
 export function Btn({ children, onClick, variant = 'primary', small, style = {}, disabled }) {

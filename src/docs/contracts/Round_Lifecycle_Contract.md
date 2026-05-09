@@ -1,6 +1,8 @@
 # Round Lifecycle Contract
 
-_Version 2.2 — April 2026_
+_Version 2.3 — May 2026_
+_Changes in v2.3 (15-E.1): §5.2 — auto-export payload now carries a top-level `settings` field with two app-preference keys (`moneyListRange`, `historyRange`). Cross-references `App_Data_Model_Contract.md` §1.2 for full payload shape and import-path requirements. No lifecycle changes — only documents existing v3.8 export field._
+_Supersedes: v2.2._
 _Changes in v2.2 (13-C.7, post-device-test): §3.4 — Back→Setup→Forward navigation preservation rule added: when a user navigates Back to Setup mid-round and then forward to Scorecard, `NewRoundPage.handleStart` MUST preserve `earlyDepartureOpts`, `earlyEndOpts`, and `lastCompletedHole` (read from `initSrc` using camelCase keys) into the reconstructed `activeRound`. Without this, all locked-cell displays and resolution decisions are silently lost. §7 — three departure fields added to required-fields table (`earlyDepartureOpts`, `earlyEndOpts`, `lastCompletedHole`). §8 — round-trip preservation rule strengthened: explicit table mapping camelCase ↔ snake_case for the three fields. §12 — invariants 23 and 24 added covering Back→Setup→Forward preservation and dual-implementation of the engine departure data guardrail. Surfaced and fixed in 13-C.7 device test._
 _Changes in v2.1 (13-C.7 / v2.0): §4.5 — `earlyEndOpts` shape and write semantics defer to `PartialGameContract.md` v2.0 / §4.1 / §14 invariant 20. Two key updates: (1) the SHAPE of `earlyEndOpts` is `{ [gameKey]: SegmentedResolution }`, NOT the `'payout' | 'no_payout'` shape described in this contract's §4.5 step 3 — that shape predates the resolver work and was superseded by `PartialGameContract` §4.1. PartialGameContract is the source-of-truth. (2) The WRITE rule for `earlyEndOpts` and `lastCompletedHole` is governed by PartialGameContract §5.4.4 / §14 invariant 20: both fields are written ONLY by the LAST event in the sequenced resolver chain, AND ONLY when every player is classified Early-departure (no player reached `roundEndHole`). If at least one player is Complete, neither field is written even if other players departed. This contract's prior framing (Scenario A vs Scenario B as a UI decision) is collapsed in v2.0 — the per-event sequenced chain handles all cases. §4.5 retains the high-level "round may end before all 18 holes" lifecycle framing but defers shape and write rules to PartialGameContract. §4.6 Sixes early-end rule unchanged. §4.7 manual-press handling unchanged. Engine firewall unchanged. No code changes._
 _Version 2.0 — April 2026_
@@ -621,6 +623,10 @@ recoverable from the active round slot. It exists only in history.
 Every time a round is saved (step 6 above), the app automatically
 triggers a JSON export download. The export contains the full history
 array (all saved rounds), not just the round being saved.
+
+**Payload shape (v3.8):** Top-level `settings` field carries app
+preferences. See `App_Data_Model_Contract.md` §1.2 for the full payload
+shape and import-path requirements.
 
 **File naming rule (applies to all exports — auto and manual):**
 ```

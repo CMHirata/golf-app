@@ -447,3 +447,24 @@ export function lastScoredInHoles(holeWinFn, holes) {
 export function getStrokeDotCount(courseHcp, hcpRank, minCourseHcp, mode) {
   return strokesForMode(courseHcp, hcpRank, minCourseHcp, mode || 'net');
 }
+
+/**
+ * parRelative(score, par) → 'eagle' | 'birdie' | 'par' | 'bogey' | 'double_bogey'
+ * Category 1 — Pure formatter. No engine dependency.
+ *
+ * Returns the par-relative label for a gross score on a given hole par.
+ * Returns null when either argument is missing/falsy (caller suppresses indicator).
+ * 'eagle' covers hole-in-one and albatross (score ≤ par − 2).
+ * 'double_bogey' covers triple-bogey and worse (score ≥ par + 2).
+ */
+export function parRelative(score, par) {
+  if (!par || score == null || score === '' || score === 'X') return null;
+  const s = typeof score === 'string' ? parseInt(score, 10) : score;
+  if (!Number.isFinite(s) || s <= 0) return null;
+  const diff = s - par;
+  if (diff <= -2) return 'eagle';
+  if (diff === -1) return 'birdie';
+  if (diff === 0)  return 'par';
+  if (diff === 1)  return 'bogey';
+  return 'double_bogey';
+}

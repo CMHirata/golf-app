@@ -1,7 +1,9 @@
 # UI Component Contract
 
-_Version 1.5 — April 2026_
-_Supersedes: v1.4_
+_Version 1.7 — May 2026_
+_Supersedes: v1.6_
+_Changes in v1.7 (15-G): §3.1 — two new score-indicator tokens added: `BIRDIE_COLOR` (`'#1a6b3a'`) and `BOGEY_COLOR` (`'#c0392b'`). §3.6 NEW — score indicator token rules. §4 ScoreGrid sub-section NEW (§4.11) — birdie/bogey indicator overlay rendering rules for ScoreGrid score cells. §12 NEW — ScorecardPage ScoreGrid pin behavior: sticky positioning, toggle UI location, localStorage key, invariants._
+_Changes in v1.6 (15-E.1): §10 NEW — `RangePicker.jsx` documented as a shared component sibling to `ui.jsx`. Owner of two localStorage keys: `moneyListRange` (Home page Money List filter) and `historyRange` (History page round filter); both keys share the same shape (see `App_Data_Model_Contract.md` §1.1). Exports: `RANGE_OPTS`, `loadRangePref(key)`, `saveRangePref(pref, key)`, `filterByRange`, `rangeLabel`, `RangePickerRow`, `ML_KEY`, `HISTORY_KEY`. Used by both `HomePage` (Money List filter) and `HistoryPage` (round filter); single source of truth for range options and filter logic; both pages maintain independent filter state._
 _Changes in v1.5 (13-F implementation tested): §4.7 `BetInput` — `placeholder` prop documented; `isActive` prop added (2px green border + GA background when keypad is editing this field); keypad activation flow corrected to use `<input readOnly inputMode="none">` with `onFocus`+`e.target.blur()` (more reliable iOS keyboard suppression than the originally-specified `inputMode="none"` div tap target); `onActivate` 6-arg signature noted; select-to-overwrite pattern clarified (handled at page level via empty kpValue seed, not in the field). §4.10 `BetSection` — `onActivate`, `betSectionId`, and `activeFieldId` props documented; threading requirement spelled out: pages must pass `activeFieldId={setupKp?.fieldId}` through every level (GamesCard → GameConfig → panel → BetSection → BetInput, and MatchCard → BetSection)._
 _Changes in v1.4 (13-F): §4.7 `BetInput` — `onActivate`/`fieldId` props added for custom keypad activation; value display format updated (whole dollar `$5` vs cents `$5.50`); `inputMode="none"` behavior when keypad active. §4.10 NEW — `BetSection` bet-mode carry-forward rule documented: single→FBT pre-populates all three fields from current single value; FBT→single retains total; prior inconsistency between Match and other games corrected at all call sites._
 _Changes in v1.3: §4.9 NEW — `ShareOrientationPicker` component added._
@@ -123,6 +125,8 @@ constants — no theme object, no nested structure.
 | `RED` | `'#c0392b'` | Danger red. Used for destructive actions (`Btn` `danger` variant) and negative result indicators. |
 | `AMB` | `'#b7770d'` | Amber — warning/attention. Used for the `Btn` `amber` variant and caution states. |
 | `AMBBG` | `'#fff8e1'` | Amber background tint. Intended as the surface color to pair with `AMB` text. Not currently used by any component in this file (see §9 G-3). |
+| `BIRDIE_COLOR` | `'#1a6b3a'` | Score indicator green — stroke color for birdie (single circle) and eagle (double circle) overlays on ScoreGrid cells. Distinct from `G` to allow independent tuning of indicator vs interactive-element green. |
+| `BOGEY_COLOR` | `'#c0392b'` | Score indicator red — stroke color for bogey (single square) and double-bogey-or-worse (double square) overlays on ScoreGrid cells. Shares value with `RED`; declared as a separate token so indicator usage is semantically distinct from destructive-action usage and can be tuned independently. |
 
 ### §3.2 Token usage rule
 
@@ -162,6 +166,19 @@ Dark mode is **not implemented**. The token set is light-mode only.
 No dark-mode variants exist for any token. This is an intentional
 deferment, not a gap to be fixed. If dark mode is added in the future,
 a parallel token set must be introduced and this contract updated.
+
+### §3.6 Score indicator tokens (v1.7)
+
+`BIRDIE_COLOR` and `BOGEY_COLOR` are used exclusively for the stroke-only
+circle/square overlays on ScoreGrid score cells (see §4.11). Rules:
+
+- Both tokens are stroke color only. No fill is applied — the cell background
+  shows through the shape interior, keeping the score number readable.
+- Stroke width for all indicators: `1.5px`.
+- Double-indicator offset (eagle / double-bogey-or-worse): second shape inset
+  `3px` from the first (i.e. the inner shape is 3px smaller on each side).
+- No other component in the app may use these tokens for non-indicator
+  purposes. Their semantic scope is score-relative-to-par display only.
 
 ---
 
@@ -613,6 +630,75 @@ across multiple non-scorecard pages. Per §2.3, utilities here must not
 depend on or interpret application state, scores, or engine-derived
 values.
 
+### §4.11 ScoreGrid Score-Cell Indicator Overlay (v1.7)
+
+**Purpose:** PGA-broadcast-style par-relative indicators rendered as
+stroke-only SVG overlays on active ScoreGrid score cells. Indicators
+convey score relative to par at a glance without replacing or
+repositioning the score number.
+
+**Indicator level table:**
+
+| Condition | Indicator |
+|---|---|
+| Score ≤ par − 2 (eagle or better) | Double circle (outer + inner, `BIRDIE_COLOR`) |
+| Score = par − 1 (birdie) | Single circle (`BIRDIE_COLOR`) |
+| Score = par (par) | None |
+| Score = par + 1 (bogey) | Single square (`BOGEY_COLOR`) |
+| Score ≥ par + 2 (double-bogey or worse) | Double square (outer + inner, `BOGEY_COLOR`) |
+
+**Visibility rules — indicator is ABSENT when any of the following are true:**
+
+1. The cell is an out-of-round cell (gray `–` cell, `!inRound(h)`)
+2. The cell is a departed-player lock cell (`dep && h > dep.departureHole`)
+3. The score value is empty (`''`) or null/undefined
+4. The score value is `'X'` (pick-up/unfinished hole)
+5. `pars[h]` is falsy (missing or zero) — no par to compare against
+
+**Score used:** gross score (`scores[h][pi]` as integer). Net/handicap
+adjustment is not applied to indicator calculation. This matches the
+current gross-only first-cut decision; future sessions may make this
+configurable.
+
+**Rendering approach:** The indicator is an absolutely-positioned SVG
+element inside the existing `<div style={{ position: 'relative' }}>` 
+wrapper that already surrounds each score cell. The SVG is `position:
+absolute; inset: 0; width: 100%; height: 100%; pointerEvents: none`
+so it overlays the cell without intercepting taps.
+
+**Shape geometry:**
+- Single circle: `cx/cy` at cell center, `r` set to fit just inside
+  the cell boundary with ~1px inset from each edge.
+- Double circle: outer circle as above; inner circle with radius
+  reduced by 3px.
+- Single square: `<rect>` with ~1px inset from each edge, `rx/ry: 2`
+  for slight rounding.
+- Double square: outer rect as above; inner rect inset an additional 3px.
+- Stroke width: `1.5` for all shapes. No fill (`fill: none`).
+- Colors: `BIRDIE_COLOR` for circles; `BOGEY_COLOR` for squares.
+
+**Helper location:** A `parRelative(score, par)` pure function must be
+added to `scorecardUtils.js` (Category 1 — pure formatter, no engine
+dependency). Returns `'eagle'`, `'birdie'`, `'par'`, `'bogey'`, or
+`'double_bogey'`. `ScoreGrid` calls this helper to determine which
+indicator (if any) to render. The helper itself must not be in `ui.jsx`
+(it is scorecard-specific, per §2.2).
+
+**What must NOT change:**
+- Score number display, position, font size, or color
+- Cell tap targets and long-press behavior
+- DotBadge and PopDots overlay positions
+- Cell background color logic (`isX` amber, active green border)
+- `display: block` on score inputs (H-2)
+
+---
+
+These are pure functions, not components. They live in `ui.jsx` because
+they are presentational, have no scorecard dependency, and are used
+across multiple non-scorecard pages. Per §2.3, utilities here must not
+depend on or interpret application state, scores, or engine-derived
+values.
+
 ### §5.1 `fmtDollar`
 
 ```js
@@ -771,7 +857,148 @@ See §9 G-2 for the known gap on `Tog` and `SH`.
 
 ---
 
-## §10. Final Rule
+## §10. Other shared components in `src/components/`
+
+This contract is primarily scoped to `ui.jsx`. The components below are
+sibling modules in the same directory and are documented here for
+discoverability. Detailed prop docs may live alongside their source.
+
+### §10.1 `RangePicker.jsx` (15-E.1)
+
+**Purpose:** Shared date-range filter UI used by `HomePage` (Money List)
+and `HistoryPage` (round filter). Single source of truth for range
+options, filter logic, and the custom date wheel picker.
+
+**Owner of:** `moneyListRange` and `historyRange` localStorage keys (see
+`App_Data_Model_Contract.md` §1.1 and §1.2). Each consumer page owns
+one key; the two pages maintain independent filter state.
+
+**Exports:**
+
+| Export | Type | Purpose |
+|---|---|---|
+| `RANGE_OPTS` | `{v, l}[]` | The five range options: `7days`, `mtd`, `ytd`, `all`, `custom` |
+| `ML_KEY` | string | `'moneyListRange'` — Home page key |
+| `HISTORY_KEY` | string | `'historyRange'` — History page key |
+| `loadRangePref(key)` | function | Reads pref from localStorage at `key`; default `{ range: 'ytd', customStart: null, customEnd: null }`. Defaults `key` to `ML_KEY` for back-compat. |
+| `saveRangePref(pref, key)` | function | Writes pref to localStorage at `key`. Defaults `key` to `ML_KEY`. |
+| `filterByRange(items, pref)` | function | Filters an array of `{date}` objects by pref; returns full array for `'all'` or unset custom |
+| `rangeLabel(pref)` | function | Human-readable label for the pref pill (e.g. `'YTD'` or `'Mar 15, 2025 – May 7, 2026'`) |
+| `RangePickerRow` | component | Drop-in pill grid + custom date wheel pickers; props `{ rangePref, onRangePrefChange }` |
+
+**Internal-only (not exported):** `DateChipPicker`, `ScrollWheel`,
+`daysInMonth`, `todayParts`, `jan1Parts`, `MONTHS`, `ITEM_H`.
+
+**Rules:**
+- No file outside `RangePicker.jsx` reads or writes `localStorage`
+  keys `'moneyListRange'` or `'historyRange'` directly. All access goes
+  through `loadRangePref(key)` / `saveRangePref(pref, key)`.
+- `HistoryPage.applyImport` is the one exception: it writes both keys
+  directly when applying a backup, by design — the import is restoring
+  saved values, not generating them.
+- Consumer pages each pass their own key (`ML_KEY` or `HISTORY_KEY`)
+  to `loadRangePref` / `saveRangePref` and pass `rangePref` /
+  `onRangePrefChange` to `RangePickerRow`. The component itself is
+  key-agnostic.
+- New range options or filter logic changes are made in this file only.
+  Both consumer pages pick up changes automatically.
+
+**Style consistency:** The pill grid pattern (`repeat(5, 1fr)` grid,
+green-filled active state, `borderRadius: 20`) is replicated by
+`CoursesPage.jsx` add buttons (Search / Scan Card / Manual). Future
+top-of-page action rows should follow the same pattern.
+
+---
+
+
+---
+
+## §12. ScorecardPage ScoreGrid Pin Behavior (v1.7)
+
+### §12.1 Purpose
+
+The pin toggle lets users keep the ScoreGrid visible at the top of
+ScorecardPage while scrolling down through the game tables below.
+When pinned, the ScoreGrid becomes a sticky element that stays in
+view; when unpinned, page scrolling is unchanged from pre-15-G
+behavior.
+
+### §12.2 Scroll container
+
+The page scroll container is the root `<div style={{ minHeight: '100vh' }}>` 
+in `ScorecardPage` — the page itself scrolls (no inner scroll wrapper). 
+This is a pre-existing invariant that must not change. The sticky header 
+(green bar with logo/course name) already uses `position: sticky; top: 0; 
+zIndex: 10`. The pinned ScoreGrid wrapper uses `position: sticky; top: 
+<stickyHeaderHeight>px` so it sits directly below the header.
+
+### §12.3 Sticky header height
+
+The sticky header height is **73px** (measured from live source: 
+`padding: '8px 16px 7px'` with logo height 58px + padding ≈ 73px). 
+This value is declared as a named constant `STICKY_HEADER_H = 73` in 
+`ScorecardPage.jsx`. If the header height changes in a future session, 
+update this constant — do not hardcode the numeric value at the sticky 
+wrapper.
+
+### §12.4 Pin preference persistence
+
+- localStorage key: `'pinScoreGrid'` (see `App_Data_Model_Contract.md` §1 and §1.3)
+- Shape: JSON boolean (`true` / `false`)
+- Default when absent or unreadable: `false` (unpinned)
+- Read once on mount via `useState(() => ...)` initializer
+- Written on every toggle via `localStorage.setItem`
+- No shared helper required — plain `localStorage.getItem` / `setItem`
+
+### §12.5 Toggle UI location
+
+The pin toggle is a small icon button rendered in two locations matching
+the zoom button placement:
+
+- **Portrait:** Inside `ScoreGrid`'s `renderHalf` header row, next to
+  `ZoomBtn`. `ScoreGrid` receives two new props: `pinned: boolean` and
+  `onPinToggle: () => void`. `ScorecardPage` owns state and storage;
+  ScoreGrid renders the button only.
+- **Landscape:** Inside `ScorecardPage`'s existing landscape dot-control /
+  zoom button rows, immediately adjacent to the zoom SVG button(s).
+
+**Icon:** A pushpin SVG (📌 shape) — green-filled when pinned, outlined
+(stroke-only, same green) when unpinned. Size: 24×24px, matching the 
+zoom button footprint.
+
+### §12.6 Pin mode invariants
+
+The following must hold regardless of pin state:
+
+1. ScoreGrid renders identically in both pinned and unpinned states —
+   only its CSS positioning context changes.
+2. Game tables below the grid scroll normally beneath the pinned grid.
+3. Landscape mode is unaffected — `isLandscape` detection remains the
+   single source of truth in `ScorecardPage` (H-4).
+4. ZoomModal behavior is unchanged — pin state has no effect on zoom
+   open/close or the hidden input architecture (H-12).
+5. The `range` prop passed to game table components is unaffected (H-26).
+6. Bottom clearance padding (`paddingBottom`) accounts for the pinned
+   grid so content below it is not hidden behind it. No explicit
+   additional padding is needed — the pinned ScoreGrid is in document
+   flow and game tables naturally sit below it.
+7. ScoreGrid correctly renders partial-round column layout (9-hole
+   ranges) in both pinned and unpinned states — sticky positioning
+   does not affect the grid's internal layout.
+
+### §12.7 Props added to ScoreGrid
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `pinned` | boolean | `false` | When true, ScoreGrid renders the pin icon as filled/active |
+| `onPinToggle` | function | `undefined` | Called when pin icon tapped; ScorecardPage toggles state and writes localStorage |
+
+These props are display/callback only. ScoreGrid does not read or write
+localStorage directly.
+
+---
+
+## §11. Final Rule
 
 If implementation behavior conflicts with this contract, call out the
 conflict. The implementation must be corrected. This document defines

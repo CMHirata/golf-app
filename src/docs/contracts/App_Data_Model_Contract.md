@@ -1,6 +1,10 @@
 # App Data Model Contract
 
-_Version 3.7 — April 2026_
+_Version 3.9 — May 2026_
+_Changes in v3.9 (15-G): §1 — `pinScoreGrid` boolean preference key added to the app-preference exception table. §1.2 — `settings` backup payload gains `pinScoreGrid: boolean | null`. §1.3 NEW — `pinScoreGrid` shape documented. Owner: `ScorecardPage.jsx`._
+_Supersedes v3.8._
+_Changes in v3.8 (15-E.1): §1 Storage Keys — two app-preference keys (`moneyListRange`, `historyRange`) documented as the exception to the SK-only rule. New §1.1 — shape and valid values for the range pref object. §1.2 — backup payload `settings` field documented as a new top-level export field carrying app preferences (`moneyListRange` and `historyRange`); preserved through `HistoryPage.applyImport` and applied to localStorage on import. New shared component `RangePicker.jsx` in `src/components/` is the sole owner of read/write to these keys — see `UI_Component_Contract.md` §10._
+_Supersedes v3.7._
 _Changes in v3.7 (13-G.2): §5.3 Players — Player object schema gains `siArray: number[18]` (per-player stroke index, required at round-start; never null for a started round; built once via `buildPlayerSI(player, layout)` from `Handicap_Contract.md` §2.8; not serialized — `roundLib.toActiveRound` rebuilds defensively on reload). Engines read `players[pi].siArray[h]` for stroke allocation in every game (§5 amendment in `Handicap_Contract.md`). The shared `activeRound.hcps` field is retained for SI display rows only._
 _Supersedes v3.6._
 _Changes in v3.6 (13-C.8 / 13-C.8.1): §10.1 `computePerMatchPayouts` updated — two new trailing args (`earlyEndOpts` positional 12, `lastCompletedHole` positional 13); full resolution pipeline now applied per match (aggregate per-match SegmentedResolution, skip abandoned matches, apply end_at_k trim, zero per-segment/press Pay/Abandon contributions). Return shape gains `decoration: string | null`. All three call sites updated. §10.1 share-image filter widened — `buildShareHtml` now drops any `breakdown[]` entry whose `game` starts with `'🥊 Match '` (per-instance entries from computePayouts Option A), not only the retired combined `'🥊 Match / Nassau'` entry. §11 invariant 19 NEW — per-match Option A policy: `computePayouts` emits one breakdown entry per match instance; the combined `'🥊 Match / Nassau'` flat entry is retired._
@@ -65,6 +69,87 @@ Defined in `storage.js` as the `SK` object. Never hardcode key strings.
 
 Version suffix (`_v4`) must be incremented if a schema change is
 destructively incompatible with existing stored data.
+
+**App preferences exception (v3.8):** Keys that store app-level UI
+preferences (not entity data) are direct string keys, not part of `SK`.
+They are owned by the component that uses them and are read/written
+through that component's helpers, never directly elsewhere.
+
+| Key (string literal) | Contains | Owner |
+|---|---|---|
+| `moneyListRange` | Money List range filter pref (Home page) | `components/RangePicker.jsx` |
+| `historyRange` | Round history range filter pref (History page) | `components/RangePicker.jsx` |
+| `pinScoreGrid` | ScoreGrid sticky-pin pref (ScorecardPage) | `pages/ScorecardPage.jsx` |
+
+### 1.1 Range pref shape
+
+Both `moneyListRange` and `historyRange` use the same shape:
+
+```js
+{
+  range:        '7days' | 'mtd' | 'ytd' | 'all' | 'custom',
+  customStart:  { day: number, month: number, year: number } | null,
+  customEnd:    { day: number, month: number, year: number } | null,
+}
+```
+
+- `range` — required. One of five values. Default on first read: `'ytd'`.
+- `customStart` / `customEnd` — required only when `range === 'custom'`.
+  Both must be set for the custom range to take effect; otherwise the
+  filter falls through to no-op (returns all items).
+- `month` is 1-indexed (1 = January, 12 = December).
+- Read via `loadRangePref(key)`; write via `saveRangePref(pref, key)`.
+  Both exported from `RangePicker.jsx` and accept the storage key as
+  their final argument so each consumer page operates on its own pref.
+  Home and History intentionally maintain independent filter state.
+- No file outside `RangePicker.jsx` reads or writes either key directly,
+  with the single exception of `HistoryPage.applyImport` (see §1.2).
+
+### 1.2 Backup payload `settings` field (v3.8)
+
+Backup JSON exports gain a top-level `settings` field carrying app
+preferences. Current shape:
+
+```js
+{
+  exportedAt:  string,    // ISO timestamp
+  appVersion:  string,    // 'golf-scorekeeper-v4'
+  players:     Player[],
+  courses:     Course[],
+  rounds:      Round[],
+  settings: {
+    moneyListRange: { range, customStart, customEnd } | null,
+    historyRange:   { range, customStart, customEnd } | null,
+    pinScoreGrid:   boolean | null,
+  },
+}
+```
+
+Owned by two paths: `services/exportUtils.js` `triggerExport` (auto-save
+export) and `pages/HistoryPage.jsx` `handleExport` (manual export). Both
+must populate `settings.moneyListRange`, `settings.historyRange`, and
+`settings.pinScoreGrid` from `ls.get(...)`.
+
+Import path: `HistoryPage.handleImportFile` MUST preserve `parsed.settings`
+through to `applyImport`. `applyImport` writes each present key from
+`parsed.settings` to localStorage. Settings are not subject to the
+player/course conflict-resolution prompt — they overwrite silently.
+
+Future preference keys follow the same pattern: add to `settings` field,
+add a row in §1, document shape under §1.1 (or new sub-section if shape
+differs).
+
+### 1.3 `pinScoreGrid` shape (v3.9)
+
+```js
+boolean   // true = ScoreGrid sticky-pinned; false or absent = unpinned
+```
+
+- Stored as JSON `true` or `false` at the literal key `'pinScoreGrid'`.
+- Default when key is absent or unreadable: `false` (unpinned).
+- Read/written directly by `ScorecardPage.jsx` via `localStorage.getItem` /
+  `localStorage.setItem`. No shared helper required for a plain boolean.
+- Included in backup `settings` payload (§1.2); restored silently on import.
 
 ---
 

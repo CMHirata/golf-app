@@ -37,9 +37,9 @@
 // `handleDepartConfirmYes`) remain owned here. No state coupling change.
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import { G } from '../../components/ui.jsx';
+import { G, BIRDIE_COLOR, BOGEY_COLOR } from '../../components/ui.jsx';
 import { strokesForMode, scoreForMode, xGrossScore } from '../../engine/handicap.js';
-import { restoreDotDefs, COL_W, TOT_W, NAME_MIN } from './scorecardUtils.js';
+import { restoreDotDefs, COL_W, TOT_W, NAME_MIN, parRelative } from './scorecardUtils.js';
 import { getDotsPartner, getMatchTeamPartner, sixesSegForHole } from '../../engine/games.js';
 import { DotsPopup }        from './DotsPopup.jsx';
 import { ZoomModal }        from './ZoomModal.jsx';
@@ -88,6 +88,64 @@ function DotBadge({ count }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       pointerEvents: 'none', zIndex: 2,
     }}>{count}</div>
+  );
+}
+
+// ── ScoreIndicator — par-relative overlay (§4.11) ─────────────────────────────
+// Absolutely-positioned SVG overlaid on a score cell. Stroke-only, no fill.
+// level: 'eagle' | 'birdie' | 'bogey' | 'double_bogey' (null / 'par' → no render)
+function ScoreIndicator({ level }) {
+  if (!level || level === 'par') return null;
+  const isBirdie = level === 'birdie' || level === 'eagle';
+  const color    = isBirdie ? BIRDIE_COLOR : BOGEY_COLOR;
+  const sw       = 1.5;
+  const inset    = 1.5;   // outer shape distance from cell edge
+  const gap      = 3;     // inner shape additional inset for doubles
+
+  if (level === 'birdie') {
+    return (
+      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
+           viewBox="0 0 100 100" preserveAspectRatio="none">
+        <ellipse cx="50" cy="50" rx={50 - inset - sw/2} ry={50 - inset - sw/2}
+          stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
+      </svg>
+    );
+  }
+  if (level === 'eagle') {
+    return (
+      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
+           viewBox="0 0 100 100" preserveAspectRatio="none">
+        <ellipse cx="50" cy="50" rx={50 - inset - sw/2} ry={50 - inset - sw/2}
+          stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
+        <ellipse cx="50" cy="50" rx={50 - inset - gap - sw/2} ry={50 - inset - gap - sw/2}
+          stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
+      </svg>
+    );
+  }
+  if (level === 'bogey') {
+    return (
+      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
+           viewBox="0 0 100 100" preserveAspectRatio="none">
+        <rect x={inset + sw/2} y={inset + sw/2}
+          width={100 - 2*(inset + sw/2)} height={100 - 2*(inset + sw/2)}
+          rx="4" ry="4"
+          stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
+      </svg>
+    );
+  }
+  // double_bogey
+  return (
+    <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
+         viewBox="0 0 100 100" preserveAspectRatio="none">
+      <rect x={inset + sw/2} y={inset + sw/2}
+        width={100 - 2*(inset + sw/2)} height={100 - 2*(inset + sw/2)}
+        rx="4" ry="4"
+        stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
+      <rect x={inset + gap + sw/2} y={inset + gap + sw/2}
+        width={100 - 2*(inset + gap + sw/2)} height={100 - 2*(inset + gap + sw/2)}
+        rx="3" ry="3"
+        stroke={color} strokeWidth={sw} fill="none" vectorEffect="non-scaling-stroke"/>
+    </svg>
   );
 }
 
@@ -147,6 +205,10 @@ export function ScoreGrid({
   // not participate in this gesture — they are fully inert.
   //   (pi: number) => void
   onUndoDeparturePrompt,
+  // 15-G: Pin toggle props. ScorecardPage owns state and localStorage;
+  // ScoreGrid renders the pin icon button in the renderHalf header row.
+  pinned      = false,
+  onPinToggle = undefined,
 }) {
   // 13-C.2: Derived end hole (never stored per PartialGameContract §1A.3, §14.17)
   const roundEndHole = roundStartHole + roundNumHoles - 1;
@@ -918,6 +980,7 @@ export function ScoreGrid({
               <>{xGross}<span style={{ color: '#b8860b', fontWeight: 800, marginLeft: 1 }}>X</span></>
             ) : displayVal}
           </div>
+          {!isX && <ScoreIndicator level={parRelative(val, pars[h])}/>}
           <DotBadge count={dotCount}/>
           {dotMode && !(dotMode === 'netofflow' && nonParticipantIdxs?.has(pi)) && (() => {
             const ch = courseHcps[pi];
@@ -958,6 +1021,7 @@ export function ScoreGrid({
             <>{xGross}<span style={{ color: '#b8860b', fontWeight: 800, marginLeft: 1 }}>X</span></>
           ) : displayVal}
         </div>
+        {!isX && <ScoreIndicator level={parRelative(val, pars[h])}/>}
         <DotBadge count={dotCount}/>
         {dotMode && !(dotMode === 'netofflow' && nonParticipantIdxs?.has(pi)) && (() => {
           const ch = courseHcps[pi];
@@ -975,25 +1039,52 @@ export function ScoreGrid({
 
   // ── Zoom button — SVG magnifier ────────────────────────────────────────────
   const ZoomBtn = () => (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2, paddingRight: 2 }}>
+    <button
+      onClick={openZoom}
+      title="Open zoom score entry"
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        padding: '2px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+      aria-label="Zoom score entry"
+    >
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="7.5" stroke={G} strokeWidth="2.2"/>
+        <line x1="17.8" y1="17.8" x2="24" y2="24" stroke={G} strokeWidth="2.4" strokeLinecap="round"/>
+        <line x1="9" y1="12" x2="15" y2="12" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
+        <line x1="12" y1="9" x2="12" y2="15" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    </button>
+  );
+
+  // ── Pin button — pushpin SVG (15-G) ───────────────────────────────────────
+  // Filled green when pinned, stroke-only when unpinned.
+  const PinBtn = () => {
+    if (!onPinToggle) return null;
+    const pinColor = G;
+    return (
       <button
-        onClick={openZoom}
-        title="Open zoom score entry"
+        onClick={onPinToggle}
+        title={pinned ? 'Unpin scorecard' : 'Pin scorecard to top'}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
           padding: '2px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
-        aria-label="Zoom score entry"
+        aria-label={pinned ? 'Unpin scorecard' : 'Pin scorecard to top'}
       >
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="12" cy="12" r="7.5" stroke={G} strokeWidth="2.2"/>
-          <line x1="17.8" y1="17.8" x2="24" y2="24" stroke={G} strokeWidth="2.4" strokeLinecap="round"/>
-          <line x1="9" y1="12" x2="15" y2="12" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
-          <line x1="12" y1="9" x2="12" y2="15" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Pin shaft */}
+          <line x1="12" y1="14" x2="12" y2="21" stroke={pinColor} strokeWidth="2" strokeLinecap="round"/>
+          {/* Pin head circle */}
+          <circle cx="12" cy="8" r="5"
+            stroke={pinColor} strokeWidth="1.8"
+            fill={pinned ? pinColor : 'none'}/>
+          {/* Horizontal bar across pin */}
+          <line x1="7" y1="14" x2="17" y2="14" stroke={pinColor} strokeWidth="2" strokeLinecap="round"/>
         </svg>
       </button>
-    </div>
-  );
+    );
+  };
 
   const renderHalf = (hs, halfLabel, showZoom = false) => {
     // 13-C.2: `hs` is the full 9-column Front/Back array. `inRoundHs` is the
@@ -1006,7 +1097,12 @@ export function ScoreGrid({
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
           <div style={{ fontWeight: 700, color: G, fontSize: 12 }}>{halfLabel}</div>
-          {canZoom && showZoom && <ZoomBtn />}
+          {canZoom && showZoom && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+              <PinBtn />
+              <ZoomBtn />
+            </div>
+          )}
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', minWidth: NAME_MIN + hs.length * COL_W + TOT_W }}>

@@ -1,6 +1,6 @@
 # The Card — Master Build Plan
 
-_Last updated: May 2026 — 14-bugs.1 complete and confirmed on device. Custom dot payout + team companion fix; ScoreKeypad double-fire fix. Next session: **15-E — Players Page Enhancements**._
+_Last updated: May 2026 — 15-E.1 complete and confirmed on device. Money List visual overhaul, custom date wheel picker, shared `RangePicker.jsx` component, independent date filters on Home/History, settings persistence through backup/restore, Courses pill consistency, player conflict-detection field-list fix. Next session: **15-A — Display Polish**._
 _Maintained in this chat as the authoritative sequence and history of all build sessions._
 _The APP_STATE_SUMMARY.md in the project knowledge base is the authoritative record of_
 _what is implemented. This file is the authoritative record of what was planned, why,_
@@ -27,6 +27,7 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 - **14-A** scope vastly exceeded original plan (simple API swap → full OCR infrastructure build). Split into **14-A** (closed May 2026) and **14-A.2** (Mistral OCR continuation, requires real WiFi). See 14-A.2 open session entry.
 - **14-B** scope significantly exceeded plan — originally "CourseImportReviewModal new component"; became full ManualCourseModal redesign + import flow wiring + extensive iOS keypad debugging.
 - **14-C.bugs** (Open Session Plan designation) → corrected to **14-bugs.1** at session start per owner. Non-sequential designation; logged here for traceability.
+- **15-E** scope significantly exceeded original plan — original spec covered swipe-to-delete, star toggle, money toggle on Players page only. Expanded to include: shared `SwipeableRow` component (refactoring CoursesPage swipe at the same time), Money List moved from History to Home page, YTD Leader removed, cumulative winnings removed from History page, starred avatar treatment in PlayerPickerPopup, `new-round/CourseCard.jsx` renamed to `NewRoundCourseCard.jsx` to resolve naming collision.
 
 ---
 
@@ -88,6 +89,9 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 | 14-A | Sprint 14 photo import — full OCR infrastructure build. AI Assistant path confirmed on device. Auto Scan functional with known limitations. `courseLib.js` schema gains `nineComboNames`. `CourseCard.jsx` hole numbering + combo yardages. Deploy migrated from Netlify to Cloudflare Pages + Workers. Scope significantly exceeded plan — see detailed 14-A notes below. | — | Confirmed on device — AI Assistant path. Auto Scan in development. |
 | 14-B | ManualCourseModal full redesign: compact M/W inline grid for Par & Handicap, table layout for Rating/Slope & Yardage, USGA SI validation (odd/even per nine, duplicate detection, save-block), `KpField` component for system-keyboard-free entry, discard confirmation overlay, tap-outside lock, modal shrinks when keypad open, background scroll lock. `PhotoImportModal.jsx`: `finish()` → Review & Save flow via `ManualCourseModal` with `initialData`, duplicate tee name consolidation. `CourseCard.jsx` + `courseLib.js`: website field removed. Scope significantly exceeded plan. H-39 added. | — | Confirmed on device |
 | 14-bugs.1 | Custom dot bugs: `parts[2]` key-split bug caused custom dot IDs (`c_timestamp`) to be silently dropped in payout accumulation and team companion logic across `payouts.js`, `ScoreGrid.jsx`, `DotsTable.jsx`, `DotsPopup.jsx`. Fixed with `parts.slice(2).join('_')` at all 6 id-extraction sites. `pivotSegTot`/`pivotRoundTot` companion-filtering fix. ScoreKeypad double-fire: React 18 passive listeners silently ignored `preventDefault()` in `onTouchEnd`, causing `onClick` to fire ~300ms later on every digit/backspace tap. Fixed with `touchHandledRef` timestamp guard on `onClick`; `onMouseUp` removed. H-40 added. | — | Confirmed on device |
+| 15-E | Players page enhancements. Shared `SwipeableRow` component (ported from `SwipeableRoundRow` mechanics — yellow edit strip, red delete, full-swipe overlay). `CoursesPage` refactored to use `SwipeableRow`. Star/favourite toggle on player rows — starred players sort to top of `playerLib.list()` and all player pickers. Per-player `inMoneyLists` toggle. Cumulative Winnings removed from History page. Money List added to Home page (roster-filtered, `inMoneyLists`-filtered). YTD Leader widget removed from Home page. Starred avatar treatment in `PlayerPickerPopup` (pale yellow star watermark behind initial, disappears on selection). `new-round/CourseCard.jsx` renamed `NewRoundCourseCard.jsx` to resolve naming collision with `pages/CourseCard.jsx`. `App_Data_Model_Contract.md` §5.3 amended — `starred` and `inMoneyLists` library-record fields. Scope significantly exceeded plan. | — | Confirmed on device |
+| 15-F | Dead import cleanup. Removed dead `Btn` import from `HistoryPage.jsx`; removed dead `GA` import from `HomePage.jsx`. Two surgical `str_replace` edits. | — | Confirmed on device |
+| 15-E.1 | Money List visual overhaul (Option D layout: position number + initials avatar + name + amount; left accent bar in app green/red/grey; no winner highlight; no round counters). Custom date wheel picker (iOS-style three-column scroll wheel: month/day/year) replacing native `<input type="date">`. New shared `components/RangePicker.jsx` extracts all range logic — owns two localStorage keys (`moneyListRange` for Home, `historyRange` for History) so the two pages maintain independent filter state. Range options: 7 Days, MTD, YTD, All Time, Custom (equal-width pill grid). Settings persisted through backup/restore via new top-level `settings` field in export payload. Player conflict-detection field-list fix (`starred`, `inMoneyLists` added to `f` field list at both detection and resolution sites in `HistoryPage.applyImport`). `CoursesPage` add-button row updated to match Money List pill style (Search / Scan Card / Manual all filled green). Contracts amended: `App_Data_Model_Contract.md` v3.8 (§1 storage keys, §1.1 range pref shape, §1.2 backup payload settings field), `Round_Lifecycle_Contract.md` v2.3 (§5.2 settings cross-reference), `UI_Component_Contract.md` v1.6 (§10 NEW — `RangePicker.jsx` documented). Scope significantly exceeded plan. | App_Data_Model v3.8, Round_Lifecycle v2.3, UI_Component v1.6 | Confirmed on device |
 
 ---
 
@@ -205,7 +209,7 @@ let markdown = (data.pages || []).map(p => {
 
 ## Open Session Plan
 
-> **Next session: 15-E — Players Page Enhancements.** 14-bugs.1 complete. 14-A.2 (Mistral OCR) remains gated on real WiFi. Sprint 15 sessions may be tackled in any order.
+> **Next session: 15-A — Display Polish.** 15-E, 15-E.1, and 15-F complete. Sprint 15 sessions may be tackled in any order. 14-A.2 (Mistral OCR) remains gated on real WiFi.
 
 ---
 
@@ -231,7 +235,7 @@ _14-A complete. 14-B complete. 14-bugs.1 complete. AI Assistant + Review & Save 
 
 ### Sprint 15 — Display Polish + Features
 
-_Sessions within Sprint 15 may be tackled in any order._
+_15-E, 15-E.1, and 15-F complete. Sessions within Sprint 15 may be tackled in any order._
 
 **15-A: Display Polish — Summary, History, Modals**
 - Move player name tiles out of header on round summaries.
@@ -250,16 +254,6 @@ _Sessions within Sprint 15 may be tackled in any order._
 **15-D: Save Game Settings as Defaults**
 - Save last-used game configuration as default for next round.
 - Priority: Medium
-
-**15-E: Players Page Enhancements**
-- Swipe-to-delete on Players and Courses pages
-- Star/favorite players — starred players rise to top of player list
-- Per-player "include in money lists" toggle
-- Priority: Medium
-
-**15-F: Cleanup Pass**
-- Remove dead `Btn` import from `HistoryPage.jsx`. Other minor items.
-- Priority: Low
 
 **15-G: Advanced Scorecard Options** *(contract first)*
 - Birdie/bogey indicators, pin sheet, etc.
@@ -340,6 +334,17 @@ _None._
 | Website field removed from course schema UI | 14-B | Removed from ManualCourseModal, CourseCard, courseLib prompt/merge. Existing localStorage data with `website` field silently ignored. |
 | SI validation: 2-nine courses use USGA odd/even rule; 1 or 3+ nines use 1–9 | 14-B | Front nine: odd 1–17. Back nine: even 2–18. 27-hole: each nine 1–9 independently. Save blocked on duplicates. |
 | Tee Boxes card layout preserved as commented code | 14-B | `TeeRow` component kept in `ManualCourseModal.jsx` as commented-out Tees 1 option for potential future settings menu. |
+| `SwipeableRow` gesture mechanics port from `SwipeableRoundRow` | 15-E | All swipe gesture tracking in refs (zero setState during gesture). `snapClose` called before action callbacks. Full-swipe threshold = 80% of row width. Edit strip = pale yellow `#fff9e6`, delete = `#c0392b`. |
+| Money List on Home page; cumulative winnings removed from History | 15-E | Home page shows roster-filtered, `inMoneyLists`-filtered cumulative winnings. History page shows rounds only. |
+| `starred` and `inMoneyLists` are library-only fields — never in `activePlayers` | 15-E | Engines never see these fields. `App_Data_Model_Contract.md` §5.3 amended. |
+| `new-round/CourseCard.jsx` renamed to `NewRoundCourseCard.jsx` | 15-E | Resolves naming collision with `pages/CourseCard.jsx` (read-only detail card). Two distinct components, now distinct names. |
+| Shared `RangePicker.jsx` is single source of truth for range filters | 15-E.1 | Both Home page Money List and History page round filter import from `components/RangePicker.jsx`. Range options, filter logic, custom date wheel picker live in one file. New range options or filter changes are made once and pick up in both consumers automatically. |
+| Home and History maintain independent date filter state | 15-E.1 | Two distinct localStorage keys (`moneyListRange`, `historyRange`) sharing the same shape. `loadRangePref(key)` and `saveRangePref(pref, key)` accept the key as a parameter; consumer pages pass their own. Both keys survive backup/restore via the new `settings` payload field. |
+| Backup payload `settings` field for app-level preferences | 15-E.1 | Top-level `settings` field on the export JSON carries app preferences (currently `moneyListRange` and `historyRange`). `HistoryPage.handleImportFile` preserves it through to `applyImport`, which writes each present key to localStorage. Settings overwrite silently — not subject to the player/course conflict prompt. Future preference keys follow the same pattern. |
+| App-preference localStorage keys are direct strings, not part of `SK` | 15-E.1 | `SK` is reserved for entity data (players, courses, rounds, active round, setup draft). UI preference keys (`moneyListRange`, `historyRange`) are direct string literals owned by the component that uses them. Documented in `App_Data_Model_Contract.md` §1. |
+| iOS-style scroll wheel for custom date picker | 15-E.1 | Three independent scroll columns (month/day/year) using CSS `scroll-snap-type: y mandatory` and `scroll-snap-align: center`. Selection highlight band is semi-transparent with green borders so the centered text is fully readable. Top/bottom fades stop short of the selected row to avoid obscuring it. |
+| Money List visual: position + initials + name + amount, left accent bar | 15-E.1 | Each row has a 4px left accent bar colored green (positive) / red (negative) / grey (zero) — colorblind-safe contrast. No winner highlight, no round counters. Place number muted (12px, grey, weight 700). Name flex-grows; amount right-aligned. |
+| Player import conflict field-list includes `starred` and `inMoneyLists` | 15-E.1 | `HistoryPage.applyImport` previously rebuilt player records using a fixed five-field list (`name, gender, ghin, email, phone`), silently dropping `starred` and `inMoneyLists` on any conflicting import. Both fields added to the `f` list at conflict-detection (line ~158) and conflict-resolution (line ~199) sites. Brand-new players (no conflict) were already correct. |
 
 ---
 
@@ -375,3 +380,4 @@ _None._
 | Game range indicator in game table headers | Deferred | Polish — post-13-E |
 | Stroke Play §14 G-2 `effMin` not received from `subsetMin()` | Deferred | Architectural inconsistency only; results correct |
 | Auto Scan accuracy to production quality | Deferred to 14-A.2 | Gemini coordinate approach has known limitations. Mistral OCR is next candidate. Test on real WiFi in 14-A.2. |
+| starred players auto-selected in New Round | Deferred | Out of scope for 15-E; log for future sprint if demand arises |
