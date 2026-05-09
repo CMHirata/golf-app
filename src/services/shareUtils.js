@@ -270,7 +270,7 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     const dots = g ? hcpStrokesHtml(pi, h) : '';
     const ind = g ? indicatorHtml(parRelative(g, pars[h])) : '';
     if (!dots && !ind) return `<td style="text-align:center;font-size:10px;">${g||''}</td>`;
-    return `<td style="text-align:center;font-size:10px;padding:0;"><div style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;line-height:1;">${g}${ind}${dots}</div></td>`;
+    return `<td style="text-align:center;font-size:10px;padding:0;"><div style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;line-height:1;"><span style="display:block;line-height:1;padding-bottom:1px;">${g}</span>${ind}${dots}</div></td>`;
   };
 
   const ninesLabel = (() => {
