@@ -148,23 +148,9 @@ const ScorecardPage = forwardRef(function ScorecardPage(
     });
   }, []);
 
-  // 15-G: Measure ScoreGrid height when pinned so we can pad the content below it.
-  const scoreGridWrapperRef = useRef(null);
-  const [pinnedGridHeight, setPinnedGridHeight] = useState(0);
-  useEffect(() => {
-    if (!pinned || !scoreGridWrapperRef.current) { setPinnedGridHeight(0); return; }
-    const el = scoreGridWrapperRef.current;
-    const update = () => setPinnedGridHeight(el.offsetHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [pinned]);
-
   const isDiscardingRef = useRef(false);
 
   // 15-G: Pin ScoreGrid to top of page (§12, App_Data_Model §1.3).
-  // Reads persisted boolean on mount; writes on every toggle.
   const [pinned, setPinned] = useState(() => {
     try { return JSON.parse(localStorage.getItem('pinScoreGrid')) === true; }
     catch { return false; }
@@ -176,6 +162,10 @@ const ScorecardPage = forwardRef(function ScorecardPage(
       return next;
     });
   }, []);
+  // Approximate height of the ScoreGrid in portrait mode (Front 9 half only visible
+  // before scroll; includes par row, hcp row, player rows). Used as spacer when pinned.
+  // Generous estimate so game tables are never hidden behind the fixed grid.
+  const SCORE_GRID_SPACER = 220;
 
   // Persist mutable state on every change.
   // Read the latest activeRound from storage so we never clobber breakdown/bank
@@ -350,8 +340,11 @@ const ScorecardPage = forwardRef(function ScorecardPage(
         </div>
       </div>
 
-      {/* ── Scrollable content above grid (dot controls, zoom row) ── */}
-      <div style={{ padding: '12px 12px 0' }}>
+      {/* ── Scrollable content ── */}
+      <div style={{
+        padding: '12px 12px',
+        paddingBottom: `calc(${bottomClearance}px + env(safe-area-inset-bottom))`,
+      }}>
         {/* ── Dot mode unified pill control (§5.6) ── */}
         {(isMixed || hasNOL) && (isMixed || nolDotOptions.length > 0) && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
@@ -460,73 +453,61 @@ const ScorecardPage = forwardRef(function ScorecardPage(
             </button>
           </div>
         )}
-      </div>
 
-      {/* ── ScoreGrid — when pinned uses position:fixed to escape overflow-x:hidden
-          scroll-container on App.jsx root div (iOS Safari sticky limitation).
-          A ResizeObserver measures the wrapper height so the spacer div below
-          pushes game tables down by exactly the right amount. ── */}
-      {activePlayers.length >= 2 && (
-        <div
-          ref={scoreGridWrapperRef}
-          style={pinned ? {
-            position: 'fixed',
-            top: STICKY_HEADER_H,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '100%',
-            maxWidth: 520,
-            zIndex: 5,
-            background: '#eef4ee',
-            padding: '0 12px 4px',
-          } : { padding: '0 12px' }}
-        >
-          <ScoreGrid
-            players={activePlayers} pars={pars} hcps={hcps} hcpsWomen={hcpsWomen || null}
-            courseHcps={courseHcps} minCourseHcp={minCourseHcp}
-            effectiveMinCourseHcp={effectiveMinCourseHcp}
-            nonParticipantIdxs={nonParticipantIdxs}
-            scores={scores} setScores={setScores}
-            dotMode={dotMode} isMixed={isMixed} setDotModeOverride={setDotModeOverride}
-            nolDotGame={nolDotGame} setNolDotGame={setNolDotGame}
-            nolDotOptions={nolDotOptions}
-            primaryMode={primaryMode} activeGames={activeGames} gameOpts={gameOpts}
-            matches={matches || []} sixesTeams={sixesTeams}
-            strokePlayPlayers={strokePlayPlayers || []}
-            skinsPlayers={skinsPlayers || []}
-            stablefordPlayers={stablefordPlayers || []}
-            ninesPlayers={ninesPlayers || []}
-            dotsPlayers={dotsPlayers || []}
-            dots={dots} dotEntries={dotEntries} setDotEntries={setDotEntries}
-            manualPresses={manualPresses} setManualPresses={setManualPresses}
-            frontLabel={frontLabel} backLabel={backLabel}
-            isLandscape={isLandscape}
-            zoomTriggerRef={zoomTriggerRef}
-            roundStartHole={roundStartHole}
-            roundNumHoles={roundNumHoles}
-            gameRanges={ar.gameRanges ?? {}}
-            earlyDepartureOpts={earlyDepartureOpts}
-            onOpenDepartureResolver={onOpenDepartureResolver}
-            onOpenReorderDeparturesModal={onOpenReorderDeparturesModal}
-            onUndoDeparturePrompt={onUndoDeparturePrompt}
-            pinned={pinned}
-            onPinToggle={handlePinToggle}
-          />
-        </div>
-      )}
-      {/* Spacer: when pinned the ScoreGrid is fixed so we push game tables down */}
-      {pinned && activePlayers.length >= 2 && (
-        <div style={{ height: pinnedGridHeight }}/>
-      )}
-      {activePlayers.length < 2 && (
-        <div style={{ color: '#aaa', textAlign: 'center', padding: 28 }}>Add at least 2 players in setup.</div>
-      )}
-
-      {/* ── Game tables and remaining content ── */}
-      <div style={{
-        padding: '0 12px',
-        paddingBottom: `calc(${bottomClearance}px + env(safe-area-inset-bottom))`,
-      }}>
+        {activePlayers.length < 2
+          ? <div style={{ color: '#aaa', textAlign: 'center', padding: 28 }}>Add at least 2 players in setup.</div>
+          : <>
+              {/* 15-G: When pinned, ScoreGrid is position:fixed so it stays visible
+                  while game tables scroll beneath it. A spacer div of equal height
+                  keeps the game tables pushed down. When unpinned, normal flow. */}
+              {pinned && <div style={{ height: SCORE_GRID_SPACER }}/>}
+              <div
+                style={pinned ? {
+                  position: 'fixed',
+                  top: STICKY_HEADER_H,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '100%',
+                  maxWidth: 520,
+                  zIndex: 5,
+                  background: '#eef4ee',
+                  padding: '0 12px 4px',
+                } : {}}
+              >
+                <ScoreGrid
+                  players={activePlayers} pars={pars} hcps={hcps} hcpsWomen={hcpsWomen || null}
+                  courseHcps={courseHcps} minCourseHcp={minCourseHcp}
+                  effectiveMinCourseHcp={effectiveMinCourseHcp}
+                  nonParticipantIdxs={nonParticipantIdxs}
+                  scores={scores} setScores={setScores}
+                  dotMode={dotMode} isMixed={isMixed} setDotModeOverride={setDotModeOverride}
+                  nolDotGame={nolDotGame} setNolDotGame={setNolDotGame}
+                  nolDotOptions={nolDotOptions}
+                  primaryMode={primaryMode} activeGames={activeGames} gameOpts={gameOpts}
+                  matches={matches || []} sixesTeams={sixesTeams}
+                  strokePlayPlayers={strokePlayPlayers || []}
+                  skinsPlayers={skinsPlayers || []}
+                  stablefordPlayers={stablefordPlayers || []}
+                  ninesPlayers={ninesPlayers || []}
+                  dotsPlayers={dotsPlayers || []}
+                  dots={dots} dotEntries={dotEntries} setDotEntries={setDotEntries}
+                  manualPresses={manualPresses} setManualPresses={setManualPresses}
+                  frontLabel={frontLabel} backLabel={backLabel}
+                  isLandscape={isLandscape}
+                  zoomTriggerRef={zoomTriggerRef}
+                  roundStartHole={roundStartHole}
+                  roundNumHoles={roundNumHoles}
+                  gameRanges={ar.gameRanges ?? {}}
+                  earlyDepartureOpts={earlyDepartureOpts}
+                  onOpenDepartureResolver={onOpenDepartureResolver}
+                  onOpenReorderDeparturesModal={onOpenReorderDeparturesModal}
+                  onUndoDeparturePrompt={onUndoDeparturePrompt}
+                  pinned={pinned}
+                  onPinToggle={handlePinToggle}
+                />
+              </div>
+            </>
+        }
       </div>
 
       {/* ── Pinned action bar ── */}
