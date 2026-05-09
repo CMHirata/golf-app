@@ -1,8 +1,6 @@
 # App Data Model Contract
 
-_Version 3.9 — May 2026_
-_Changes in v3.9 (15-G): §1 — `pinScoreGrid` boolean preference key added to the app-preference exception table. §1.2 — `settings` backup payload gains `pinScoreGrid: boolean | null`. §1.3 NEW — `pinScoreGrid` shape documented. Owner: `ScorecardPage.jsx`._
-_Supersedes v3.8._
+_Version 3.8 — May 2026_
 _Changes in v3.8 (15-E.1): §1 Storage Keys — two app-preference keys (`moneyListRange`, `historyRange`) documented as the exception to the SK-only rule. New §1.1 — shape and valid values for the range pref object. §1.2 — backup payload `settings` field documented as a new top-level export field carrying app preferences (`moneyListRange` and `historyRange`); preserved through `HistoryPage.applyImport` and applied to localStorage on import. New shared component `RangePicker.jsx` in `src/components/` is the sole owner of read/write to these keys — see `UI_Component_Contract.md` §10._
 _Supersedes v3.7._
 _Changes in v3.7 (13-G.2): §5.3 Players — Player object schema gains `siArray: number[18]` (per-player stroke index, required at round-start; never null for a started round; built once via `buildPlayerSI(player, layout)` from `Handicap_Contract.md` §2.8; not serialized — `roundLib.toActiveRound` rebuilds defensively on reload). Engines read `players[pi].siArray[h]` for stroke allocation in every game (§5 amendment in `Handicap_Contract.md`). The shared `activeRound.hcps` field is retained for SI display rows only._
@@ -79,7 +77,6 @@ through that component's helpers, never directly elsewhere.
 |---|---|---|
 | `moneyListRange` | Money List range filter pref (Home page) | `components/RangePicker.jsx` |
 | `historyRange` | Round history range filter pref (History page) | `components/RangePicker.jsx` |
-| `pinScoreGrid` | ScoreGrid sticky-pin pref (ScorecardPage) | `pages/ScorecardPage.jsx` |
 
 ### 1.1 Range pref shape
 
@@ -120,15 +117,14 @@ preferences. Current shape:
   settings: {
     moneyListRange: { range, customStart, customEnd } | null,
     historyRange:   { range, customStart, customEnd } | null,
-    pinScoreGrid:   boolean | null,
   },
 }
 ```
 
 Owned by two paths: `services/exportUtils.js` `triggerExport` (auto-save
 export) and `pages/HistoryPage.jsx` `handleExport` (manual export). Both
-must populate `settings.moneyListRange`, `settings.historyRange`, and
-`settings.pinScoreGrid` from `ls.get(...)`.
+must populate `settings.moneyListRange` and `settings.historyRange`
+from `ls.get(...)`.
 
 Import path: `HistoryPage.handleImportFile` MUST preserve `parsed.settings`
 through to `applyImport`. `applyImport` writes each present key from
@@ -138,18 +134,6 @@ player/course conflict-resolution prompt — they overwrite silently.
 Future preference keys follow the same pattern: add to `settings` field,
 add a row in §1, document shape under §1.1 (or new sub-section if shape
 differs).
-
-### 1.3 `pinScoreGrid` shape (v3.9)
-
-```js
-boolean   // true = ScoreGrid sticky-pinned; false or absent = unpinned
-```
-
-- Stored as JSON `true` or `false` at the literal key `'pinScoreGrid'`.
-- Default when key is absent or unreadable: `false` (unpinned).
-- Read/written directly by `ScorecardPage.jsx` via `localStorage.getItem` /
-  `localStorage.setItem`. No shared helper required for a plain boolean.
-- Included in backup `settings` payload (§1.2); restored silently on import.
 
 ---
 

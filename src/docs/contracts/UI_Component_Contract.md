@@ -2,7 +2,7 @@
 
 _Version 1.7 — May 2026_
 _Supersedes: v1.6_
-_Changes in v1.7 (15-G): §3.1 — two new score-indicator tokens added: `BIRDIE_COLOR` (`'#1a6b3a'`) and `BOGEY_COLOR` (`'#c0392b'`). §3.6 NEW — score indicator token rules. §4 ScoreGrid sub-section NEW (§4.11) — birdie/bogey indicator overlay rendering rules for ScoreGrid score cells. §12 NEW — ScorecardPage ScoreGrid pin behavior: sticky positioning, toggle UI location, localStorage key, invariants._
+_Changes in v1.7 (15-G): §3.1 — two new score-indicator tokens added: `BIRDIE_COLOR` (`'#1a6b3a'`) and `BOGEY_COLOR` (`'#c0392b'`). §3.6 NEW — score indicator token rules. §4.11 NEW — birdie/bogey indicator overlay rendering rules for ScoreGrid score cells._
 _Changes in v1.6 (15-E.1): §10 NEW — `RangePicker.jsx` documented as a shared component sibling to `ui.jsx`. Owner of two localStorage keys: `moneyListRange` (Home page Money List filter) and `historyRange` (History page round filter); both keys share the same shape (see `App_Data_Model_Contract.md` §1.1). Exports: `RANGE_OPTS`, `loadRangePref(key)`, `saveRangePref(pref, key)`, `filterByRange`, `rangeLabel`, `RangePickerRow`, `ML_KEY`, `HISTORY_KEY`. Used by both `HomePage` (Money List filter) and `HistoryPage` (round filter); single source of truth for range options and filter logic; both pages maintain independent filter state._
 _Changes in v1.5 (13-F implementation tested): §4.7 `BetInput` — `placeholder` prop documented; `isActive` prop added (2px green border + GA background when keypad is editing this field); keypad activation flow corrected to use `<input readOnly inputMode="none">` with `onFocus`+`e.target.blur()` (more reliable iOS keyboard suppression than the originally-specified `inputMode="none"` div tap target); `onActivate` 6-arg signature noted; select-to-overwrite pattern clarified (handled at page level via empty kpValue seed, not in the field). §4.10 `BetSection` — `onActivate`, `betSectionId`, and `activeFieldId` props documented; threading requirement spelled out: pages must pass `activeFieldId={setupKp?.fieldId}` through every level (GamesCard → GameConfig → panel → BetSection → BetInput, and MatchCard → BetSection)._
 _Changes in v1.4 (13-F): §4.7 `BetInput` — `onActivate`/`fieldId` props added for custom keypad activation; value display format updated (whole dollar `$5` vs cents `$5.50`); `inputMode="none"` behavior when keypad active. §4.10 NEW — `BetSection` bet-mode carry-forward rule documented: single→FBT pre-populates all three fields from current single value; FBT→single retains total; prior inconsistency between Match and other games corrected at all call sites._
@@ -907,94 +907,6 @@ one key; the two pages maintain independent filter state.
 green-filled active state, `borderRadius: 20`) is replicated by
 `CoursesPage.jsx` add buttons (Search / Scan Card / Manual). Future
 top-of-page action rows should follow the same pattern.
-
----
-
-
----
-
-## §12. ScorecardPage ScoreGrid Pin Behavior (v1.7)
-
-### §12.1 Purpose
-
-The pin toggle lets users keep the ScoreGrid visible at the top of
-ScorecardPage while scrolling down through the game tables below.
-When pinned, the ScoreGrid becomes a sticky element that stays in
-view; when unpinned, page scrolling is unchanged from pre-15-G
-behavior.
-
-### §12.2 Scroll container
-
-The page scroll container is the root `<div style={{ minHeight: '100vh' }}>` 
-in `ScorecardPage` — the page itself scrolls (no inner scroll wrapper). 
-This is a pre-existing invariant that must not change. The sticky header 
-(green bar with logo/course name) already uses `position: sticky; top: 0; 
-zIndex: 10`. The pinned ScoreGrid wrapper uses `position: sticky; top: 
-<stickyHeaderHeight>px` so it sits directly below the header.
-
-### §12.3 Sticky header height
-
-The sticky header height is **73px** (measured from live source: 
-`padding: '8px 16px 7px'` with logo height 58px + padding ≈ 73px). 
-This value is declared as a named constant `STICKY_HEADER_H = 73` in 
-`ScorecardPage.jsx`. If the header height changes in a future session, 
-update this constant — do not hardcode the numeric value at the sticky 
-wrapper.
-
-### §12.4 Pin preference persistence
-
-- localStorage key: `'pinScoreGrid'` (see `App_Data_Model_Contract.md` §1 and §1.3)
-- Shape: JSON boolean (`true` / `false`)
-- Default when absent or unreadable: `false` (unpinned)
-- Read once on mount via `useState(() => ...)` initializer
-- Written on every toggle via `localStorage.setItem`
-- No shared helper required — plain `localStorage.getItem` / `setItem`
-
-### §12.5 Toggle UI location
-
-The pin toggle is a small icon button rendered in two locations matching
-the zoom button placement:
-
-- **Portrait:** Inside `ScoreGrid`'s `renderHalf` header row, next to
-  `ZoomBtn`. `ScoreGrid` receives two new props: `pinned: boolean` and
-  `onPinToggle: () => void`. `ScorecardPage` owns state and storage;
-  ScoreGrid renders the button only.
-- **Landscape:** Inside `ScorecardPage`'s existing landscape dot-control /
-  zoom button rows, immediately adjacent to the zoom SVG button(s).
-
-**Icon:** A pushpin SVG (📌 shape) — green-filled when pinned, outlined
-(stroke-only, same green) when unpinned. Size: 24×24px, matching the 
-zoom button footprint.
-
-### §12.6 Pin mode invariants
-
-The following must hold regardless of pin state:
-
-1. ScoreGrid renders identically in both pinned and unpinned states —
-   only its CSS positioning context changes.
-2. Game tables below the grid scroll normally beneath the pinned grid.
-3. Landscape mode is unaffected — `isLandscape` detection remains the
-   single source of truth in `ScorecardPage` (H-4).
-4. ZoomModal behavior is unchanged — pin state has no effect on zoom
-   open/close or the hidden input architecture (H-12).
-5. The `range` prop passed to game table components is unaffected (H-26).
-6. Bottom clearance padding (`paddingBottom`) accounts for the pinned
-   grid so content below it is not hidden behind it. No explicit
-   additional padding is needed — the pinned ScoreGrid is in document
-   flow and game tables naturally sit below it.
-7. ScoreGrid correctly renders partial-round column layout (9-hole
-   ranges) in both pinned and unpinned states — sticky positioning
-   does not affect the grid's internal layout.
-
-### §12.7 Props added to ScoreGrid
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `pinned` | boolean | `false` | When true, ScoreGrid renders the pin icon as filled/active |
-| `onPinToggle` | function | `undefined` | Called when pin icon tapped; ScorecardPage toggles state and writes localStorage |
-
-These props are display/callback only. ScoreGrid does not read or write
-localStorage directly.
 
 ---
 

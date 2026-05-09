@@ -197,10 +197,6 @@ export function ScoreGrid({
   // not participate in this gesture — they are fully inert.
   //   (pi: number) => void
   onUndoDeparturePrompt,
-  // 15-G: Pin toggle props. ScorecardPage owns state and localStorage;
-  // ScoreGrid renders the pin icon button in the renderHalf header row.
-  pinned      = false,
-  onPinToggle = undefined,
 }) {
   // 13-C.2: Derived end hole (never stored per PartialGameContract §1A.3, §14.17)
   const roundEndHole = roundStartHole + roundNumHoles - 1;
@@ -1031,70 +1027,33 @@ export function ScoreGrid({
 
   // ── Zoom button — SVG magnifier ────────────────────────────────────────────
   const ZoomBtn = () => (
-    <button
-      onClick={openZoom}
-      title="Open zoom score entry"
-      style={{
-        background: 'none', border: 'none', cursor: 'pointer',
-        padding: '2px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}
-      aria-label="Zoom score entry"
-    >
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="7.5" stroke={G} strokeWidth="2.2"/>
-        <line x1="17.8" y1="17.8" x2="24" y2="24" stroke={G} strokeWidth="2.4" strokeLinecap="round"/>
-        <line x1="9" y1="12" x2="15" y2="12" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
-        <line x1="12" y1="9" x2="12" y2="15" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-    </button>
-  );
-
-  // ── Pin button — pushpin SVG (15-G) ───────────────────────────────────────
-  // Filled green when pinned, stroke-only when unpinned.
-  const PinBtn = () => {
-    if (!onPinToggle) return null;
-    const pinColor = G;
-    return (
+    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2, paddingRight: 2 }}>
       <button
-        onClick={onPinToggle}
-        title={pinned ? 'Unpin scorecard' : 'Pin scorecard to top'}
+        onClick={openZoom}
+        title="Open zoom score entry"
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
           padding: '2px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
-        aria-label={pinned ? 'Unpin scorecard' : 'Pin scorecard to top'}
+        aria-label="Zoom score entry"
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* Pin shaft */}
-          <line x1="12" y1="14" x2="12" y2="21" stroke={pinColor} strokeWidth="2" strokeLinecap="round"/>
-          {/* Pin head circle */}
-          <circle cx="12" cy="8" r="5"
-            stroke={pinColor} strokeWidth="1.8"
-            fill={pinned ? pinColor : 'none'}/>
-          {/* Horizontal bar across pin */}
-          <line x1="7" y1="14" x2="17" y2="14" stroke={pinColor} strokeWidth="2" strokeLinecap="round"/>
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="7.5" stroke={G} strokeWidth="2.2"/>
+          <line x1="17.8" y1="17.8" x2="24" y2="24" stroke={G} strokeWidth="2.4" strokeLinecap="round"/>
+          <line x1="9" y1="12" x2="15" y2="12" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
+          <line x1="12" y1="9" x2="12" y2="15" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
         </svg>
       </button>
-    );
-  };
+    </div>
+  );
 
   const renderHalf = (hs, halfLabel, showZoom = false) => {
-    // 13-C.2: `hs` is the full 9-column Front/Back array. `inRoundHs` is the
-    // subset actually played; totals (par, gross, net) are computed over the
-    // in-round subset so they reflect only played holes. Par and M.Hcp rows
-    // show real values for all 9 columns (owner preference — graying those
-    // rows clashed with readability; only score cells go gray).
     const inRoundHs = hs.filter(inRound);
     return (
       <div style={{ marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
           <div style={{ fontWeight: 700, color: G, fontSize: 12 }}>{halfLabel}</div>
-          {canZoom && showZoom && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-              <PinBtn />
-              <ZoomBtn />
-            </div>
-          )}
+          {canZoom && showZoom && <ZoomBtn />}
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed', width: '100%', minWidth: NAME_MIN + hs.length * COL_W + TOT_W }}>
