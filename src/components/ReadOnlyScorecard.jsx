@@ -203,9 +203,9 @@ export function ReadOnlyScorecard({ players, scores, pars, hcps, courseSnapshot,
     }
     const indicator = s ? parRelative(s, pars[h]) : null;
     return <td key={h} style={{ textAlign:'center', padding:'1px', color: s ? '#222' : '#ccc', fontSize:10 }}>
-      <div style={{ position:'relative', display:'inline-flex', alignItems:'center', justifyContent:'center', width:20, height:20, lineHeight:1 }}>
-        <span style={{ display:'block', lineHeight:1, transform:'translateY(-0.02em)' }}>{s||'·'}</span>
+      <div style={{ position:'relative', display:'inline-block', width:20, height:20, lineHeight:'20px', textAlign:'center', verticalAlign:'middle' }}>
         {indicator && <ScoreIndicator level={indicator}/>}
+        <span style={{ position:'absolute', top:'53%', left:'50%', transform:'translate(-50%,-50%)', display:'block', lineHeight:1 }}>{s||'·'}</span>
         {dots && <div style={{ position:'absolute', bottom:0, right:-1, display:'flex', gap:1, pointerEvents:'none' }}>{dots}</div>}
       </div>
     </td>;
