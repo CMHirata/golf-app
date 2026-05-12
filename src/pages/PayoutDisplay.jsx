@@ -49,70 +49,15 @@ export function splitGameHeader(gameStr) {
 // Payout_Contract §7.3: optional `decoration` prop renders a styled secondary
 // line under the label (e.g. "ended at hole 11, paid Front only",
 // "continued (Tom departed)", "drop player (Dave)").
-const GAME_ICONS = {
-function getGameIcon(label = '') {
-  if (label.includes('Match')) return GAME_ICONS.Match;
-  if (label.includes('Dots')) return GAME_ICONS.Dots;
-  if (label.includes('Sixes')) return GAME_ICONS.Sixes;
-  if (label.includes('Nines')) return GAME_ICONS.Nines;
-  if (label.includes('Stableford')) return GAME_ICONS.Stableford;
-  if (label.includes('Skins')) return GAME_ICONS.Skins;
-  if (label.includes('Wolf')) return GAME_ICONS.Wolf;
-  if (label.includes('Stroke')) return GAME_ICONS.Stroke;
-  return null;
-}
-
 export function SubHeader({ children, decoration }) {
   return (
-    <div
-      style={{
-        display:'flex',
-        alignItems:'flex-start',
-        gap:12,
-        marginBottom:14,
-      }}
-    >
-      <div
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 12,
-          background: '#f3f8f4',
-          border: '1px solid #e3eee5',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        {getGameIcon(children)}
-      </div>
-
-      <div style={{ minWidth:0 }}>
-        <div
-          style={{
-            fontSize: 15,
-            fontWeight: 800,
-            color: '#1d1d1d',
-            lineHeight: 1.1,
-          }}
-        >
-          {children}
+    <div style={{ marginBottom:3, paddingBottom:2, borderBottom:'1px solid #e8f0e8' }}>
+      <div style={{ fontSize:10, fontWeight:700, color:'#666' }}>{children}</div>
+      {decoration && (
+        <div style={{ fontSize:9, fontStyle:'italic', color:'#999', marginTop:1 }}>
+          {decoration}
         </div>
-
-        {decoration && (
-          <div
-            style={{
-              marginTop: 4,
-              fontSize: 11,
-              color: '#889288',
-              lineHeight: 1.35,
-            }}
-          >
-            {decoration}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -120,35 +65,10 @@ export function SubHeader({ children, decoration }) {
 // ── PayRow ────────────────────────────────────────────────────────────────────
 export function PayRow({ name, net }) {
   return (
-    <div
-      style={{
-        display:'flex',
-        alignItems:'center',
-        justifyContent:'space-between',
-        padding:'10px 0',
-        borderTop:'1px solid #f1f3f1',
-      }}
-    >
-      <div
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: '#333',
-        }}
-      >
-        {name}
-      </div>
-
-      <div
-        style={{
-          fontSize: 15,
-          fontWeight: 800,
-          letterSpacing: '-0.02em',
-          color: net > 0 ? '#1f8f4e' : net < 0 ? RED : '#777',
-        }}
-      >
-        {fmtMoney(net)}
-      </div>
+    <div style={{ display:'flex', justifyContent:'space-between', fontSize:11,
+      padding:'2px 0', borderBottom:'1px solid #f8f8f8' }}>
+      <span style={{ color:'#555' }}>{name}</span>
+      <span style={{ fontWeight:600, color: net>0?'#27ae60':net<0?RED:'#888' }}>{fmtMoney(net)}</span>
     </div>
   );
 }
@@ -160,27 +80,55 @@ export function PayRow({ name, net }) {
 // Last column is always the per-row total (right-aligned, bold, larger font).
 export function DotsColTable({ entry }) {
   if (!entry?.colHeaders?.length || !entry?.rows?.length) return null;
-
   const headers = entry.colHeaders;
-  const rows = entry.rows;
-
-  const colClr = v =>
-    v > 0 ? '#1f8f4e' : v < 0 ? RED : '#777';
-
-  const isTot = i => i === headers.length - 1;
-
+  const rows    = entry.rows;
+  const colClr  = v => v > 0 ? '#27ae60' : v < 0 ? RED : '#888';
+  const isTot   = (i) => i === headers.length - 1;
+  const COL_W   = 52; // px — fixed width for each data column
   return (
-    <div
-      style={{
-        borderRadius: 14,
-        overflow: 'hidden',
-        border: '1px solid #edf2ed',
-      }}
-    >
-      <table
-        style={{
-          width:'100%',
-          border
+    <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11,
+                    marginTop:2, tableLayout:'fixed' }}>
+      <colgroup>
+        <col/> {/* name column — takes all remaining space */}
+        {headers.map((_, i) => <col key={i} style={{ width:COL_W }}/>)}
+      </colgroup>
+      <thead>
+        <tr>
+          <td style={{ padding:'2px 0', color:'#888', fontSize:10 }}></td>
+          {headers.map((h, i) => (
+            <td key={i} style={{ padding:'2px 4px',
+                                  textAlign: isTot(i) ? 'right' : 'center',
+                                  color:'#888',
+                                  fontSize:10, fontWeight: isTot(i) ? 700 : 500,
+                                  borderBottom:'1px solid #e8f0e8',
+                                  whiteSpace:'nowrap' }}>
+              {h}
+            </td>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, ri) => (
+          <tr key={ri} style={{ borderBottom:'1px solid #f8f8f8' }}>
+            <td style={{ padding:'2px 0', color:'#555', fontSize:11,
+                         overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+              {r.name}
+            </td>
+            {(r.matchCols || []).map((v, ci) => (
+              <td key={ci} style={{ padding:'2px 4px',
+                                     textAlign: isTot(ci) ? 'right' : 'center',
+                                     fontWeight: isTot(ci) ? 700 : 600,
+                                     color: colClr(v), fontSize: isTot(ci) ? 12 : 11,
+                                     whiteSpace:'nowrap' }}>
+                {fmtMoney(v)}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 // ── PayoutsSection ────────────────────────────────────────────────────────────
 // Top-level payout display. RSM visual style throughout:
