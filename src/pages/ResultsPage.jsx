@@ -1,5 +1,12 @@
 // ─── ResultsPage.jsx ──────────────────────────────────────────────────────────
 //
+// ✅ Self-checked (15-C): Renamed "Results" → "Payouts" in header. Player chips
+// replaced with initial-circle + name + net amount, sorted win-to-loss, 2-col
+// for 2/4 players, 3-col for 3. Settlement tile added above PayoutsSection —
+// derives minimal payment set via greedy debt simplification (buildSettlements).
+// bank keyed by player name; net derived from bank[p.name] with null guard.
+// All prior self-check notes from 13-E.5 and 13-C.8 retained below.
+//
 // ✅ Self-checked (13-E.5): Removed local DotsColTable, SubHeader, PayRow,
 // splitGameHeader, fmtMoney, SectionLabel, ResultsDisplay. Replaced with
 // <PayoutsSection> from PayoutDisplay.jsx. Pre-extraction ResultsDisplay
@@ -33,6 +40,7 @@
 //       F / B / O / Total columns. Legacy fallback (PayRow + tie banner) kept
 //       for matches without colHeaders (backward-compat for older history
 //       records).
+
 import { useState, useCallback } from 'react';
 import { Btn, Card, G, RED, ShareOrientationPicker } from '../components/ui.jsx';
 import { computePerMatchPayouts } from '../services/roundUtils.js';
@@ -44,13 +52,57 @@ import { PayoutsSection } from './PayoutDisplay.jsx';
 const NAV_BAR_HEIGHT    = 68;
 const ACTION_BAR_HEIGHT = 52;
 
+// ── buildSettlements ──────────────────────────────────────────────────────────
+// Greedy debt simplification — fewest transactions.
+// Returns array of { from, to, amount } sorted by amount desc.
+function buildSettlements(bank) {
+  if (!bank) return [];
+  const entries = Object.entries(bank).filter(([, v]) => v !== 0);
+  if (!entries.length) return [];
+
+  // Work in cents to avoid float drift
+  const balances = entries.map(([name, v]) => ({ name, bal: Math.round(v * 100) }));
+  const debtors   = balances.filter(x => x.bal < 0).sort((a, b) => a.bal - b.bal); // most negative first
+  const creditors = balances.filter(x => x.bal > 0).sort((a, b) => b.bal - a.bal); // most positive first
+
+  const result = [];
+  let di = 0, ci = 0;
+  while (di < debtors.length && ci < creditors.length) {
+    const d = debtors[di];
+    const c = creditors[ci];
+    const amount = Math.min(-d.bal, c.bal);
+    if (amount > 0) {
+      result.push({ from: d.name, to: c.name, amount: amount / 100 });
+    }
+    d.bal += amount;
+    c.bal -= amount;
+    if (d.bal === 0) di++;
+    if (c.bal === 0) ci++;
+  }
+
+  return result.sort((a, b) => b.amount - a.amount);
+}
+
+// ── PlayerInitial ─────────────────────────────────────────────────────────────
+// Colored circle with player initial — matches PlayerPickerPopup treatment.
+const CHIP_COLORS = ['#1a472a', '#2c5f8a', '#7b3f00', '#6b2d8b', '#8a4a00', '#2d6b5a'];
+function PlayerInitial({ name, index, size = 36 }) {
+  const initial = (name || '?')[0].toUpperCase();
+  const bg = CHIP_COLORS[index % CHIP_COLORS.length];
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      background: bg, color: '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.44, fontWeight: 700, flexShrink: 0,
+      fontFamily: 'inherit',
+    }}>
+      {initial}
+    </div>
+  );
+}
 
 function getMissingScoresError(scores, activePlayers, roundStartHole = 0, roundNumHoles = 18) {
-  // 13-C.2: Loop bounds respect round length. For default full rounds (rsh=0,
-  // rnh=18) this is identical to the prior [0..17] scan. Also treats 'X' as
-  // unscored for Stroke Play compatibility — this gate is the save-time guard
-  // and partial rounds with X (picked-up) scores are not saveable without the
-  // departure resolver (13-C.7 scope).
   const rsh = roundStartHole ?? 0;
   const reh = rsh + (roundNumHoles ?? 18) - 1;
   const numPlayers = (activePlayers || []).length;
@@ -89,10 +141,6 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
     if (!ar) return [];
     if (!(ar.activeGames || []).includes('Match / Nassau')) return [];
     try {
-      // 13-C.3: forward gameRanges + round bounds so per-match ranges are
-      // honored (matches computePayouts and RoundSummaryModal output).
-      // 13-C.8: forward earlyEndOpts + lastCompletedHole for engine departure
-      // handling. Abandoned matches are filtered out by the engine.
       const rs = ar.roundStartHole ?? 0;
       const rn = ar.roundNumHoles  ?? 18;
       const re = rs + rn - 1;
@@ -143,8 +191,6 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
 
   const { activePlayers, breakdown, bank, courseHcps } = ar;
   const hasScores    = (ar.scores || []).some(r => r.some(s => s !== ''));
-  // 13-C.2: Pass round length so save-time check only flags missing scores
-  // within [roundStartHole, roundEndHole]. Defaults preserve 18-hole behavior.
   const missingError = getMissingScoresError(ar.scores, activePlayers, ar.roundStartHole ?? 0, ar.roundNumHoles ?? 18);
   const canSave      = hasScores && !missingError;
 
@@ -162,9 +208,18 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
 
   const n = (activePlayers || []).length;
 
-  // Total bottom clearance: action bar height + nav bar + button protrusion + gap
+  // Build sorted player list: highest net first
+  const sortedPlayers = (activePlayers || [])
+    .map((p, i) => ({ ...p, originalIndex: i, net: (bank || {})[p.name] ?? 0 }))
+    .sort((a, b) => b.net - a.net);
+
+  // Grid columns: 3 for exactly 3 players, 2 otherwise
+  const chipCols = n === 3 ? 3 : 2;
+
+  // Settlement transfers
+  const settlements = buildSettlements(bank || {});
+
   const bottomClearance = NAV_BAR_HEIGHT + ACTION_BAR_HEIGHT + 30;
-  // Action bar sits flush on top of nav bar; paddingBottom absorbs button protrusion
   const actionBarBottom = NAV_BAR_HEIGHT;
 
   return (
@@ -173,34 +228,51 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
       {/* Sticky header */}
       <div style={{ background:G, padding:'8px 16px 7px', position:'sticky', top:0, zIndex:10, boxShadow:'0 2px 12px rgba(0,0,0,.2)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <img src="/logo_lockup.png" alt="The Card" style={{ height:58, width:'auto', display:'block' }} />
-        <div style={{ color:'#fff', fontWeight:800, fontSize:16, letterSpacing:'0.12em', textTransform:'uppercase', fontFamily:'inherit' }}>Results</div>
+        <div style={{ color:'#fff', fontWeight:800, fontSize:16, letterSpacing:'0.12em', textTransform:'uppercase', fontFamily:'inherit' }}>Payouts</div>
       </div>
 
-      {/* Scrollable content — paddingBottom clears pinned bar + nav */}
+      {/* Scrollable content */}
       <div style={{ padding:'14px 14px', maxWidth:520, margin:'0 auto', paddingBottom:`calc(${bottomClearance}px + env(safe-area-inset-bottom))` }}>
 
-        {/* R-5: Player chips */}
+        {/* Player chips — initial circle + name + net, sorted win-to-loss */}
         {n > 0 && (
-          <div style={{ display:'grid', gridTemplateColumns:`repeat(${n}, 1fr)`, gap:6, marginBottom:12 }}>
-            {(activePlayers || []).map((p, i) => {
-              const hi  = p.ghin != null && p.ghin !== '' ? p.ghin : null;
-              const ch  = (courseHcps || [])[i] != null ? (courseHcps || [])[i] : (p.courseHcpVal ?? null);
-              const tee = p.selectedTee || '';
-              const hasHiCh = hi != null || ch != null;
+          <div style={{ display:'grid', gridTemplateColumns:`repeat(${chipCols}, 1fr)`, gap:8, marginBottom:14 }}>
+            {sortedPlayers.map((p) => {
+              const net = p.net;
+              const netColor = net > 0 ? '#27ae60' : net < 0 ? RED : '#888';
+              const netStr   = net > 0 ? `+$${net.toFixed(2)}` : net < 0 ? `-$${Math.abs(net).toFixed(2)}` : '$0';
               return (
-                <div key={i} style={{ background:'#fff', borderRadius:12, padding:'8px 10px', minWidth:0, boxShadow:'0 1px 4px rgba(0,0,0,.06)', border:'1.5px solid #e0ece0' }}>
-                  <div style={{ fontWeight:700, color:G, fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{p.name}</div>
-                  {hasHiCh && (
-                    <div style={{ fontSize:10, marginTop:2, color:'#888' }}>
-                      {hi != null && <span>HI {hi}</span>}
-                      {hi != null && ch != null && <span> · </span>}
-                      {ch != null && <span>CH {ch}</span>}
-                    </div>
-                  )}
-                  {tee && <div style={{ fontSize:10, color:'#aaa', marginTop:1 }}>{tee}</div>}
+                <div key={p.originalIndex} style={{
+                  background:'#fff', borderRadius:12, padding:'10px 12px',
+                  display:'flex', alignItems:'center', gap:10,
+                  boxShadow:'0 1px 4px rgba(0,0,0,.07)', border:'1.5px solid #e0ece0',
+                  minWidth:0,
+                }}>
+                  <PlayerInitial name={p.name} index={p.originalIndex} size={36} />
+                  <div style={{ minWidth:0, flex:1 }}>
+                    <div style={{ fontWeight:700, fontSize:13, color:'#222', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{p.name}</div>
+                    <div style={{ fontWeight:800, fontSize:15, color:netColor, marginTop:1 }}>{netStr}</div>
+                  </div>
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Settlement tile */}
+        {settlements.length > 0 && (
+          <div style={{ background:'#fff', borderRadius:12, padding:'12px 14px', marginBottom:14, boxShadow:'0 1px 4px rgba(0,0,0,.07)', border:'1.5px solid #e0ece0' }}>
+            <div style={{ fontSize:10, fontWeight:700, color:'#888', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:8 }}>Settle Up</div>
+            {settlements.map((s, i) => (
+              <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'5px 0', borderBottom: i < settlements.length - 1 ? '1px solid #f0f8f0' : 'none' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:13, fontWeight:500, color:'#333' }}>
+                  <span>{s.from}</span>
+                  <span style={{ color:'#aaa', fontSize:11 }}>→</span>
+                  <span>{s.to}</span>
+                </div>
+                <div style={{ fontWeight:800, fontSize:14, color:RED }}>${s.amount.toFixed(2)}</div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -210,11 +282,6 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
         {hasScores && (
           <PayoutsSection breakdown={breakdown} bank={bank} matchPayouts={matchPayouts} />
         )}
-
-        {/* 13-C.2 fix pass (H3): removed the automatic missingError banner that
-            previously displayed whenever there were missing scores. It duplicated
-            the saveMsg banner when the user tapped Save. Per owner direction, the
-            error appears only after a Save attempt (via saveMsg below). */}
 
         {saveMsg && (
           <div style={{ padding:'8px 12px', borderRadius:8, margin:'10px 0',
@@ -237,8 +304,7 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
         />
       )}
 
-      {/* ── Pinned action bar: ← Scorecard | Save Round | Share ── */}
-      {/* Flush on nav bar top. paddingBottom: 13px clears 5px button protrusion. */}
+      {/* Pinned action bar */}
       <div style={{
         position: 'fixed',
         bottom: `calc(${actionBarBottom}px + env(safe-area-inset-bottom))`,

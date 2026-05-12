@@ -30,6 +30,8 @@
 // the modal rather than running the confirm synchronously, since the
 // gesture target moved from the cell to the player name td and the
 // styled modal feels in-app rather than OS-jarring.
+//
+// ✅ Self-checked (15-C): "Results →" button label changed to "Payouts →".
 
 import { useCallback, useMemo, useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Btn, G } from '../components/ui.jsx';
@@ -42,10 +44,6 @@ import { ReorderDeparturesModal } from './scorecard/ReorderDeparturesModal.jsx';
 // Layout constants — must match App.jsx
 const NAV_BAR_HEIGHT    = 68;
 const ACTION_BAR_HEIGHT = 52;
-// Height of the sticky green header (logo 58px + top/bottom padding 8px+7px = 73px).
-// Used to offset the pinned ScoreGrid wrapper so it sits flush below the header.
-// If the header height changes, update this constant — do not hardcode at the call site.
-const STICKY_HEADER_H   = 73;
 
 // ── deriveDotModes ─────────────────────────────────────────────────────────────
 function deriveDotModes(activeGames, gameOpts, matches) {
@@ -149,19 +147,6 @@ const ScorecardPage = forwardRef(function ScorecardPage(
   }, []);
 
   const isDiscardingRef = useRef(false);
-
-  // 15-G: Pin ScoreGrid to top of page (§12, App_Data_Model §1.3).
-  const [pinned, setPinned] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('pinScoreGrid')) === true; }
-    catch { return false; }
-  });
-  const handlePinToggle = useCallback(() => {
-    setPinned(prev => {
-      const next = !prev;
-      try { localStorage.setItem('pinScoreGrid', JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }, []);
 
   // Persist mutable state on every change.
   // Read the latest activeRound from storage so we never clobber breakdown/bank
@@ -387,53 +372,27 @@ const ScorecardPage = forwardRef(function ScorecardPage(
                 >{opt.label}</button>
               ))}
             </div>
-            {/* Landscape zoom + pin buttons at far right */}
+            {/* Landscape zoom button at far right */}
             {isLandscape && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-                <button
-                  onClick={handlePinToggle}
-                  title={pinned ? 'Unpin scorecard' : 'Pin scorecard to top'}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', display: 'flex', alignItems: 'center' }}
-                  aria-label={pinned ? 'Unpin scorecard' : 'Pin scorecard to top'}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <line x1="12" y1="14" x2="12" y2="21" stroke={G} strokeWidth="2" strokeLinecap="round"/>
-                    <circle cx="12" cy="8" r="5" stroke={G} strokeWidth="1.8" fill={pinned ? G : 'none'}/>
-                    <line x1="7" y1="14" x2="17" y2="14" stroke={G} strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-                <button
-                  onClick={() => zoomTriggerRef.current?.()}
-                  title="Open zoom score entry"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', display: 'flex', alignItems: 'center' }}
-                  aria-label="Zoom score entry"
-                >
-                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="7.5" stroke={G} strokeWidth="2.2"/>
-                    <line x1="17.8" y1="17.8" x2="24" y2="24" stroke={G} strokeWidth="2.4" strokeLinecap="round"/>
-                    <line x1="9" y1="12" x2="15" y2="12" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
-                    <line x1="12" y1="9" x2="12" y2="15" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
-                  </svg>
-                </button>
-              </div>
+              <button
+                onClick={() => zoomTriggerRef.current?.()}
+                title="Open zoom score entry"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', display: 'flex', alignItems: 'center' }}
+                aria-label="Zoom score entry"
+              >
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="7.5" stroke={G} strokeWidth="2.2"/>
+                  <line x1="17.8" y1="17.8" x2="24" y2="24" stroke={G} strokeWidth="2.4" strokeLinecap="round"/>
+                  <line x1="9" y1="12" x2="15" y2="12" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
+                  <line x1="12" y1="9" x2="12" y2="15" stroke={G} strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+              </button>
             )}
           </div>
         )}
-        {/* Landscape zoom + pin buttons when no dot control is shown */}
+        {/* Landscape zoom button when no dot control is shown */}
         {!((isMixed || hasNOL) && (isMixed || nolDotOptions.length > 0)) && isLandscape && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0, marginBottom: 10 }}>
-            <button
-              onClick={handlePinToggle}
-              title={pinned ? 'Unpin scorecard' : 'Pin scorecard to top'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', display: 'flex', alignItems: 'center' }}
-              aria-label={pinned ? 'Unpin scorecard' : 'Pin scorecard to top'}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="12" y1="14" x2="12" y2="21" stroke={G} strokeWidth="2" strokeLinecap="round"/>
-                <circle cx="12" cy="8" r="5" stroke={G} strokeWidth="1.8" fill={pinned ? G : 'none'}/>
-                <line x1="7" y1="14" x2="17" y2="14" stroke={G} strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
             <button
               onClick={() => zoomTriggerRef.current?.()}
               title="Open zoom score entry"
@@ -452,45 +411,35 @@ const ScorecardPage = forwardRef(function ScorecardPage(
 
         {activePlayers.length < 2
           ? <div style={{ color: '#aaa', textAlign: 'center', padding: 28 }}>Add at least 2 players in setup.</div>
-          : <div style={pinned ? {
-              position: 'sticky',
-              top: STICKY_HEADER_H,
-              zIndex: 5,
-              background: '#eef4ee',
-              paddingBottom: 4,
-            } : {}}>
-              <ScoreGrid
-                  players={activePlayers} pars={pars} hcps={hcps} hcpsWomen={hcpsWomen || null}
-                  courseHcps={courseHcps} minCourseHcp={minCourseHcp}
-                  effectiveMinCourseHcp={effectiveMinCourseHcp}
-                  nonParticipantIdxs={nonParticipantIdxs}
-                  scores={scores} setScores={setScores}
-                  dotMode={dotMode} isMixed={isMixed} setDotModeOverride={setDotModeOverride}
-                  nolDotGame={nolDotGame} setNolDotGame={setNolDotGame}
-                  nolDotOptions={nolDotOptions}
-                  primaryMode={primaryMode} activeGames={activeGames} gameOpts={gameOpts}
-                  matches={matches || []} sixesTeams={sixesTeams}
-                  strokePlayPlayers={strokePlayPlayers || []}
-                  skinsPlayers={skinsPlayers || []}
-                  stablefordPlayers={stablefordPlayers || []}
-                  ninesPlayers={ninesPlayers || []}
-                  dotsPlayers={dotsPlayers || []}
-                  dots={dots} dotEntries={dotEntries} setDotEntries={setDotEntries}
-                  manualPresses={manualPresses} setManualPresses={setManualPresses}
-                  frontLabel={frontLabel} backLabel={backLabel}
-                  isLandscape={isLandscape}
-                  zoomTriggerRef={zoomTriggerRef}
-                  roundStartHole={roundStartHole}
-                  roundNumHoles={roundNumHoles}
-                  gameRanges={ar.gameRanges ?? {}}
-                  earlyDepartureOpts={earlyDepartureOpts}
-                  onOpenDepartureResolver={onOpenDepartureResolver}
-                  onOpenReorderDeparturesModal={onOpenReorderDeparturesModal}
-                  onUndoDeparturePrompt={onUndoDeparturePrompt}
-                  pinned={pinned}
-                  onPinToggle={handlePinToggle}
-                />
-              </div>
+          : <ScoreGrid
+              players={activePlayers} pars={pars} hcps={hcps} hcpsWomen={hcpsWomen || null}
+              courseHcps={courseHcps} minCourseHcp={minCourseHcp}
+              effectiveMinCourseHcp={effectiveMinCourseHcp}
+              nonParticipantIdxs={nonParticipantIdxs}
+              scores={scores} setScores={setScores}
+              dotMode={dotMode} isMixed={isMixed} setDotModeOverride={setDotModeOverride}
+              nolDotGame={nolDotGame} setNolDotGame={setNolDotGame}
+              nolDotOptions={nolDotOptions}
+              primaryMode={primaryMode} activeGames={activeGames} gameOpts={gameOpts}
+              matches={matches || []} sixesTeams={sixesTeams}
+              strokePlayPlayers={strokePlayPlayers || []}
+              skinsPlayers={skinsPlayers || []}
+              stablefordPlayers={stablefordPlayers || []}
+              ninesPlayers={ninesPlayers || []}
+              dotsPlayers={dotsPlayers || []}
+              dots={dots} dotEntries={dotEntries} setDotEntries={setDotEntries}
+              manualPresses={manualPresses} setManualPresses={setManualPresses}
+              frontLabel={frontLabel} backLabel={backLabel}
+              isLandscape={isLandscape}
+              zoomTriggerRef={zoomTriggerRef}
+              roundStartHole={roundStartHole}
+              roundNumHoles={roundNumHoles}
+              gameRanges={ar.gameRanges ?? {}}
+              earlyDepartureOpts={earlyDepartureOpts}
+              onOpenDepartureResolver={onOpenDepartureResolver}
+              onOpenReorderDeparturesModal={onOpenReorderDeparturesModal}
+              onUndoDeparturePrompt={onUndoDeparturePrompt}
+            />
         }
       </div>
 
@@ -523,7 +472,7 @@ const ScorecardPage = forwardRef(function ScorecardPage(
           >
             Discard
           </button>
-          <Btn onClick={flushAndResults} style={{ flex: 1 }}>Results →</Btn>
+          <Btn onClick={flushAndResults} style={{ flex: 1 }}>Payouts →</Btn>
         </div>
       </div>
 
