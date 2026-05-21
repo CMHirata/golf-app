@@ -87,14 +87,17 @@ function buildSettlements(bank) {
 // Colored circle with player initial — matches PlayerPickerPopup treatment.
 const CHIP_COLORS = ['#1a472a', '#2c5f8a', '#7b3f00', '#6b2d8b', '#8a4a00', '#2d6b5a'];
 function PlayerInitial({ name, index, size = 36 }) {
-  const initial = (name || '?')[0].toUpperCase();
+  const parts = (name || '?').trim().split(/\s+/);
+  const initial = parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : parts[0][0].toUpperCase();
   const bg = CHIP_COLORS[index % CHIP_COLORS.length];
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
       background: bg, color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.44, fontWeight: 700, flexShrink: 0,
+      fontSize: size * 0.36, fontWeight: 700, flexShrink: 0,
       fontFamily: 'inherit',
     }}>
       {initial}
