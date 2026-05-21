@@ -213,8 +213,8 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
     .map((p, i) => ({ ...p, originalIndex: i, net: (bank || {})[p.name] ?? 0 }))
     .sort((a, b) => b.net - a.net);
 
-  // Grid columns: 3 for exactly 3 players, 2 otherwise
-  const chipCols = n === 3 ? 3 : 2;
+  // All players in one row regardless of count
+  const chipCols = n;
 
   // Settlement transfers
   const settlements = buildSettlements(bank || {});
@@ -243,16 +243,14 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
               const netStr   = net > 0 ? `+$${net.toFixed(2)}` : net < 0 ? `-$${Math.abs(net).toFixed(2)}` : '$0';
               return (
                 <div key={p.originalIndex} style={{
-                  background:'#fff', borderRadius:12, padding:'10px 12px',
-                  display:'flex', alignItems:'center', gap:10,
+                  background:'#fff', borderRadius:12, padding:'10px 8px',
+                  display:'flex', flexDirection:'column', alignItems:'center', gap:6,
                   boxShadow:'0 1px 4px rgba(0,0,0,.07)', border:'1.5px solid #e0ece0',
-                  minWidth:0,
+                  minWidth:0, textAlign:'center',
                 }}>
-                  <PlayerInitial name={p.name} index={p.originalIndex} size={36} />
-                  <div style={{ minWidth:0, flex:1 }}>
-                    <div style={{ fontWeight:700, fontSize:13, color:'#222', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{p.name}</div>
-                    <div style={{ fontWeight:800, fontSize:15, color:netColor, marginTop:1 }}>{netStr}</div>
-                  </div>
+                  <PlayerInitial name={p.name} index={p.originalIndex} size={38} />
+                  <div style={{ fontWeight:700, fontSize:12, color:'#222', wordBreak:'break-word', lineHeight:1.2, width:'100%', textAlign:'center' }}>{p.name}</div>
+                  <div style={{ fontWeight:800, fontSize:14, color:netColor }}>{netStr}</div>
                 </div>
               );
             })}
@@ -262,7 +260,14 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
         {/* Settlement tile */}
         {settlements.length > 0 && (
           <div style={{ background:'#fff', borderRadius:12, padding:'12px 14px', marginBottom:14, boxShadow:'0 1px 4px rgba(0,0,0,.07)', border:'1.5px solid #e0ece0' }}>
-            <div style={{ fontSize:10, fontWeight:700, color:'#888', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:8 }}>Settle Up</div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+              {/* Transfer icon */}
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 7h13M13 4l3 3-3 3" stroke="#1a472a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M19 15H6M9 12l-3 3 3 3" stroke="#1a472a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <div style={{ fontSize:10, fontWeight:700, color:'#888', textTransform:'uppercase', letterSpacing:'0.5px' }}>Settle Up</div>
+            </div>
             {settlements.map((s, i) => (
               <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'5px 0', borderBottom: i < settlements.length - 1 ? '1px solid #f0f8f0' : 'none' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:13, fontWeight:500, color:'#333' }}>
