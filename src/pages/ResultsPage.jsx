@@ -237,22 +237,28 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
       {/* Scrollable content */}
       <div style={{ padding:'14px 14px', maxWidth:520, margin:'0 auto', paddingBottom:`calc(${bottomClearance}px + env(safe-area-inset-bottom))` }}>
 
-        {/* Player chips — initial circle + name + net, sorted win-to-loss */}
+        {/* Player chips — circle / first / last / net, sorted win-to-loss */}
         {n > 0 && (
           <div style={{ display:'grid', gridTemplateColumns:`repeat(${chipCols}, 1fr)`, gap:8, marginBottom:14 }}>
             {sortedPlayers.map((p) => {
               const net = p.net;
               const netColor = net > 0 ? '#27ae60' : net < 0 ? RED : '#888';
               const netStr   = net > 0 ? `+$${net.toFixed(2)}` : net < 0 ? `-$${Math.abs(net).toFixed(2)}` : '$0';
+              const nameParts = (p.name || '').trim().split(/\s+/);
+              const firstName = nameParts[0] || '';
+              const lastName  = nameParts.slice(1).join(' ') || '\u00A0'; // non-breaking space keeps row height
               return (
                 <div key={p.originalIndex} style={{
                   background:'#fff', borderRadius:12, padding:'10px 8px',
-                  display:'flex', flexDirection:'column', alignItems:'center', gap:6,
+                  display:'flex', flexDirection:'column', alignItems:'center', gap:4,
                   boxShadow:'0 1px 4px rgba(0,0,0,.07)', border:'1.5px solid #e0ece0',
                   minWidth:0, textAlign:'center',
                 }}>
                   <PlayerInitial name={p.name} index={p.originalIndex} size={38} />
-                  <div style={{ fontWeight:700, fontSize:12, color:'#222', wordBreak:'break-word', lineHeight:1.2, width:'100%', textAlign:'center' }}>{p.name}</div>
+                  <div style={{ width:'100%', textAlign:'center', lineHeight:1.25 }}>
+                    <div style={{ fontWeight:700, fontSize:12, color:'#222' }}>{firstName}</div>
+                    <div style={{ fontWeight:700, fontSize:12, color:'#222' }}>{lastName}</div>
+                  </div>
                   <div style={{ fontWeight:800, fontSize:14, color:netColor }}>{netStr}</div>
                 </div>
               );
