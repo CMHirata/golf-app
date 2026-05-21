@@ -1,6 +1,6 @@
 # The Card — Master Build Plan
 
-_Last updated: May 2026 — 15-E.1 complete and confirmed on device. Money List visual overhaul, custom date wheel picker, shared `RangePicker.jsx` component, independent date filters on Home/History, settings persistence through backup/restore, Courses pill consistency, player conflict-detection field-list fix. Next session: **15-A — Display Polish**._
+_Last updated: May 2026 — 15-G complete and confirmed on device. Birdie/bogey/eagle/double-bogey indicators on ScoreGrid, ReadOnlyScorecard, and share image. Next session: **15-A — Display Polish**._
 _Maintained in this chat as the authoritative sequence and history of all build sessions._
 _The APP_STATE_SUMMARY.md in the project knowledge base is the authoritative record of_
 _what is implemented. This file is the authoritative record of what was planned, why,_
@@ -92,6 +92,7 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 | 15-E | Players page enhancements. Shared `SwipeableRow` component (ported from `SwipeableRoundRow` mechanics — yellow edit strip, red delete, full-swipe overlay). `CoursesPage` refactored to use `SwipeableRow`. Star/favourite toggle on player rows — starred players sort to top of `playerLib.list()` and all player pickers. Per-player `inMoneyLists` toggle. Cumulative Winnings removed from History page. Money List added to Home page (roster-filtered, `inMoneyLists`-filtered). YTD Leader widget removed from Home page. Starred avatar treatment in `PlayerPickerPopup` (pale yellow star watermark behind initial, disappears on selection). `new-round/CourseCard.jsx` renamed `NewRoundCourseCard.jsx` to resolve naming collision with `pages/CourseCard.jsx`. `App_Data_Model_Contract.md` §5.3 amended — `starred` and `inMoneyLists` library-record fields. Scope significantly exceeded plan. | — | Confirmed on device |
 | 15-F | Dead import cleanup. Removed dead `Btn` import from `HistoryPage.jsx`; removed dead `GA` import from `HomePage.jsx`. Two surgical `str_replace` edits. | — | Confirmed on device |
 | 15-E.1 | Money List visual overhaul (Option D layout: position number + initials avatar + name + amount; left accent bar in app green/red/grey; no winner highlight; no round counters). Custom date wheel picker (iOS-style three-column scroll wheel: month/day/year) replacing native `<input type="date">`. New shared `components/RangePicker.jsx` extracts all range logic — owns two localStorage keys (`moneyListRange` for Home, `historyRange` for History) so the two pages maintain independent filter state. Range options: 7 Days, MTD, YTD, All Time, Custom (equal-width pill grid). Settings persisted through backup/restore via new top-level `settings` field in export payload. Player conflict-detection field-list fix (`starred`, `inMoneyLists` added to `f` field list at both detection and resolution sites in `HistoryPage.applyImport`). `CoursesPage` add-button row updated to match Money List pill style (Search / Scan Card / Manual all filled green). Contracts amended: `App_Data_Model_Contract.md` v3.8 (§1 storage keys, §1.1 range pref shape, §1.2 backup payload settings field), `Round_Lifecycle_Contract.md` v2.3 (§5.2 settings cross-reference), `UI_Component_Contract.md` v1.6 (§10 NEW — `RangePicker.jsx` documented). Scope significantly exceeded plan. | App_Data_Model v3.8, Round_Lifecycle v2.3, UI_Component v1.6 | Confirmed on device |
+| 15-G | Birdie/bogey/eagle/double-bogey par-relative indicators on ScoreGrid score cells, ReadOnlyScorecard (round summary modal), and share image (`shareUtils.js`). `parRelative()` helper added to `scorecardUtils.js`. `BIRDIE_COLOR` and `BOGEY_COLOR` tokens added to `ui.jsx`. Indicators: eagle = double circle, birdie = single circle, par = none, bogey = single square, double-bogey-or-worse = double square. Stroke-only outlines, gross score vs par, suppressed on empty/locked/missing-par cells. Share image uses CSS borders (not SVG) due to foreignObject limitation; number centered via absolute `top:53%/left:50%` anchor. ScoreGrid pin feature deferred — see Deferred table. `UI_Component_Contract.md` v1.7 (§3.6 new tokens, §4.11 NEW indicator overlay rules). Scope significantly exceeded plan — extended to 15-G.2 to cover ReadOnlyScorecard and shareUtils. | UI_Component v1.7 | Confirmed on device |
 
 ---
 
@@ -235,7 +236,9 @@ _14-A complete. 14-B complete. 14-bugs.1 complete. AI Assistant + Review & Save 
 
 ### Sprint 15 — Display Polish + Features
 
-_15-E, 15-E.1, and 15-F complete. Sessions within Sprint 15 may be tackled in any order._
+_15-E, 15-E.1, 15-F, and 15-G complete. Sessions within Sprint 15 may be tackled in any order._
+
+_Session 15-G complete and confirmed on device — see Completed Sessions table above. Next session: **15-A — Display Polish**._
 
 **15-A: Display Polish — Summary, History, Modals**
 - Move player name tiles out of header on round summaries.
@@ -254,10 +257,6 @@ _15-E, 15-E.1, and 15-F complete. Sessions within Sprint 15 may be tackled in an
 **15-D: Save Game Settings as Defaults**
 - Save last-used game configuration as default for next round.
 - Priority: Medium
-
-**15-G: Advanced Scorecard Options** *(contract first)*
-- Birdie/bogey indicators, pin sheet, etc.
-- Priority: Low
 
 **15-H: Verify iCloud Export Naming**
 - Priority: Low
@@ -278,7 +277,6 @@ _All Sprint 16 sessions are contract-first._
 
 | Item | Contract | Notes |
 |---|---|---|
-| Sprint 15-G: Birdie/bogey indicators | `UI_Component_Contract.md` | Amend before ScoreGrid changes |
 | Sprint 16: Wolf | New `Wolf_Contract.md` | Full contract session before any code |
 | Sprint 16: High/Low | New `HighLow_Contract.md` | Full contract session before any code |
 | Sprint 16: other formats | New contracts per format | Full contract session each |
@@ -381,3 +379,4 @@ _None._
 | Stroke Play §14 G-2 `effMin` not received from `subsetMin()` | Deferred | Architectural inconsistency only; results correct |
 | Auto Scan accuracy to production quality | Deferred to 14-A.2 | Gemini coordinate approach has known limitations. Mistral OCR is next candidate. Test on real WiFi in 14-A.2. |
 | starred players auto-selected in New Round | Deferred | Out of scope for 15-E; log for future sprint if demand arises |
+| ScoreGrid sticky/pin to top of ScorecardPage | Deferred — optional | ScoreGrid takes significant vertical space; pinning may not be worth the screen cost. Revisit if user demand arises. Contract pattern documented in 15-G planning. |

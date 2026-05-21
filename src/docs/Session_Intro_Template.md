@@ -1,12 +1,9 @@
-# Session Intro Meta-Template (v3.1)
+# Session Intro Meta-Template (v3.2)
 
-_Last updated: April 2026 — cap-efficiency revision. Key changes from v3.0:_
-- _Section 7 gotchas list replaced with APP_STATE_SUMMARY H-reference (eliminates ~200 words of redundancy per session)_
-- _Testing checklist moved out of intro — Claude generates it after diagnostic/plan phase, not upfront_
-- _Stream-of-consciousness prohibition elevated to a prominent named rule_
-- _Section 2 word cap tightened to 100 words (hard)_
-- _Section 8 testing format tiered by session complexity_
-- _"Skip if already in ASS" rule added for Section 4 scope items_
+_Last updated: May 2026 — file manifest integration._
+_Key changes from v3.1:_
+- _`FILE_MANIFEST.md` added to Section 1 standard reading list_
+- _Section 7 instruction 2 replaced with two-step: confirm paths via manifest, then prompt owner for needed source files_
 
 _This is the meta-template used by the **meta-planning chat** to draft opening messages for new build-session chats. It is not a game contract. For game contracts see `Universal_Contract_Template.md`._
 
@@ -28,6 +25,7 @@ Before drafting any session intro, always read these files first:
 - `ARCHITECTURE_FOUNDATIONS.md`
 - `APP_STATE_SUMMARY.md` (including the "Work in Flight" block at top)
 - `BUILD_PLAN.md`
+- `FILE_MANIFEST.md`
 - The relevant contract(s) for the session scope
 - The relevant source file(s) for the session scope
 
@@ -53,6 +51,7 @@ taking any action:
   3. App_Data_Model_Contract.md
   4. Round_Lifecycle_Contract.md
   5. UI_Component_Contract.md
+  6. FILE_MANIFEST.md   (complete file inventory with exact paths)
 
 Session-specific governing documents (read before the Section 4 scope items):
   [list 1–N contracts directly relevant to this session's scope]
@@ -68,7 +67,7 @@ Reading depth:
     documents you are not going to act on.
 ```
 
-The meta-planner is responsible for filling in the session-specific document and file lists. Do not leave the Section 1 list at the baseline 5 for sessions that need more context. Reading order matters: core docs → session-specific contracts → source files.
+The meta-planner is responsible for filling in the session-specific document and file lists. Do not leave the Section 1 list at the baseline 6 for sessions that need more context. Reading order matters: core docs → session-specific contracts → source files.
 
 The meta-planner must classify the session's reading depth and state it explicitly in Section 2.
 
@@ -204,7 +203,11 @@ costs cap that should go toward code and decisions.
 1. Read documents per Section 1's reading-depth classification. Scan
    headers first; full-read only sections relevant to scope.
 
-2. Read session-specific source files in full.
+2. Cross-reference FILE_MANIFEST.md to confirm exact paths for all
+   files in scope. Then identify which of those files are not already
+   present in project files. Output a list of missing files and ask
+   the owner to upload them before proceeding. Do not write any code
+   until all required source files are in hand.
 
 3. [If contract-first: Read the contract sections in Section 4A before
    drawing any conclusions.]
@@ -315,18 +318,19 @@ When the owner says "write the intro for session X" or "next session is X":
 
 1. Read `BUILD_PLAN.md` to find session X — scope, files, contract requirements, dependencies
 2. Read `APP_STATE_SUMMARY.md` — confirm current app state, Work in Flight block, and highest H-gotcha number
-3. Read the relevant contracts and source files to fill in spec references and file paths accurately
-4. Classify reading depth (contract-first/architectural vs bug-fix/small-feature) and state it in Section 2
-5. Draft the intro using all applicable sections (1, 2, 2A if applicable, 3, 4 or 4A/4B, 5, 6, 7, 8, 9)
-6. Flag anything requiring an owner decision before the session begins
-7. Verify session designation against BUILD_PLAN.md — do not assume next letter
+3. Read `FILE_MANIFEST.md` — confirm exact paths for all files the session will touch
+4. Read the relevant contracts and source files to fill in spec references and file paths accurately
+5. Classify reading depth (contract-first/architectural vs bug-fix/small-feature) and state it in Section 2
+6. Draft the intro using all applicable sections (1, 2, 2A if applicable, 3, 4 or 4A/4B, 5, 6, 7, 8, 9)
+7. Flag anything requiring an owner decision before the session begins
+8. Verify session designation against BUILD_PLAN.md — do not assume next letter
 
 ## Rules for the draft itself
 
 - **Do not pad.** Every sentence must carry information Claude needs. No filler, no preamble.
 - **Do not omit decision points.** Surface owner choices explicitly in Section 4.
 - **Reference H-gotchas, don't restate them.** If APP_STATE_SUMMARY already captures a rule, cite the H-number.
-- **Verify document references.** Every document in Section 1 and file in Section 5 must exist in the project.
+- **Verify document references.** Every document in Section 1 and file in Section 5 must exist in the project and be confirmed against FILE_MANIFEST.md.
 - **Preserve guardrails verbatim.** Section 3 (naming rule), Section 7 output discipline block, Section 7 instructions, and Section 9 (closure) are quoted verbatim — do not paraphrase or trim.
 - **Use copy-ready formatting.** Owner pastes the entire output into a new chat tab without editing. No meta-commentary, no placeholders.
 - **Fill in the H-gotcha list in Section 7 instruction 8.** The meta-planner identifies the 2–4 most relevant H-numbers for this session's scope and lists them by name. Do not leave this as a generic reference.

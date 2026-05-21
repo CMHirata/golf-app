@@ -33,15 +33,15 @@ Before logging a session anywhere, confirm all of the following:
 
 ## Work in Flight
 
-_None. Session 15-E.1 fully complete and device-confirmed. **Next session: 15-A — Display Polish**._
+_None. Session 15-G fully complete and device-confirmed. **Next session: 15-A — Display Polish**._
 
 ---
 
 ## Current State
 
-_Last refresh: May 2026 — Session 15-E.1 complete and confirmed on device._
+_Last refresh: May 2026 — Session 15-G complete and confirmed on device._
 
-Session 15-E.1 complete. Money List on Home page redesigned (position number + initials avatar + name + amount; left accent bar in app green/red/grey; no winner highlight; no round counters). New shared `components/RangePicker.jsx` is the single source of truth for date-range filter UI and logic; Home and History each own their own localStorage key (`moneyListRange` and `historyRange`) so the two pages maintain independent filter state. Range options are 7 Days, MTD, YTD, All Time, Custom; Custom uses an iOS-style three-column scroll wheel picker (month/day/year). Both range prefs persist through backup/restore via a new top-level `settings` field on the export JSON. `CoursesPage` add buttons updated to match the Money List pill style. Player import conflict-detection bug fixed — `starred` and `inMoneyLists` are now included in the field comparison list at both detection and resolution sites. Contracts amended: `App_Data_Model_Contract.md` v3.8 (§1 storage keys, §1.1 range pref shape, §1.2 backup payload), `Round_Lifecycle_Contract.md` v2.3 (§5.2 settings cross-reference), `UI_Component_Contract.md` v1.6 (§10 NEW — `RangePicker.jsx`).
+Session 15-G complete. Par-relative score indicators ship on all three scorecard surfaces: `ScoreGrid.jsx` (live scoring), `ReadOnlyScorecard.jsx` (round summary modal), and `shareUtils.js` (share image). Indicator levels: eagle = double circle, birdie = single circle, par = none, bogey = single square, double-bogey-or-worse = double square. Stroke-only outlines in `BIRDIE_COLOR` (`#1a6b3a`) and `BOGEY_COLOR` (`#c0392b`), computed gross score vs `coursePars[h]`, suppressed on empty/locked/missing-par cells. `parRelative()` helper added to `scorecardUtils.js`. Share image uses CSS borders (not SVG) due to `foreignObject` rendering limitations; number centered via `position:absolute; top:53%; left:50%; transform:translate(-50%,-50%)` to compensate for font ascender space. `UI_Component_Contract.md` amended to v1.7 (§3.6 new tokens, §4.11 NEW overlay rules). ScoreGrid sticky/pin feature evaluated and deferred — screen space cost too high relative to benefit.
 
 ---
 
@@ -343,7 +343,7 @@ Contract version pins below verified against each contract's actual version head
 | `Dots_Contract.md` | v2.5 | Dots/Junk: `DOTS_DEF`, specials, mutual exclusivity, team payout |
 | `PartialGameContract.md` | v2.2 AUTHORITATIVE | Partial round, predetermined ranges, early departure |
 | `ScoreKeypad_Contract.md` | v2.4 AUTHORITATIVE | Custom keypad: universal system-keyboard replacement |
-| `UI_Component_Contract.md` | v1.6 | `ui.jsx` tokens, all components, `style` prop pattern. v1.6 (15-E.1): §10 NEW — `RangePicker.jsx` shared component documented (owner of `moneyListRange` and `historyRange` keys; exports `loadRangePref(key)` / `saveRangePref(pref, key)` / `RangePickerRow`). |
+| `UI_Component_Contract.md` | v1.7 | `ui.jsx` tokens, all components, `style` prop pattern. v1.6 (15-E.1): §10 NEW — `RangePicker.jsx` shared component documented. v1.7 (15-G): §3.6 NEW — `BIRDIE_COLOR` and `BOGEY_COLOR` tokens. §4.11 NEW — ScoreGrid score-cell indicator overlay rules (eagle/birdie/par/bogey/double-bogey). |
 | `Universal_Contract_Template.md` | v1.0 AUTHORITATIVE SKELETON | Template every game contract must conform to |
 
 ### Process / planning docs
@@ -351,7 +351,7 @@ Contract version pins below verified against each contract's actual version head
 | Document | Purpose |
 |---|---|
 | `BUILD_PLAN.md` | Authoritative session history, completed sessions table, open session plan, deferred items, decision log |
-| `APP_STATE_SUMMARY.md` (this file) | Lean status, gotchas (H-1…H-41), open items, document index |
+| `APP_STATE_SUMMARY.md` (this file) | Lean status, gotchas (H-1…H-42), open items, document index |
 | `Session_Intro_Template.md` | Boilerplate prompt for starting a fresh chat session |
 | `Session_Closing_Maintenance_Template.md` | Step-by-step closing-session checklist for BP and ASS maintenance |
 | `NewRoundPage_Design_Spec.md` | 11-H output: full NewRoundPage setup UI design spec. 13-E.7: three card body sections now in `pages/new-round/NewRoundCourseCard.jsx`, `PlayersCard.jsx`, `GamesCard.jsx` |
