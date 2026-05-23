@@ -436,8 +436,9 @@ export default function NewRoundPage({ onStart, onGoScorecard, onSaveEdits, inPr
     const isF = player && (player.gender || '').toLowerCase().trim();
     const useWomens = (isF === 'f' || isF === 'female' || isF === 'w') && tee?.slopeW && tee?.ratingW;
     // Use gender-appropriate par total (Handicap_Contract §2.1 / §2.7)
+    const activeNines = (course?.nines || []).filter(n => n.name === frontNine || n.name === backNine);
     const totalPar = useWomens
-      ? (course?.nines?.reduce((s, n) => {
+      ? (activeNines.reduce((s, n) => {
           const np = n.parsWomen?.length === 9 ? n.parsWomen : n.pars;
           return s + (np ? np.reduce((a, b) => a + b, 0) : 0);
         }, 0) || pars.reduce((a, b) => a + b, 0))
@@ -541,7 +542,8 @@ export default function NewRoundPage({ onStart, onGoScorecard, onSaveEdits, inPr
       return course?.tees?.find(t => t.name === teeName) || null;
     });
 
-    const courseHcps   = groupCourseHandicaps(updatedPlayers, perPlayerTees, pars, course?.nines);
+    const activeNinesForHcps = (course?.nines || []).filter(n => n.name === frontNine || n.name === backNine);
+    const courseHcps   = groupCourseHandicaps(updatedPlayers, perPlayerTees, pars, activeNinesForHcps);
     // Apply manual CH overrides — if user typed a CH directly, use that instead of calculated value
     const finalCourseHcps = courseHcps.map((ch, i) => {
       const pid = updatedPlayers[i]?.id;

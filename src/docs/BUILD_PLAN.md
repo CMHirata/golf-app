@@ -1,6 +1,6 @@
 # The Card — Master Build Plan
 
-_Last updated: May 2026 — 15-G complete and confirmed on device. Birdie/bogey/eagle/double-bogey indicators on ScoreGrid, ReadOnlyScorecard, and share image. Next session: **15-A — Display Polish**._
+_Last updated: May 2026 — 15-B complete and confirmed on device. Game table display consistency pass: help text removed, column headers standardized, badge labels stripped to Gross/Net only, Dots badge added, ScoreGrid half labels simplified to Front/Back. Next session: **15-A — Display Polish**._
 _Maintained in this chat as the authoritative sequence and history of all build sessions._
 _The APP_STATE_SUMMARY.md in the project knowledge base is the authoritative record of_
 _what is implemented. This file is the authoritative record of what was planned, why,_
@@ -28,6 +28,7 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 - **14-B** scope significantly exceeded plan — originally "CourseImportReviewModal new component"; became full ManualCourseModal redesign + import flow wiring + extensive iOS keypad debugging.
 - **14-C.bugs** (Open Session Plan designation) → corrected to **14-bugs.1** at session start per owner. Non-sequential designation; logged here for traceability.
 - **15-E** scope significantly exceeded original plan — original spec covered swipe-to-delete, star toggle, money toggle on Players page only. Expanded to include: shared `SwipeableRow` component (refactoring CoursesPage swipe at the same time), Money List moved from History to Home page, YTD Leader removed, cumulative winnings removed from History page, starred avatar treatment in PlayerPickerPopup, `new-round/CourseCard.jsx` renamed to `NewRoundCourseCard.jsx` to resolve naming collision.
+- **15-C** scope significantly exceeded original plan — original spec was "pre-extraction commented blocks cleanup"; became full Payouts page redesign (rename, chips, settle up tile, game cards).
 
 ---
 
@@ -93,6 +94,8 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 | 15-F | Dead import cleanup. Removed dead `Btn` import from `HistoryPage.jsx`; removed dead `GA` import from `HomePage.jsx`. Two surgical `str_replace` edits. | — | Confirmed on device |
 | 15-E.1 | Money List visual overhaul (Option D layout: position number + initials avatar + name + amount; left accent bar in app green/red/grey; no winner highlight; no round counters). Custom date wheel picker (iOS-style three-column scroll wheel: month/day/year) replacing native `<input type="date">`. New shared `components/RangePicker.jsx` extracts all range logic — owns two localStorage keys (`moneyListRange` for Home, `historyRange` for History) so the two pages maintain independent filter state. Range options: 7 Days, MTD, YTD, All Time, Custom (equal-width pill grid). Settings persisted through backup/restore via new top-level `settings` field in export payload. Player conflict-detection field-list fix (`starred`, `inMoneyLists` added to `f` field list at both detection and resolution sites in `HistoryPage.applyImport`). `CoursesPage` add-button row updated to match Money List pill style (Search / Scan Card / Manual all filled green). Contracts amended: `App_Data_Model_Contract.md` v3.8 (§1 storage keys, §1.1 range pref shape, §1.2 backup payload settings field), `Round_Lifecycle_Contract.md` v2.3 (§5.2 settings cross-reference), `UI_Component_Contract.md` v1.6 (§10 NEW — `RangePicker.jsx` documented). Scope significantly exceeded plan. | App_Data_Model v3.8, Round_Lifecycle v2.3, UI_Component v1.6 | Confirmed on device |
 | 15-G | Birdie/bogey/eagle/double-bogey par-relative indicators on ScoreGrid score cells, ReadOnlyScorecard (round summary modal), and share image (`shareUtils.js`). `parRelative()` helper added to `scorecardUtils.js`. `BIRDIE_COLOR` and `BOGEY_COLOR` tokens added to `ui.jsx`. Indicators: eagle = double circle, birdie = single circle, par = none, bogey = single square, double-bogey-or-worse = double square. Stroke-only outlines, gross score vs par, suppressed on empty/locked/missing-par cells. Share image uses CSS borders (not SVG) due to foreignObject limitation; number centered via absolute `top:53%/left:50%` anchor. ScoreGrid pin feature deferred — see Deferred table. `UI_Component_Contract.md` v1.7 (§3.6 new tokens, §4.11 NEW indicator overlay rules). Scope significantly exceeded plan — extended to 15-G.2 to cover ReadOnlyScorecard and shareUtils. | UI_Component v1.7 | Confirmed on device |
+| 15-C | Payouts page redesign. "Results" renamed to "Payouts" throughout (`ResultsPage.jsx` header, `ScorecardPage.jsx` button). Player chips: vertical stack (initial circle / first name / last name / net amount), sorted win-to-loss, all players in one row, first+last initials in circle. Settle Up tile with transfer SVG icon: greedy debt-simplification algorithm (fewest transactions). "Total — All Games" section removed. Per-game sections refreshed as white cards with border/shadow on light-green page background. No contract changes. Scope significantly exceeded original plan. | — | Confirmed on device |
+| 15-B | Game table display consistency pass. Removed all per-game legend/help text (`ColNote` lines) from `NinesTable`, `SkinsTable`, `StablefordTable`, `StrokePlayTable`, and the scorecard-level dots hint from `ScoreGrid`. Stripped extra info from game tile upper-right badges — Gross/Net only across all tables; added missing Gross/Net badge to `DotsTable`. Column header standardization: "Skins"→"Total" (`SkinsTable`), "F"/"B"→"Total" (`StablefordTable`), "Status"→"Total" (`SixesTable`, `MatchNassauTable`). "Front 9"/"Back 9"→"Front"/"Back" in `MatchNassauTable`, `DotsTable`, and `ScoreGrid` half labels. Removed Dots pivot winner highlight. Removed dead `frontLabel`/`backLabel` prop from `ScoreGrid` (variables retained in `ScorecardPage` for toolbar display). | — | Confirmed on device |
 
 ---
 
@@ -210,7 +213,7 @@ let markdown = (data.pages || []).map(p => {
 
 ## Open Session Plan
 
-> **Next session: 15-A — Display Polish.** 15-E, 15-E.1, and 15-F complete. Sprint 15 sessions may be tackled in any order. 14-A.2 (Mistral OCR) remains gated on real WiFi.
+> **Next session: 15-A — Display Polish.** 15-B, 15-C, 15-E, 15-E.1, 15-F, and 15-G complete. Sprint 15 sessions may be tackled in any order. 14-A.2 (Mistral OCR) remains gated on real WiFi.
 
 ---
 
@@ -236,22 +239,12 @@ _14-A complete. 14-B complete. 14-bugs.1 complete. AI Assistant + Review & Save 
 
 ### Sprint 15 — Display Polish + Features
 
-_15-E, 15-E.1, 15-F, and 15-G complete. Sessions within Sprint 15 may be tackled in any order._
-
-_Session 15-G complete and confirmed on device — see Completed Sessions table above. Next session: **15-A — Display Polish**._
+_15-B, 15-C, 15-E, 15-E.1, 15-F, and 15-G complete. Sessions within Sprint 15 may be tackled in any order._
 
 **15-A: Display Polish — Summary, History, Modals**
 - Move player name tiles out of header on round summaries.
 - Remove Match/Nassau label from history tiles.
 - Smart line-break on long course names.
-- Priority: Medium
-
-**15-B: Game Table Display Consistency Pass**
-- Audit all 7 game tables for visual consistency.
-- Priority: Medium
-
-**15-C: Results Page Refinement**
-- See pre-extraction commented blocks in `ResultsPage.jsx` and `RoundSummaryModal.jsx`.
 - Priority: Medium
 
 **15-D: Save Game Settings as Defaults**
@@ -343,6 +336,10 @@ _None._
 | iOS-style scroll wheel for custom date picker | 15-E.1 | Three independent scroll columns (month/day/year) using CSS `scroll-snap-type: y mandatory` and `scroll-snap-align: center`. Selection highlight band is semi-transparent with green borders so the centered text is fully readable. Top/bottom fades stop short of the selected row to avoid obscuring it. |
 | Money List visual: position + initials + name + amount, left accent bar | 15-E.1 | Each row has a 4px left accent bar colored green (positive) / red (negative) / grey (zero) — colorblind-safe contrast. No winner highlight, no round counters. Place number muted (12px, grey, weight 700). Name flex-grows; amount right-aligned. |
 | Player import conflict field-list includes `starred` and `inMoneyLists` | 15-E.1 | `HistoryPage.applyImport` previously rebuilt player records using a fixed five-field list (`name, gender, ghin, email, phone`), silently dropping `starred` and `inMoneyLists` on any conflicting import. Both fields added to the `f` list at conflict-detection (line ~158) and conflict-resolution (line ~199) sites. Brand-new players (no conflict) were already correct. |
+| Payouts page: player chips vertical stack, first+last initials, sorted win-to-loss | 15-C | Circle / first name / last name / net amount stacked vertically. All players in one row. Amounts always align because name is always two lines. |
+| Payouts page: greedy debt-simplification for Settle Up tile | 15-C | `buildSettlements(bank)` sorts debtors/creditors by magnitude, matches greedily for fewest transactions. |
+| "Total — All Games" section removed from Payouts page | 15-C | Redundant with player chips which already show each player's net. |
+| ScoreGrid half labels simplified to Front/Back | 15-B | `frontLabel`/`backLabel` props removed from `ScoreGrid` — dead after label simplification. Variables retained in `ScorecardPage` for toolbar nine-name display. |
 
 ---
 

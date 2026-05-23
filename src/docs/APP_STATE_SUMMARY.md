@@ -33,15 +33,15 @@ Before logging a session anywhere, confirm all of the following:
 
 ## Work in Flight
 
-_None. Session 15-G fully complete and device-confirmed. **Next session: 15-A — Display Polish**._
+_None. Session 15-B fully complete and device-confirmed. **Next session: 15-A — Display Polish**._
 
 ---
 
 ## Current State
 
-_Last refresh: May 2026 — Session 15-G complete and confirmed on device._
+_Last refresh: May 2026 — Session 15-B complete and confirmed on device._
 
-Session 15-G complete. Par-relative score indicators ship on all three scorecard surfaces: `ScoreGrid.jsx` (live scoring), `ReadOnlyScorecard.jsx` (round summary modal), and `shareUtils.js` (share image). Indicator levels: eagle = double circle, birdie = single circle, par = none, bogey = single square, double-bogey-or-worse = double square. Stroke-only outlines in `BIRDIE_COLOR` (`#1a6b3a`) and `BOGEY_COLOR` (`#c0392b`), computed gross score vs `coursePars[h]`, suppressed on empty/locked/missing-par cells. `parRelative()` helper added to `scorecardUtils.js`. Share image uses CSS borders (not SVG) due to `foreignObject` rendering limitations; number centered via `position:absolute; top:53%; left:50%; transform:translate(-50%,-50%)` to compensate for font ascender space. `UI_Component_Contract.md` amended to v1.7 (§3.6 new tokens, §4.11 NEW overlay rules). ScoreGrid sticky/pin feature evaluated and deferred — screen space cost too high relative to benefit.
+Session 15-B complete. Game table display consistency pass across all 7 game tables and `ScoreGrid`. All per-game legend/help text (`ColNote` lines) removed from `NinesTable`, `SkinsTable`, `StablefordTable`, `StrokePlayTable`, and the dots hint line from `ScoreGrid`. Upper-right badge labels stripped to Gross/Net only across all tables; `DotsTable` gains its missing Gross/Net badge (`scoringLabel` imported, `dotsMode` variable derived from `gameOpts`). Column header standardization: "Skins"→"Total" (`SkinsTable`), "F"/"B"→"Total" (`StablefordTable`), "Status"→"Total" (`SixesTable`, `MatchNassauTable`). "Front 9"/"Back 9"→"Front"/"Back" in `MatchNassauTable`, `DotsTable`, and `ScoreGrid` half labels. Dots pivot winner highlight removed (all totals render uniformly). Dead `frontLabel`/`backLabel` prop removed from `ScoreGrid` prop interface and `ScorecardPage` call site; variables retained in `ScorecardPage` for toolbar nine-name display. No contract changes. No engine changes.
 
 ---
 
@@ -158,9 +158,9 @@ component state.
 
 ### H-21: `PayoutDisplay.jsx` owns all payout display sub-components
 `DotsColTable`, `SubHeader`, `PayRow`, `splitGameHeader`, `fmtMoney`, `PayoutsSection`
-are defined only in `PayoutDisplay.jsx`. Pre-extraction commented blocks remain in
-`ResultsPage.jsx` and `RoundSummaryModal.jsx` until 15-C confirms they are unneeded.
-Do not re-inline these sub-components.
+are defined only in `PayoutDisplay.jsx`. Do not re-inline these sub-components in
+`ResultsPage.jsx` or `RoundSummaryModal.jsx`. Pre-extraction commented blocks in
+those files were confirmed unneeded in 15-C and may be removed.
 
 ### H-22: `useIsLandscape` hook — single import from `hooks/useIsLandscape.js`
 Landscape detection logic lives exclusively in `hooks/useIsLandscape.js`. Do not
@@ -206,9 +206,7 @@ into `ScorecardPage.jsx`.
 
 ### H-30: `PayoutDisplay.jsx` is the single source of truth for payout display sub-components
 `DotsColTable`, `SubHeader`, `PayRow`, `splitGameHeader`, `fmtMoney`, `PayoutsSection`
-live exclusively in `pages/PayoutDisplay.jsx`. Pre-extraction commented blocks in
-`ResultsPage.jsx` and `RoundSummaryModal.jsx` must remain until 15-C confirms they
-are no longer needed.
+live exclusively in `pages/PayoutDisplay.jsx`. Do not re-inline in any consumer file.
 
 ### H-31: `defaultMatch`/`makeMatchId` are intentionally duplicated in `GamesCard.jsx`
 Local copies exist for the "+ Add another Match" button. Authoritative copies remain
