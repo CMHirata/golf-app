@@ -1353,9 +1353,9 @@ export function ScoreGrid({
             {/* round touches any front-9 hole. Out-of-round columns within   */}
             {/* the rendered section display as gray `–` (handled in          */}
             {/* renderCell). Par / M.Hcp rows also gray out via renderHalf.   */}
-            {anyFrontInRound && renderHalf(FULL_FRONT, `Front 9${frontLabel ? ` (${frontLabel})` : ''}`, true)}
+            {anyFrontInRound && renderHalf(FULL_FRONT, 'Front', true)}
             {/* Back 9 section — same rule, rendered whenever round touches any back-9 hole. */}
-            {anyBackInRound  && renderHalf(FULL_BACK,  `Back 9${backLabel  ? ` (${backLabel})`  : ''}`,  !anyFrontInRound)}
+            {anyBackInRound  && renderHalf(FULL_BACK,  'Back',  !anyFrontInRound)}
           </>
         )
       }
