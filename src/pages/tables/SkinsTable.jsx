@@ -284,3 +284,5 @@ export function SkinsTable({
       <TableDivider/>
       <PlayerChips players={displayPlayers} values={totals} chipBg={K.hdrBg} chipColor={K.hdrClr} leaderBg={K.totBg} leaderColor={K.totClr} fmtVal={v => v} subLabel="skins"/>
     </GameSection>
+  );
+}

@@ -1359,8 +1359,6 @@ export function ScoreGrid({
           </>
         )
       }
-      {dotsGameActive && (
-        )}
       {/* 13-C.3: In landscape partial mode, constrain TotalsCard AND all game  */}
       {/* tables to match the compact scoregrid width. Width is derived from   */}
       {/* the round hole count (not hardcoded 18) so a 9-hole landscape round  */}
