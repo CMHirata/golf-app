@@ -17,7 +17,7 @@
 
 import { scoreForMode } from '../../engine/handicap.js';
 import { P, nameTd, scoringLabel, applyDepartureGuardrailToScores } from '../scorecard/scorecardUtils.js';
-import { GameSection, GameTable, HalfLabel, TableDivider, ColNote } from '../scorecard/GameSection.jsx';
+import { GameSection, GameTable, HalfLabel, TableDivider } from '../scorecard/GameSection.jsx';
 import { RED } from '../../components/ui.jsx';
 
 export function StrokePlayTable({
@@ -177,7 +177,6 @@ export function StrokePlayTable({
           );
         })}
       </div>
-      <ColNote>Each hole = score vs par · F/B col = half total vs par</ColNote>
     </GameSection>
   );
 }

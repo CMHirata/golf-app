@@ -21,7 +21,7 @@
 
 import { stabPts, xGrossScore } from '../../engine/handicap.js';
 import { S, nameTd, scoringLabel, applyDepartureGuardrailToScores } from '../scorecard/scorecardUtils.js';
-import { GameSection, GameTable, HalfLabel, TableDivider, ColNote, PlayerChips } from '../scorecard/GameSection.jsx';
+import { GameSection, GameTable, HalfLabel, TableDivider, PlayerChips } from '../scorecard/GameSection.jsx';
 import { RED } from '../../components/ui.jsx';
 
 // Color token for a Stableford point value
@@ -93,7 +93,7 @@ export function StablefordTable({
         <>
           <HalfLabel>{label}</HalfLabel>
           <div style={{ padding:'0 8px 4px' }}>
-            <GameTable hs={hs} colHeader={hs[0] < 9 ? 'F' : 'B'} headerBg={S.hdrBg} headerColor={S.hdrClr} totBg={S.totBg} totColor={S.totClr}>
+            <GameTable hs={hs} colHeader="Total" headerBg={S.hdrBg} headerColor={S.hdrClr} totBg={S.totBg} totColor={S.totClr}>
               {subsetPlayers.map(({ p, pi }, rowIdx) => {
                 const holePts = hs.map(h => scoreHole(pi, h));
                 return (
@@ -181,7 +181,6 @@ export function StablefordTable({
           leaderBg={S.totBg} leaderColor={S.totClr}
           fmtVal={v => v} subLabel="pts"
         />
-        <ColNote>4+ = condor · 3 = birdie · 2 = par · 1 = bogey · 0 = double+</ColNote>
       </GameSection>
     );
   }
@@ -268,7 +267,6 @@ export function StablefordTable({
           );
         })}
       </div>
-      <ColNote>4+ = condor · 3 = birdie · 2 = par · 1 = bogey · 0 = double+</ColNote>
     </GameSection>
   );
 }

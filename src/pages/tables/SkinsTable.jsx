@@ -48,7 +48,7 @@
 
 import { calcSkinsHole } from '../../engine/games.js';
 import { K, nameTd, scoringLabel, applyDepartureGuardrailToScores } from '../scorecard/scorecardUtils.js';
-import { GameSection, GameTable, HalfLabel, TableDivider, ColNote, PlayerChips } from '../scorecard/GameSection.jsx';
+import { GameSection, GameTable, HalfLabel, TableDivider, PlayerChips } from '../scorecard/GameSection.jsx';
 
 export function SkinsTable({
   players, scores, hcps, opts, courseHcps, minCourseHcp, skinsPlayerIdxs, isLandscape,
@@ -197,7 +197,7 @@ export function SkinsTable({
       <>
         <HalfLabel>{label}</HalfLabel>
         <div style={{ padding: '0 8px 4px' }}>
-          <GameTable hs={hs} colHeader="Skins" headerBg={K.hdrBg} headerColor={K.hdrClr} totBg={K.totBg} totColor={K.totClr}>
+          <GameTable hs={hs} colHeader="Total" headerBg={K.hdrBg} headerColor={K.hdrClr} totBg={K.totBg} totColor={K.totClr}>
             {displayPlayers.map((p, pos) => (
               <tr key={displayIdxs[pos]} style={{ background: K.row[pos % 2] }}>
                 <td style={{ ...nameTd, color: K.hdrClr }}>{p.name}</td>
@@ -222,7 +222,7 @@ export function SkinsTable({
       const hs = hasFront ? frontHoles : backHoles;
       return (
         <div style={{ padding: '0 8px 4px' }}>
-          <GameTable hs={hs} colHeader="Skins" headerBg={K.hdrBg} headerColor={K.hdrClr} totBg={K.totBg} totColor={K.totClr}>
+          <GameTable hs={hs} colHeader="Total" headerBg={K.hdrBg} headerColor={K.hdrClr} totBg={K.totBg} totColor={K.totClr}>
             {displayPlayers.map((p, pos) => (
               <tr key={displayIdxs[pos]} style={{ background: K.row[pos % 2] }}>
                 <td style={{ ...nameTd, color: K.hdrClr }}>{p.name}</td>
@@ -255,7 +255,7 @@ export function SkinsTable({
 
   if (abandoned) {
     return (
-      <GameSection title="Skins" badge={`${scoringLabel(mode)} · Carry ${carry ? 'on' : 'off'}`} color={K.hdrClr} borderColor={K.border}>
+      <GameSection title="Skins" badge={scoringLabel(mode)} color={K.hdrClr} borderColor={K.border}>
         <div style={{ padding: '12px 12px 16px', fontSize: 12, color: '#888', fontStyle: 'italic' }}>
           Game abandoned at early departure.
         </div>
@@ -271,7 +271,7 @@ export function SkinsTable({
   const displayPlayers = displayIdxs.map(i => players[i]).filter(Boolean);
 
   return (
-    <GameSection title="Skins" badge={`${scoringLabel(mode)} · Carry ${carry ? 'on' : 'off'}`} color={K.hdrClr} borderColor={K.border}>
+    <GameSection title="Skins" badge={scoringLabel(mode)} color={K.hdrClr} borderColor={K.border}>
       {isLandscape ? (
         renderAll18()
       ) : (
@@ -283,7 +283,4 @@ export function SkinsTable({
       )}
       <TableDivider/>
       <PlayerChips players={displayPlayers} values={totals} chipBg={K.hdrBg} chipColor={K.hdrClr} leaderBg={K.totBg} leaderColor={K.totClr} fmtVal={v => v} subLabel="skins"/>
-      <ColNote>Number = skins on that hole · darker = carryover · – = tied</ColNote>
     </GameSection>
-  );
-}

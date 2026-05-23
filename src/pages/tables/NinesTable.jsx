@@ -16,7 +16,7 @@
 import { scoreForMode, xGrossScore } from '../../engine/handicap.js';
 import { ninesPts } from '../../engine/games.js';
 import { N, nameTd, scoringLabel, applyDepartureGuardrailToScores } from '../scorecard/scorecardUtils.js';
-import { GameSection, GameTable, HalfLabel, TableDivider, ColNote, PlayerChips } from '../scorecard/GameSection.jsx';
+import { GameSection, GameTable, HalfLabel, TableDivider, PlayerChips } from '../scorecard/GameSection.jsx';
 import { RED } from '../../components/ui.jsx';
 
 export function NinesTable({
@@ -139,7 +139,7 @@ export function NinesTable({
   const totals = activePlayers.map((_, k) => allData.reduce((s, pts) => s + (pts ? pts[k] : 0), 0));
 
   return (
-    <GameSection title="Nines" badge={`${scoringLabel(mode)}${blitz ? ' · Blitz' : ''}`} color={N.hdrClr} borderColor={N.border}>
+    <GameSection title="Nines" badge={scoringLabel(mode)} color={N.hdrClr} borderColor={N.border}>
       {isLandscape ? (
         renderAll18()
       ) : (
@@ -151,7 +151,6 @@ export function NinesTable({
       )}
       <TableDivider/>
       <PlayerChips players={activePlayers} values={totals} chipBg={N.hdrBg} chipColor={N.hdrClr} leaderBg={N.totBg} leaderColor={N.totClr} fmtVal={v => v} subLabel=""/>
-      <ColNote>9 = blitz · 5/3/1 = positions · 0 = lost hole</ColNote>
     </GameSection>
   );
 }

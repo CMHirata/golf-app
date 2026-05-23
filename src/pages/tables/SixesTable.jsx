@@ -334,7 +334,7 @@ export function SixesTable({
                 {seg.holes.map(h => (
                   <th key={h} style={{ padding: '2px 1px', background: M.hdrBg, color: M.hdrClr, fontSize: 10, textAlign: 'center' }}>{h + 1}</th>
                 ))}
-                <th style={{ padding: '2px 4px', background: M.totBg, color: M.totClr, fontSize: 10, textAlign: 'center', fontWeight: 700 }}>Status</th>
+                <th style={{ padding: '2px 4px', background: M.totBg, color: M.totClr, fontSize: 10, textAlign: 'center', fontWeight: 700 }}>Total</th>
               </tr>
             </thead>
             <tbody>

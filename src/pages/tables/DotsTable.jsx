@@ -24,7 +24,7 @@
 //   effectiveRange passed as { startHole, endHole } at call site
 
 import { useState } from 'react';
-import { restoreDotDefs, SP_CLR, SP_BG, SP_HDR, COL_W, TOT_W, NAME_MIN, applyDepartureGuardrailToDotEntries } from '../scorecard/scorecardUtils.js';
+import { restoreDotDefs, SP_CLR, SP_BG, SP_HDR, COL_W, TOT_W, NAME_MIN, applyDepartureGuardrailToDotEntries, scoringLabel } from '../scorecard/scorecardUtils.js';
 import { GameSection, HalfLabel, TableDivider } from '../scorecard/GameSection.jsx';
 import { getDotsPartner, getMatchTeamPartner } from '../../engine/games.js';
 
@@ -117,6 +117,7 @@ export function DotsTable({
       })
     : dtIdxsRaw;
   const dtPlayers = dtIdxs.map(i => players[i]).filter(Boolean);
+  const dotsMode = gameOpts?.Dots?.grossNetNOL ?? gameOpts?.Dots?.scoring ?? gameOpts?.Specials?.grossNetNOL ?? gameOpts?.Specials?.scoring ?? 'gross';
 
   // ── Derive hole arrays from effective range ───────────────────────────────
   // §3.6 midpoint for front/back (Match and individual modes)
@@ -507,7 +508,6 @@ export function DotsTable({
   const renderPivotIndividual = () => {
     if (!activeRows.length) return null;
     const roundTots = dtIdxs.map(pi => playerRoundTot(pi));
-    const maxTot    = Math.max(...roundTots);
     return (
       <div style={{ margin: '0 8px 0', borderRadius: 8, overflow: 'hidden',
                     border: `1px solid ${SP.border}`, background: SP_BG }}>
@@ -544,11 +544,10 @@ export function DotsTable({
             <tr style={{ borderTop: `1.5px solid ${SP.border}` }}>
               <td style={{ padding: '4px 8px', fontSize: 11, fontWeight: 800, color: SP.totClr, background: SP.totBg }}>Total</td>
               {dtIdxs.map((pi, i) => {
-                const tot      = roundTots[i];
-                const isLeader = tot > 0 && tot === maxTot;
+                const tot = roundTots[i];
                 return (
                   <td key={pi} style={{ textAlign: 'center', fontSize: 14, fontWeight: 800, color: SP.totClr,
-                                         background: isLeader ? '#c9a8f0' : SP.totBg, padding: '4px 2px' }}>
+                                         background: SP.totBg, padding: '4px 2px' }}>
                     {tot > 0 ? tot : '·'}
                   </td>
                 );
@@ -624,13 +623,11 @@ export function DotsTable({
                 <td style={{ padding: '3px 8px', fontSize: 10, fontWeight: 800, color: SP.totClr, background: SP.totBg }}>Total</td>
                 {dtIdxs.flatMap((pi, i) => (
                   [0,1,2].map(seg => {
-                    const tot      = pivotSegTot(pi, seg);
-                    const maxSeg   = Math.max(...dtIdxs.map(p => pivotSegTot(p, seg)));
-                    const isLeader = tot > 0 && tot === maxSeg;
+                    const tot = pivotSegTot(pi, seg);
                     return (
                       <td key={`${pi}_${seg}`} style={{ textAlign: 'center', fontSize: 12, fontWeight: 800,
                                                           color: SP.totClr,
-                                                          background: isLeader ? '#c9a8f0' : SP.totBg,
+                                                          background: SP.totBg,
                                                           borderRight: seg === 2 && i < dtIdxs.length - 1 ? `1.5px solid #b08de0` : 'none',
                                                           padding: '3px 2px' }}>
                         {tot > 0 ? tot : '·'}
@@ -656,7 +653,6 @@ export function DotsTable({
 
     const allIdxs = [...tA, ...tB];
     const roundTots = allIdxs.map(pi => pivotRoundTot(pi));
-    const maxTot    = Math.max(...roundTots);
 
     return (
       <div style={{ margin: '0 8px 0', borderRadius: 8, overflow: 'hidden',
@@ -728,11 +724,10 @@ export function DotsTable({
               <tr style={{ borderTop: `1.5px solid ${SP.border}` }}>
                 <td style={{ padding: '3px 8px', fontSize: 10, fontWeight: 800, color: SP.totClr, background: SP.totBg }}>Total</td>
                 {tA.map((pi, i) => {
-                  const tot      = pivotRoundTot(pi);
-                  const isLeader = tot > 0 && tot === maxTot;
+                  const tot = pivotRoundTot(pi);
                   return (
                     <td key={pi} style={{ textAlign: 'center', fontSize: 13, fontWeight: 800, color: SP.totClr,
-                                           background: isLeader ? '#c9a8f0' : SP.totBg,
+                                           background: SP.totBg,
                                            borderRight: i === tA.length - 1 ? `2px solid #b08de0` : 'none',
                                            padding: '3px 2px' }}>
                       {tot > 0 ? tot : '·'}
@@ -740,11 +735,10 @@ export function DotsTable({
                   );
                 })}
                 {tB.map(pi => {
-                  const tot      = pivotRoundTot(pi);
-                  const isLeader = tot > 0 && tot === maxTot;
+                  const tot = pivotRoundTot(pi);
                   return (
                     <td key={pi} style={{ textAlign: 'center', fontSize: 13, fontWeight: 800, color: SP.totClr,
-                                           background: isLeader ? '#c9a8f0' : SP.totBg, padding: '3px 2px' }}>
+                                           background: SP.totBg, padding: '3px 2px' }}>
                       {tot > 0 ? tot : '·'}
                     </td>
                   );
@@ -773,8 +767,8 @@ export function DotsTable({
     if (isMatch) {
       const pairing = getMatchPairing();
       // Derived front/back labels for HalfLabel headers
-      const frontLabel = allInFront(frontH) && allInBack(backH) ? 'Front 9' : `Holes ${frontH[0]+1}–${frontH[frontH.length-1]+1}`;
-      const backLabel  = allInFront(frontH) && allInBack(backH) ? 'Back 9'  : `Holes ${backH[0]+1}–${backH[backH.length-1]+1}`;
+      const frontLabel = allInFront(frontH) && allInBack(backH) ? 'Front' : `Holes ${frontH[0]+1}–${frontH[frontH.length-1]+1}`;
+      const backLabel  = allInFront(frontH) && allInBack(backH) ? 'Back'  : `Holes ${backH[0]+1}–${backH[backH.length-1]+1}`;
       return (
         <>
           {pairing && (
@@ -796,8 +790,8 @@ export function DotsTable({
       );
     }
     // Individual mode (§10.6)
-    const frontLabel = allInFront(frontH) && allInBack(backH) ? 'Front 9' : `Holes ${frontH[0]+1}–${frontH[frontH.length-1]+1}`;
-    const backLabel  = allInFront(frontH) && allInBack(backH) ? 'Back 9'  : `Holes ${backH[0]+1}–${backH[backH.length-1]+1}`;
+    const frontLabel = allInFront(frontH) && allInBack(backH) ? 'Front' : `Holes ${frontH[0]+1}–${frontH[frontH.length-1]+1}`;
+    const backLabel  = allInFront(frontH) && allInBack(backH) ? 'Back'  : `Holes ${backH[0]+1}–${backH[backH.length-1]+1}`;
     return isLandscape
       ? renderAll()
       : (
@@ -816,7 +810,7 @@ export function DotsTable({
   };
 
   return (
-    <GameSection title="Dots" color={SP.hdrClr} borderColor={SP.border}
+    <GameSection title="Dots" badge={scoringLabel(dotsMode)} color={SP.hdrClr} borderColor={SP.border}
       onClick={() => setTooltip(null)}
     >
       {renderTopSection()}

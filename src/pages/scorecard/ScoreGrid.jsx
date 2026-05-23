@@ -1360,8 +1360,7 @@ export function ScoreGrid({
         )
       }
       {dotsGameActive && (
-        <div style={{ fontSize: 10, color: '#888', marginBottom: 10 }}>Hold any score cell to log dots · ⚡ birdie/eagle/ace auto-marked</div>
-      )}
+        )}
       {/* 13-C.3: In landscape partial mode, constrain TotalsCard AND all game  */}
       {/* tables to match the compact scoregrid width. Width is derived from   */}
       {/* the round hole count (not hardcoded 18) so a 9-hole landscape round  */}

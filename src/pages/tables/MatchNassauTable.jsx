@@ -182,7 +182,7 @@ export function MatchNassauTable({
             <tr>
               <th style={{ padding: '3px 6px', background: M.hdrBg, color: M.hdrClr, fontSize: 10, textAlign: 'left' }}></th>
               {fullHs.map(h => <th key={h} style={{ padding: '2px 1px', background: M.hdrBg, color: M.hdrClr, fontSize: 10, textAlign: 'center' }}>{h + 1}</th>)}
-              <th style={{ padding: '2px 4px', background: M.totBg, color: M.totClr, fontSize: 10, textAlign: 'center', fontWeight: 700 }}>Status</th>
+              <th style={{ padding: '2px 4px', background: M.totBg, color: M.totClr, fontSize: 10, textAlign: 'center', fontWeight: 700 }}>Total</th>
             </tr>
           </thead>
           <tbody>
@@ -253,7 +253,7 @@ export function MatchNassauTable({
               <tr>
                 <th style={{ padding: '3px 6px', background: M.hdrBg, color: M.hdrClr, fontSize: 10, textAlign: 'left' }}></th>
                 {allH.map(h => <th key={h} style={{ padding: '2px 1px', background: M.hdrBg, color: M.hdrClr, fontSize: 10, textAlign: 'center' }}>{h + 1}</th>)}
-                <th style={{ padding: '2px 4px', background: M.totBg, color: M.totClr, fontSize: 10, textAlign: 'center', fontWeight: 800 }}>Status</th>
+                <th style={{ padding: '2px 4px', background: M.totBg, color: M.totClr, fontSize: 10, textAlign: 'center', fontWeight: 800 }}>Total</th>
               </tr>
             </thead>
             <tbody>
@@ -317,7 +317,7 @@ export function MatchNassauTable({
               <th style={{ padding: '2px 4px', background: M.totBg, color: M.totClr, fontSize: 10, textAlign: 'center', fontWeight: 700 }}>Total</th>
               {backH.map(h => <th key={h} style={{ padding: '2px 1px', background: M.hdrBg, color: M.hdrClr, fontSize: 10, textAlign: 'center' }}>{h + 1}</th>)}
               <th style={{ padding: '2px 4px', background: M.totBg, color: M.totClr, fontSize: 10, textAlign: 'center', fontWeight: 700 }}>Total</th>
-              <th style={{ padding: '2px 4px', background: M.totBg, color: M.totClr, fontSize: 10, textAlign: 'center', fontWeight: 800 }}>Status</th>
+              <th style={{ padding: '2px 4px', background: M.totBg, color: M.totClr, fontSize: 10, textAlign: 'center', fontWeight: 800 }}>Total</th>
             </tr>
           </thead>
           <tbody>
@@ -430,7 +430,7 @@ export function MatchNassauTable({
         if (apF > 0) apParts.push(`F${apF}`);
         if (apB > 0) apParts.push(`B${apB}`);
         if (apO > 0) apParts.push(`O${apO}`);
-        const badge = `${scoringLabel(mode)}${apParts.length ? ` · AP ${apParts.join('/')}dn` : ''}`;
+        const badge = scoringLabel(mode);
 
         // ── Per-match effective range — §3.6 midpoint derivation ─────────────
         // Each match's range comes from gameRanges[matchId] if present and
@@ -627,8 +627,8 @@ export function MatchNassauTable({
         // Non-Nassau: labels derive from canonical canonFrontH/canonBackH (hole-9 boundary).
         const dispFrontH = nassau ? frontH : canonFrontH;
         const dispBackH  = nassau ? backH  : canonBackH;
-        const frontLabel = allInFront(dispFrontH) && allInBack(dispBackH) ? 'Front 9' : `Holes ${dispFrontH[0]+1}–${dispFrontH[dispFrontH.length-1]+1}`;
-        const backLabel  = allInFront(dispFrontH) && allInBack(dispBackH) ? 'Back 9'  : `Holes ${dispBackH[0]+1}–${dispBackH[dispBackH.length-1]+1}`;
+        const frontLabel = allInFront(dispFrontH) && allInBack(dispBackH) ? 'Front' : `Holes ${dispFrontH[0]+1}–${dispFrontH[dispFrontH.length-1]+1}`;
+        const backLabel  = allInFront(dispFrontH) && allInBack(dispBackH) ? 'Back'  : `Holes ${dispBackH[0]+1}–${dispBackH[dispBackH.length-1]+1}`;
 
         // Portrait layout decision — mirrors ScoreGrid's half-rendering rule:
         //   - Range spans both canonical halves (holes 1–9 AND 10–18 both present):
