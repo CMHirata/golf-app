@@ -429,7 +429,6 @@ const ScorecardPage = forwardRef(function ScorecardPage(
               dotsPlayers={dotsPlayers || []}
               dots={dots} dotEntries={dotEntries} setDotEntries={setDotEntries}
               manualPresses={manualPresses} setManualPresses={setManualPresses}
-              frontLabel={frontLabel} backLabel={backLabel}
               isLandscape={isLandscape}
               zoomTriggerRef={zoomTriggerRef}
               roundStartHole={roundStartHole}

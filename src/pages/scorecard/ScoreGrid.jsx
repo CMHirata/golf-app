@@ -153,7 +153,6 @@ export function ScoreGrid({
   dotsPlayers,
   dots, dotEntries, setDotEntries,
   manualPresses, setManualPresses,
-  frontLabel, backLabel,
   isLandscape: isLandscapeProp,
   zoomTriggerRef,
   // 13-C.2: Round length — defaults preserve full 18-hole behavior when props
