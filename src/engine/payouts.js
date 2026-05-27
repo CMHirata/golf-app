@@ -1007,11 +1007,27 @@ export function computePayouts({
             const ranked = stabIdxs
               .map(pi => ({ name: players[pi].name, pts: stabScore(pi, stabAll) }))
               .sort((a, b) => b.pts - a.pts);
-            for (let i = 0; i < ranked.length; i++)
-              for (let j = i + 1; j < ranked.length; j++) {
-                const diff = ranked[i].pts - ranked[j].pts;
-                if (diff > 0) { gb[ranked[i].name] += diff * bet; gb[ranked[j].name] -= diff * bet; }
+            if (payStyle === 'paywinner') {
+              // Pay Winner: each loser pays their diff from top scorer only
+              const maxPts  = ranked[0].pts;
+              const winners = ranked.filter(r => r.pts === maxPts);
+              const losers  = ranked.filter(r => r.pts < maxPts);
+              if (losers.length > 0) {
+                losers.forEach(r => {
+                  const diff = maxPts - r.pts;
+                  const share = (diff * bet) / winners.length;
+                  gb[r.name] -= diff * bet;
+                  winners.forEach(w => { gb[w.name] += share; });
+                });
               }
+            } else {
+              // Pay Up (default): pairwise differential
+              for (let i = 0; i < ranked.length; i++)
+                for (let j = i + 1; j < ranked.length; j++) {
+                  const diff = ranked[i].pts - ranked[j].pts;
+                  if (diff > 0) { gb[ranked[i].name] += diff * bet; gb[ranked[j].name] -= diff * bet; }
+                }
+            }
             Object.entries(gb).forEach(([n, v]) => (bank[n] += v));
             breakdown.push({
               game: decorateHeader('Stableford', agg, players),
@@ -1173,7 +1189,25 @@ export function computePayouts({
 
         if (ninesMode === 'perpoint') {
           const ranked = calcTots(ninesAll).sort((a, b) => b.pts - a.pts);
-          if (bet > 0) payRanked(ranked, bet);
+          if (bet > 0) {
+            if (payStyle === 'paywinner') {
+              // Pay Winner: each loser pays their diff from top scorer only
+              const maxPts  = ranked[0].pts;
+              const winners = ranked.filter(r => r.pts === maxPts);
+              const losers  = ranked.filter(r => r.pts < maxPts);
+              if (losers.length > 0) {
+                losers.forEach(r => {
+                  const diff = maxPts - r.pts;
+                  const share = (diff * bet) / winners.length;
+                  gb[r.name] -= diff * bet;
+                  winners.forEach(w => { gb[w.name] += share; });
+                });
+              }
+            } else {
+              // Pay Up (default): pairwise differential
+              payRanked(ranked, bet);
+            }
+          }
           Object.entries(gb).forEach(([n, v]) => (bank[n] += v));
           breakdown.push({
             game: decorateHeader('🔢 Nines', agg, players),
