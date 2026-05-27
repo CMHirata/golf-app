@@ -11,6 +11,9 @@
 //   label       — placeholder text when nothing selected ("Player 1", etc.)
 //   excludeIdxs — global indices to hide from the open panel
 //   panelLabel  — override header text inside panel (defaults to label)
+//   footerSlot  — optional render prop (close: () => void) => ReactNode
+//                 rendered below the player grid; caller receives close() to
+//                 dismiss the panel (e.g. after a Randomize action)
 
 import { useState, useEffect, useRef } from 'react';
 import { G, GA } from '../components/ui.jsx';
@@ -33,7 +36,7 @@ function NameBlock({ p, firstSize = 12, firstWeight = 700, firstColor, lastColor
   );
 }
 
-export function PlayerDropdown({ players, value, onChange, label, excludeIdxs = [], panelLabel, firstNameOnly = false }) {
+export function PlayerDropdown({ players, value, onChange, label, excludeIdxs = [], panelLabel, firstNameOnly = false, footerSlot }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -99,6 +102,11 @@ export function PlayerDropdown({ players, value, onChange, label, excludeIdxs = 
               );
             })}
           </div>
+          {footerSlot && (
+            <div style={{ marginTop:7 }}>
+              {footerSlot(() => setOpen(false))}
+            </div>
+          )}
         </div>
       )}
     </div>

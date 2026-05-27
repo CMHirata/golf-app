@@ -23,7 +23,7 @@
 //   pressable wiring (autoPress) unchanged. Scoring StyledSel unchanged.
 
 import { useState } from 'react';
-import { RED } from '../../components/ui.jsx';
+import { RED, G } from '../../components/ui.jsx';
 import { PlayerDropdown, ReadOnlyBubble, StyledSel } from '../PlayerDropdown.jsx';
 import {
   BetSection,
@@ -39,6 +39,20 @@ export function GameConfigSixes({
   activeFieldId,
 }) {
   const [rangeOpen, setRangeOpen] = useState(false);
+
+  // Fisher-Yates shuffle of player indices [0,1,2,3].
+  // Assigns Match 1 and Match 2 teams; Match 3 auto-derives as before.
+  function randomizeTeams() {
+    const idx = [0, 1, 2, 3];
+    for (let i = idx.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [idx[i], idx[j]] = [idx[j], idx[i]];
+    }
+    setSixesTeams([
+      { a: idx[0], b: idx[1] },
+      { a: idx[2], b: idx[3] },
+    ]);
+  }
 
   const entry     = gameRanges?.['Sixes'];
   const hasCustom = !!(entry && Number.isInteger(entry.startHole) && Number.isInteger(entry.endHole));
@@ -116,7 +130,21 @@ export function GameConfigSixes({
                         label="Player 1"
                         excludeIdxs={[slot1, ...extraExcludes].filter(x=>x!=null)}
                         panelLabel={`Match ${seg+1} — Player 1`}
-                        firstNameOnly/>
+                        firstNameOnly
+                        {...(seg === 0 ? {
+                          footerSlot: close => (
+                            <div
+                              onClick={() => { randomizeTeams(); close(); }}
+                              style={{ width:'100%', padding:'8px 0',
+                                       borderRadius:8, border:`1.5px solid ${G}`,
+                                       background:'#fff', color:G,
+                                       fontSize:13, fontWeight:700,
+                                       textAlign:'center', cursor:'pointer',
+                                       boxSizing:'border-box' }}>
+                              Randomize Teams
+                            </div>
+                          )
+                        } : {})}/>
                       <PlayerDropdown players={players} value={slot1}
                         onChange={vi => setSixesTeams(prev => { const n=[...prev]; n[seg]={a:slot0,b:vi}; return n; })}
                         label="Player 2"
