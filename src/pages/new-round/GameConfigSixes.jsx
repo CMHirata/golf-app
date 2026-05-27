@@ -40,23 +40,22 @@ export function GameConfigSixes({
 }) {
   const [rangeOpen, setRangeOpen] = useState(false);
 
-  // With 4 players there are exactly 3 distinct pairings:
-  //   {0+1 vs 2+3}, {0+2 vs 1+3}, {0+3 vs 1+2}
-  // Pick randomly from the 2 pairings that differ from the current Match 1,
-  // then assign the remaining pairing to Match 2.
-  // Guarantees no two matches share the same partner pair.
+  // All 3 valid pairings built from real global player indices — mirrors the
+  // usedPairs / priorTeammates logic used by manual selection.
+  // Pick randomly for Match 1; pick a different random one for Match 2.
+  // Match 3 auto-derives from the remaining pairing as usual.
   function randomizeTeams() {
+    const [p0, p1, p2, p3] = players.map((_, i) => i);
     const allPairings = [
-      [[0,1],[2,3]],
-      [[0,2],[1,3]],
-      [[0,3],[1,2]],
+      [[p0, p1], [p2, p3]],
+      [[p0, p2], [p1, p3]],
+      [[p0, p3], [p1, p2]],
     ];
-    const cur1a = sixesTeams[0]?.a, cur1b = sixesTeams[0]?.b;
-    const sameAsM1 = ([a, b]) =>
-      (a === cur1a && b === cur1b) || (a === cur1b && b === cur1a);
-    const others = allPairings.filter(([m1]) => !sameAsM1(m1));
-    const pick = others[Math.floor(Math.random() * others.length)];
-    const [m1, m2] = pick;
+    const m1idx = Math.floor(Math.random() * 3);
+    const rest = allPairings.filter((_, i) => i !== m1idx);
+    const m2idx = Math.floor(Math.random() * rest.length);
+    const [m1] = allPairings[m1idx];
+    const [m2] = rest[m2idx];
     setSixesTeams([
       { a: m1[0], b: m1[1] },
       { a: m2[0], b: m2[1] },
