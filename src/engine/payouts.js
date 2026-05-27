@@ -370,7 +370,7 @@ function decorateHeader(baseLabel, agg, players, segDecisions = null) {
 
   if (agg.endAtK || agg.groupStop) {
     const hole     = (agg.groupStop ?? agg.endAtK).hole;
-    const stopWord = agg.groupStop ? 'round ended' : 'ended';
+    const stopWord = agg.groupStop ? 'Round ended' : 'Ended';
     const segSummary = segDecisions ? summarizeSegmentDecisions(segDecisions) : null;
     if (segSummary) parts.push(`${stopWord} at hole ${hole + 1}, ${segSummary}`);
     else            parts.push(`${stopWord} at hole ${hole + 1}`);
@@ -522,10 +522,10 @@ export function computePayouts({
           // segment contributions and reverse them in gb).
           const showSegPills = !!(agg.endAtK || agg.groupStop);
           const segDecisions = showSegPills ? [
-            { key: 'front',   label: 'Front',   decision: decisionForSegment(agg, 'front'),   delta: fDelta },
-            { key: 'back',    label: 'Back',    decision: decisionForSegment(agg, 'back'),    delta: bDelta },
-            { key: 'overall', label: 'Overall', decision: decisionForSegment(agg, 'overall'), delta: oDelta },
-          ] : null;
+            ninesBetF  > 0 ? { key: 'front',   label: 'Front',   decision: decisionForSegment(agg, 'front'),   delta: fDelta } : null,
+            ninesBetB  > 0 ? { key: 'back',    label: 'Back',    decision: decisionForSegment(agg, 'back'),    delta: bDelta } : null,
+            ninesBet18 > 0 ? { key: 'overall', label: 'Overall', decision: decisionForSegment(agg, 'overall'), delta: oDelta } : null,
+          ].filter(Boolean) : null;
 
           if (segDecisions) {
             segDecisions.forEach(({ decision, delta }) => {
@@ -1126,10 +1126,10 @@ export function computePayouts({
 
           const showSegPills = !!(agg.endAtK || agg.groupStop);
           const segDecisions = showSegPills ? [
-            { key: 'front',   label: 'Front',   decision: decisionForSegment(agg, 'front'),   delta: fDelta },
-            { key: 'back',    label: 'Back',    decision: decisionForSegment(agg, 'back'),    delta: bDelta },
-            { key: 'overall', label: 'Overall', decision: decisionForSegment(agg, 'overall'), delta: oDelta },
-          ] : null;
+            ninesBetF  > 0 ? { key: 'front',   label: 'Front',   decision: decisionForSegment(agg, 'front'),   delta: fDelta } : null,
+            ninesBetB  > 0 ? { key: 'back',    label: 'Back',    decision: decisionForSegment(agg, 'back'),    delta: bDelta } : null,
+            ninesBet18 > 0 ? { key: 'overall', label: 'Overall', decision: decisionForSegment(agg, 'overall'), delta: oDelta } : null,
+          ].filter(Boolean) : null;
 
           if (segDecisions) {
             segDecisions.forEach(({ decision, delta }) => {
