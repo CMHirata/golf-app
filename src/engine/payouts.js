@@ -487,13 +487,13 @@ export function computePayouts({
           players.forEach(p => (segDelta[p.name] = 0));
           if (segBet <= 0 || !segRows.length) return segDelta;
           if (payStyle === 'payup') {
-            // Pay Up: each loser pays every player ranked above them segBet
+            // Pay Up: each loser pays every player ranked strictly above them segBet
             for (let i = 0; i < segRows.length; i++)
               for (let j = i + 1; j < segRows.length; j++) {
-                // segRows sorted ascending (lowest strokes = best = index 0)
-                // i is ranked above j (lower strokes)
-                gb[segRows[i].name] += segBet; segDelta[segRows[i].name] += segBet;
-                gb[segRows[j].name] -= segBet; segDelta[segRows[j].name] -= segBet;
+                if (segRows[i].nd < segRows[j].nd) {
+                  gb[segRows[i].name] += segBet; segDelta[segRows[i].name] += segBet;
+                  gb[segRows[j].name] -= segBet; segDelta[segRows[j].name] -= segBet;
+                }
               }
           } else {
             // Pay Winner (default): all losers pay only the top scorer
@@ -568,11 +568,13 @@ export function computePayouts({
           const rows = calcStrokePlay(spScores, players, pars, mode, cHcps, spMin, spIdxs);
           if (bet > 0 && rows.length > 0) {
             if (payStyle === 'payup') {
-              // Pay Up: each loser pays every player ranked above them bet
+              // Pay Up: each loser pays every player ranked strictly above them bet
               for (let i = 0; i < rows.length; i++)
                 for (let j = i + 1; j < rows.length; j++) {
-                  gb[rows[i].name] += bet;
-                  gb[rows[j].name] -= bet;
+                  if (rows[i].nd < rows[j].nd) {
+                    gb[rows[i].name] += bet;
+                    gb[rows[j].name] -= bet;
+                  }
                 }
             } else {
               // Pay Winner (default): all losers pay only the top scorer
