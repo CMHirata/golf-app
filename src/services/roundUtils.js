@@ -317,7 +317,7 @@ export function computePerMatchPayouts(
     const parts = [];
     if (agg.endAtK || agg.groupStop) {
       const hole     = (agg.groupStop ?? agg.endAtK).hole;
-      const stopWord = agg.groupStop ? 'round ended' : 'ended';
+      const stopWord = agg.groupStop ? 'Round ended' : 'Ended';
       const segSummary = segDecisions ? summarizeSegmentDecisions(segDecisions) : null;
       if (segSummary) parts.push(`${stopWord} at hole ${hole + 1}, ${segSummary}`);
       else            parts.push(`${stopWord} at hole ${hole + 1}`);
@@ -416,10 +416,10 @@ export function computePerMatchPayouts(
 
     const showSegPills = !!(agg.endAtK || agg.groupStop);
     const segDecisionsForHeader = showSegPills ? [
-      { label: 'Front',   decision: decisionForSegment(agg, 'front')   },
-      { label: 'Back',    decision: decisionForSegment(agg, 'back')    },
-      { label: 'Overall', decision: decisionForSegment(agg, 'overall') },
-    ] : null;
+      betF > 0 ? { label: 'Front',   decision: decisionForSegment(agg, 'front')   } : null,
+      betB > 0 ? { label: 'Back',    decision: decisionForSegment(agg, 'back')    } : null,
+      betO > 0 ? { label: 'Overall', decision: decisionForSegment(agg, 'overall') } : null,
+    ].filter(Boolean) : null;
     const decoration = buildDecoration(agg, segDecisionsForHeader);
 
     const rows = involved
