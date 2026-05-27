@@ -50,6 +50,7 @@ export {
   GameRangePopup,
   BetSection,
   PlayerSubsetDropdown,
+  PayStylePill,
 } from './GameConfigShared.jsx';
 
 import { GameConfigStrokePlay } from './GameConfigStrokePlay.jsx';

@@ -705,7 +705,7 @@ export function calcStrokePlay(scores, players, pars, mode, courseHcps, minCours
 // > eagle > birdie. autoWhen functions receive (effectiveScore, par).
 export const DOTS_DEF = [
   { id:'ace',       name:'Ace',       value:5, enabled:true,  auto:true,  multi:false, autoWhen:(g)     => g === 1 },
-  { id:'condor',    name:'Condor',    value:5, enabled:false, auto:true,  multi:false, autoWhen:(g,par) => par - g >= 4 },
+  { id:'condor',    name:'Condor',    value:5, enabled:true,  auto:true,  multi:false, autoWhen:(g,par) => par - g >= 4 },
   { id:'albatross', name:'Albatross', value:4, enabled:true,  auto:true,  multi:false, autoWhen:(g,par) => par - g === 3 },
   { id:'eagle',     name:'Eagle',     value:3, enabled:true,  auto:true,  multi:false, autoWhen:(g,par) => par - g === 2 },
   { id:'birdie',    name:'Birdie',    value:1, enabled:true,  auto:true,  multi:false, autoWhen:(g,par) => par - g === 1 },

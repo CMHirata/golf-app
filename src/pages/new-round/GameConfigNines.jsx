@@ -1,5 +1,5 @@
-// ─── GameConfigStrokePlay.jsx ─────────────────────────────────────────────────
-// Stroke Play game configuration panel.
+// ─── GameConfigNines.jsx ──────────────────────────────────────────────────────
+// Nines game configuration panel.
 // Extracted from GameConfig.jsx (13-E). Zero logic changes — verbatim body.
 //
 // MODULE BOUNDARY
@@ -11,19 +11,25 @@
 //   UI layer only. No engine calls. No state promotion. Props pass through
 //   unchanged from dispatcher → panel.
 //
-// ✅ Self-checked (13-E): All props verified against GameConfig default export
-//   signature. renderRangePill logic moved inline verbatim — no behavioral
-//   change. BetSection values/onValueChange wiring preserved exactly.
+// GOTCHAS
+//   Nines requires exactly 3 players — show error when < 3; show subset picker
+//   when > 3 with required=3 constraint (PlayerSubsetDropdown).
+//
+// ✅ Self-checked (13-E): All props verified. required=3 PlayerSubsetDropdown
+//   constraint preserved. Blitz StyledSel value/onChange wiring unchanged.
+//   GameRangePill uses gameKey='Nines' (structural minimum 6 holes per §16 G-4).
 
 import { useState } from 'react';
+import { RED } from '../../components/ui.jsx';
+import { StyledSel } from '../PlayerDropdown.jsx';
 import {
-  BetSection, PlayerSubsetDropdown,
+  BetSection, PlayerSubsetDropdown, PayStylePill,
   GameRangePill, GameRangePopup,
 } from './GameConfigShared.jsx';
 
-export function GameConfigStrokePlay({
+export function GameConfigNines({
   opts, setOpt, bet, setBet, players,
-  strokePlayPlayers, setStrokePlayPlayers,
+  ninesPlayers, setNinesPlayers,
   gameRanges = {}, setGameRange,
   roundStartHole = 0, roundEndHole = 17,
   activateSetupKp,
@@ -31,23 +37,29 @@ export function GameConfigStrokePlay({
 }) {
   const [rangeOpen, setRangeOpen] = useState(false);
 
-  const entry     = gameRanges?.['Stroke Play'];
+  const entry     = gameRanges?.['Nines'];
   const hasCustom = !!(entry && Number.isInteger(entry.startHole) && Number.isInteger(entry.endHole));
   const effStart  = hasCustom ? entry.startHole : roundStartHole;
   const effEnd    = hasCustom ? entry.endHole   : roundEndHole;
 
   return (
     <>
-      {players.length > 2 && (
+      {players.length < 3 && (
+        <div style={{ background:'#fce8e8', color:RED, borderRadius:8, padding:'8px 11px', fontSize:12, marginBottom:8 }}>
+          Nines requires at least 3 players.
+        </div>
+      )}
+      {players.length > 3 && (
         <PlayerSubsetDropdown
           players={players}
-          selectedIdxs={strokePlayPlayers}
-          onChange={setStrokePlayPlayers}
+          selectedIdxs={ninesPlayers || []}
+          onChange={setNinesPlayers}
+          required={3}
         />
       )}
       <BetSection
-        modes={[{ value:'total', label:'Total' }, { value:'segments', label:'F/B/T' }]}
-        mode={opts.betMode || 'total'}
+        modes={[{ value:'perpoint', label:'Point Spread' }, { value:'total', label:'Total' }, { value:'segments', label:'F/B/T' }]}
+        mode={opts.betMode || 'perpoint'}
         onModeChange={v => setOpt('betMode', v)}
         values={{ single: bet, front: opts.betF ?? bet, back: opts.betB ?? bet, total: opts.bet18 ?? bet }}
         onValueChange={(field, v) => {
@@ -58,8 +70,25 @@ export function GameConfigStrokePlay({
         }}
         onActivate={activateSetupKp}
         activeFieldId={activeFieldId}
-        betSectionId="strokeplay"
+        betSectionId="nines"
       />
+      {players.length > 2 && (
+        <PayStylePill
+          value={opts.payStyle || 'payup'}
+          onChange={v => setOpt('payStyle', v)}
+        />
+      )}
+      <div style={{ marginTop:8 }}>
+        <StyledSel
+          value={opts.blitz === true}
+          onChange={v => setOpt('blitz', v === true)}
+          options={[
+            { value:false, label:'No Niner' },
+            { value:true,  label:'Niner (Win by Net 2)' },
+          ]}
+          width="100%"
+        />
+      </div>
       <GameRangePill
         startHole={effStart} endHole={effEnd}
         isCustom={hasCustom}
@@ -67,20 +96,20 @@ export function GameConfigStrokePlay({
       />
       {rangeOpen && (
         <GameRangePopup
-          gameKey="Stroke Play"
-          gameLabel="Stroke Play"
+          gameKey="Nines"
+          gameLabel="Nines"
           initialStart={effStart} initialEnd={effEnd}
           roundStart={roundStartHole} roundEnd={roundEndHole}
           isCustom={hasCustom}
           onCommit={(s, e) => {
             if (s === roundStartHole && e === roundEndHole) {
-              setGameRange?.('Stroke Play', null);
+              setGameRange?.('Nines', null);
             } else {
-              setGameRange?.('Stroke Play', { startHole: s, endHole: e });
+              setGameRange?.('Nines', { startHole: s, endHole: e });
             }
             setRangeOpen(false);
           }}
-          onResetToRound={() => { setGameRange?.('Stroke Play', null); setRangeOpen(false); }}
+          onResetToRound={() => { setGameRange?.('Nines', null); setRangeOpen(false); }}
           onClose={() => setRangeOpen(false)}
           onActivate={activateSetupKp}
         activeFieldId={activeFieldId}

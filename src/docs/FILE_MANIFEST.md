@@ -47,7 +47,6 @@ src/pages/HistoryPage.jsx — round history page
 src/pages/HomePage.jsx — home page (Money List, quick actions)
 src/pages/ImportModals.jsx — shared import modal wrappers
 src/pages/ManualCourseModal.jsx — manual course entry/edit modal
-src/pages/MatchCard.jsx — match configuration card
 src/pages/NewRoundPage.jsx — round setup page (3-card layout)
 src/pages/PayoutDisplay.jsx — payout display sub-components (DotsColTable, SubHeader, PayRow, etc.)
 src/pages/PhotoImportModal.jsx — scorecard photo import (OCR / AI Assistant)
@@ -83,14 +82,15 @@ src/pages/scorecard/useDepartureResolver.js — departure chain state hook
 src/pages/scorecard/ZoomModal.jsx — score cell zoom/edit modal
 
 src/pages/tables/DotsTable.jsx — dots/junk game table (render-only)
-src/pages/tables/GameConfig.jsx — game config dispatcher
-src/pages/tables/GameConfigDots.jsx — dots config panel
-src/pages/tables/GameConfigNines.jsx — nines config panel
-src/pages/tables/GameConfigShared.jsx — shared config sub-components
-src/pages/tables/GameConfigSixes.jsx — sixes config panel
-src/pages/tables/GameConfigSkins.jsx — skins config panel
-src/pages/tables/GameConfigStableford.jsx — stableford config panel
-src/pages/tables/GameConfigStrokePlay.jsx — stroke play config panel
+src/pages/new-round/GameConfig.jsx — game config dispatcher (moved from tables/ in 15-J)
+src/pages/new-round/GameConfigDots.jsx — dots config panel (moved from tables/ in 15-J)
+src/pages/new-round/GameConfigMatch.jsx — match/nassau config panel (renamed from MatchCard.jsx, moved to new-round/ in 15-J)
+src/pages/new-round/GameConfigNines.jsx — nines config panel (moved from tables/ in 15-J)
+src/pages/new-round/GameConfigShared.jsx — shared config sub-components incl. PayStylePill (moved from tables/ in 15-J)
+src/pages/new-round/GameConfigSixes.jsx — sixes config panel (moved from tables/ in 15-J)
+src/pages/new-round/GameConfigSkins.jsx — skins config panel (moved from tables/ in 15-J)
+src/pages/new-round/GameConfigStableford.jsx — stableford config panel (moved from tables/ in 15-J)
+src/pages/new-round/GameConfigStrokePlay.jsx — stroke play config panel (moved from tables/ in 15-J)
 src/pages/tables/MatchNassauTable.jsx — match/nassau game table (render-only)
 src/pages/tables/NinesTable.jsx — nines game table (render-only)
 src/pages/tables/SixesTable.jsx — sixes game table (render-only)

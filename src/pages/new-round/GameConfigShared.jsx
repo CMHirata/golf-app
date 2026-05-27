@@ -1,11 +1,9 @@
 // ─── GameConfigShared.jsx ─────────────────────────────────────────────────────
 // Shared UI sub-components consumed by game-panel files (GameConfigSkins.jsx,
 // GameConfigSixes.jsx, etc.) and re-exported from GameConfig.jsx for callers
-// outside the tables/ directory (NewRoundPage, MatchCard).
+// outside the new-round/ directory (NewRoundPage, MatchCard).
 //
-// Extracted to break the circular-import that would result from panel files
-// importing named exports from the GameConfig.jsx dispatcher (which in turn
-// imports those same panel files). This file has no imports from GameConfig.jsx.
+// Moved from src/pages/tables/ to src/pages/new-round/ in session 15-J.
 //
 // Contents:
 //   PRESS_OPTS           — shared press-dropdown option list
@@ -13,6 +11,7 @@
 //   GameRangePill        — bottom-of-tile pill showing effective hole range
 //   GameRangePopup       — bottom-sheet popup for editing per-game range
 //   BetSection           — universal bet layout
+//   PayStylePill         — Pay Up / Pay Winner two-pill toggle (15-J)
 //   PlayerSubsetDropdown — inline dropdown subset picker with C-2 chip closed state
 //
 // Architecture: UI layer (ARCHITECTURE_FOUNDATIONS.md §2). No engine calls.
@@ -333,6 +332,40 @@ export function BetSection({
     <div style={{ width:'100%', boxSizing:'border-box', minWidth:0 }}>
       {labelRow}
       {fieldRow}
+    </div>
+  );
+}
+
+// ─── PayStylePill ─────────────────────────────────────────────────────────────
+// Two-pill toggle for Pay Up / Pay Winner settlement style.
+// Rendered by each game panel when player count > 2.
+// value: 'payup' | 'paywinner'   onChange: (value) => void
+export function PayStylePill({ value, onChange }) {
+  const pills = [
+    { v: 'payup',     label: 'Pay Up' },
+    { v: 'paywinner', label: 'Pay Winner' },
+  ];
+  return (
+    <div style={{ display:'flex', gap:5, marginTop:8 }}>
+      {pills.map(({ v, label }) => {
+        const active = value === v;
+        return (
+          <div key={v} onClick={() => onChange(v)}
+            style={{
+              flex: 1, textAlign: 'center',
+              padding: '5px 0',
+              borderRadius: 7,
+              border: `1.5px solid ${active ? G : '#ddd'}`,
+              background: active ? GA : '#fff',
+              fontSize: 12, fontWeight: active ? 700 : 500,
+              color: active ? G : '#888',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}>
+            {label}
+          </div>
+        );
+      })}
     </div>
   );
 }

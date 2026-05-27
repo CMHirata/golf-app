@@ -1,6 +1,6 @@
 // ─── GameConfigSkins.jsx ──────────────────────────────────────────────────────
 // Skins game configuration panel.
-// Extracted from GameConfig.jsx (13-E). Zero logic changes — verbatim body.
+// Extracted from GameConfig.jsx (13-E). Moved to src/pages/new-round/ in 15-J.
 //
 // MODULE BOUNDARY
 //   Receives all props from the GameConfig dispatcher. Owns local rangeOpen

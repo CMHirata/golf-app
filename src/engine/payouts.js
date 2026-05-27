@@ -458,6 +458,7 @@ export function computePayouts({
     const bet        = gameOpts['Stroke Play']?.bet  || 0;
     const mode       = gameOpts['Stroke Play']?.grossNetNOL ?? gameOpts['Stroke Play']?.scoring ?? 'net';
     const strokeMode = gameOpts['Stroke Play']?.betMode ?? gameOpts['Stroke Play']?.strokeMode ?? 'total';
+    const payStyle   = gameOpts['Stroke Play']?.payStyle ?? 'paywinner';
     const spBetF     = gameOpts['Stroke Play']?.betF  ?? bet;
     const spBetB     = gameOpts['Stroke Play']?.betB  ?? bet;
     const spBet18    = gameOpts['Stroke Play']?.bet18 ?? bet;
@@ -485,14 +486,26 @@ export function computePayouts({
           const segDelta = {};
           players.forEach(p => (segDelta[p.name] = 0));
           if (segBet <= 0 || !segRows.length) return segDelta;
-          const low = segRows[0].nd;
-          const winners = segRows.filter(r => r.nd === low);
-          const losers  = segRows.filter(r => r.nd !== low);
-          if (losers.length > 0) {
-            const pot   = losers.length * segBet;
-            const split = pot / winners.length;
-            winners.forEach(w => { gb[w.name] += split; segDelta[w.name] += split; });
-            losers.forEach(l  => { gb[l.name] -= segBet; segDelta[l.name] -= segBet; });
+          if (payStyle === 'payup') {
+            // Pay Up: each loser pays every player ranked above them segBet
+            for (let i = 0; i < segRows.length; i++)
+              for (let j = i + 1; j < segRows.length; j++) {
+                // segRows sorted ascending (lowest strokes = best = index 0)
+                // i is ranked above j (lower strokes)
+                gb[segRows[i].name] += segBet; segDelta[segRows[i].name] += segBet;
+                gb[segRows[j].name] -= segBet; segDelta[segRows[j].name] -= segBet;
+              }
+          } else {
+            // Pay Winner (default): all losers pay only the top scorer
+            const low = segRows[0].nd;
+            const winners = segRows.filter(r => r.nd === low);
+            const losers  = segRows.filter(r => r.nd !== low);
+            if (losers.length > 0) {
+              const pot   = losers.length * segBet;
+              const split = pot / winners.length;
+              winners.forEach(w => { gb[w.name] += split; segDelta[w.name] += split; });
+              losers.forEach(l  => { gb[l.name] -= segBet; segDelta[l.name] -= segBet; });
+            }
           }
           return segDelta;
         };
@@ -554,14 +567,24 @@ export function computePayouts({
         } else {
           const rows = calcStrokePlay(spScores, players, pars, mode, cHcps, spMin, spIdxs);
           if (bet > 0 && rows.length > 0) {
-            const lowNd   = rows[0].nd;
-            const winners = rows.filter(r => r.nd === lowNd);
-            const losers  = rows.filter(r => r.nd !== lowNd);
-            if (losers.length > 0) {
-              const pot   = losers.length * bet;
-              const split = pot / winners.length;
-              winners.forEach(w => { gb[w.name] += split; });
-              losers.forEach(l  => { gb[l.name] -= bet;   });
+            if (payStyle === 'payup') {
+              // Pay Up: each loser pays every player ranked above them bet
+              for (let i = 0; i < rows.length; i++)
+                for (let j = i + 1; j < rows.length; j++) {
+                  gb[rows[i].name] += bet;
+                  gb[rows[j].name] -= bet;
+                }
+            } else {
+              // Pay Winner (default): all losers pay only the top scorer
+              const lowNd   = rows[0].nd;
+              const winners = rows.filter(r => r.nd === lowNd);
+              const losers  = rows.filter(r => r.nd !== lowNd);
+              if (losers.length > 0) {
+                const pot   = losers.length * bet;
+                const split = pot / winners.length;
+                winners.forEach(w => { gb[w.name] += split; });
+                losers.forEach(l  => { gb[l.name] -= bet;   });
+              }
             }
           }
           Object.entries(gb).forEach(([n, v]) => (bank[n] += v));
@@ -832,6 +855,7 @@ export function computePayouts({
     const teamA       = gameOpts.Stableford?.teamA ?? [];
     const teamB       = gameOpts.Stableford?.teamB ?? [];
     const scoring     = gameOpts.Stableford?.scoring ?? 'cumulative';
+    const payStyle    = gameOpts.Stableford?.payStyle ?? 'paywinner';
 
     const agg = aggregateFor('Stableford');
     if (agg.abandoned) {
@@ -954,13 +978,26 @@ export function computePayouts({
             const segDelta = {};
             arr.forEach(r => (segDelta[r.name] = 0));
             if (segBet <= 0) return segDelta;
-            const maxVal  = Math.max(...arr.map(r => r[field]));
-            const winners = arr.filter(r => r[field] === maxVal);
-            const losers  = arr.filter(r => r[field] < maxVal);
-            if (losers.length === 0) return segDelta;
-            const share = (losers.length * segBet) / winners.length;
-            losers.forEach(r  => { gb[r.name] -= segBet; segDelta[r.name] -= segBet; });
-            winners.forEach(r => { gb[r.name] += share;  segDelta[r.name] += share; });
+            const sorted = [...arr].sort((a, b) => b[field] - a[field]);
+            if (payStyle === 'payup') {
+              // Pay Up: each loser pays every player ranked above them segBet
+              for (let i = 0; i < sorted.length; i++)
+                for (let j = i + 1; j < sorted.length; j++) {
+                  if (sorted[i][field] > sorted[j][field]) {
+                    gb[sorted[i].name] += segBet; segDelta[sorted[i].name] += segBet;
+                    gb[sorted[j].name] -= segBet; segDelta[sorted[j].name] -= segBet;
+                  }
+                }
+            } else {
+              // Pay Winner (default): all losers pay only the top scorer
+              const maxVal  = sorted[0][field];
+              const winners = sorted.filter(r => r[field] === maxVal);
+              const losers  = sorted.filter(r => r[field] < maxVal);
+              if (losers.length === 0) return segDelta;
+              const share = (losers.length * segBet) / winners.length;
+              losers.forEach(r  => { gb[r.name] -= segBet; segDelta[r.name] -= segBet; });
+              winners.forEach(r => { gb[r.name] += share;  segDelta[r.name] += share; });
+            }
             return segDelta;
           };
 
@@ -1025,13 +1062,24 @@ export function computePayouts({
               .map(pi => ({ name: players[pi].name, pts: stabScore(pi, stabAll) }))
               .sort((a, b) => b.pts - a.pts);
             if (bet > 0) {
-              const maxPts  = pts18[0]?.pts ?? 0;
-              const winners = pts18.filter(r => r.pts === maxPts);
-              const losers  = pts18.filter(r => r.pts < maxPts);
-              if (losers.length > 0) {
-                const share = (losers.length * bet) / winners.length;
-                losers.forEach(r  => { gb[r.name] -= bet; });
-                winners.forEach(r => { gb[r.name] += share; });
+              if (payStyle === 'payup') {
+                // Pay Up: each loser pays every player ranked above them bet
+                for (let i = 0; i < pts18.length; i++)
+                  for (let j = i + 1; j < pts18.length; j++)
+                    if (pts18[i].pts > pts18[j].pts) {
+                      gb[pts18[i].name] += bet;
+                      gb[pts18[j].name] -= bet;
+                    }
+              } else {
+                // Pay Winner (default): all losers pay only the top scorer
+                const maxPts  = pts18[0]?.pts ?? 0;
+                const winners = pts18.filter(r => r.pts === maxPts);
+                const losers  = pts18.filter(r => r.pts < maxPts);
+                if (losers.length > 0) {
+                  const share = (losers.length * bet) / winners.length;
+                  losers.forEach(r  => { gb[r.name] -= bet; });
+                  winners.forEach(r => { gb[r.name] += share; });
+                }
               }
             }
             Object.entries(gb).forEach(([n, v]) => (bank[n] += v));
@@ -1051,6 +1099,7 @@ export function computePayouts({
     const mode      = gameOpts.Nines?.grossNetNOL ?? gameOpts.Nines?.scoring ?? 'net';
     const ninesMode = gameOpts.Nines?.betMode ?? gameOpts.Nines?.ninesMode ?? 'perpoint';
     const blitz     = gameOpts.Nines?.blitz || false;
+    const payStyle  = gameOpts.Nines?.payStyle ?? 'payup';
 
     const agg = aggregateFor('Nines');
     if (agg.abandoned) {
@@ -1099,12 +1148,24 @@ export function computePayouts({
           const segDelta = {};
           ranked.forEach(r => (segDelta[r.name] = 0));
           if (segBet <= 0) return segDelta;
-          for (let i = 0; i < ranked.length; i++)
-            for (let j = i + 1; j < ranked.length; j++)
-              if (ranked[i].pts > ranked[j].pts) {
-                gb[ranked[i].name] += segBet; segDelta[ranked[i].name] += segBet;
-                gb[ranked[j].name] -= segBet; segDelta[ranked[j].name] -= segBet;
-              }
+          if (payStyle === 'paywinner') {
+            // Pay Winner: all losers pay only the top scorer
+            const maxPts  = ranked[0].pts;
+            const winners = ranked.filter(r => r.pts === maxPts);
+            const losers  = ranked.filter(r => r.pts < maxPts);
+            if (losers.length === 0) return segDelta;
+            const share = (losers.length * segBet) / winners.length;
+            losers.forEach(r  => { gb[r.name] -= segBet; segDelta[r.name] -= segBet; });
+            winners.forEach(r => { gb[r.name] += share;  segDelta[r.name] += share; });
+          } else {
+            // Pay Up (default): each loser pays every player ranked above them segBet
+            for (let i = 0; i < ranked.length; i++)
+              for (let j = i + 1; j < ranked.length; j++)
+                if (ranked[i].pts > ranked[j].pts) {
+                  gb[ranked[i].name] += segBet; segDelta[ranked[i].name] += segBet;
+                  gb[ranked[j].name] -= segBet; segDelta[ranked[j].name] -= segBet;
+                }
+          }
           return segDelta;
         };
 
@@ -1119,12 +1180,25 @@ export function computePayouts({
         } else if (ninesMode === 'total') {
           const ranked = calcTots(ninesAll).sort((a, b) => b.pts - a.pts);
           if (bet > 0) {
-            for (let i = 0; i < ranked.length; i++)
-              for (let j = i + 1; j < ranked.length; j++)
-                if (ranked[i].pts > ranked[j].pts) {
-                  gb[ranked[i].name] += bet;
-                  gb[ranked[j].name] -= bet;
-                }
+            if (payStyle === 'paywinner') {
+              // Pay Winner: all losers pay only the top scorer
+              const maxPts  = ranked[0].pts;
+              const winners = ranked.filter(r => r.pts === maxPts);
+              const losers  = ranked.filter(r => r.pts < maxPts);
+              if (losers.length > 0) {
+                const share = (losers.length * bet) / winners.length;
+                losers.forEach(r  => { gb[r.name] -= bet; });
+                winners.forEach(r => { gb[r.name] += share; });
+              }
+            } else {
+              // Pay Up (default): each loser pays every player ranked above them bet
+              for (let i = 0; i < ranked.length; i++)
+                for (let j = i + 1; j < ranked.length; j++)
+                  if (ranked[i].pts > ranked[j].pts) {
+                    gb[ranked[i].name] += bet;
+                    gb[ranked[j].name] -= bet;
+                  }
+            }
           }
           Object.entries(gb).forEach(([n, v]) => (bank[n] += v));
           breakdown.push({
@@ -1311,10 +1385,12 @@ export function computePayouts({
     if (agg.abandoned) {
       // Skip
     } else {
-      const dotsOpts = gameOpts.Dots || gameOpts.Specials || {};
-      const dolPt    = dotsOpts.bet || 0;
-      const ens      = (dots || []).filter(s => s.enabled);
-      const gb       = initBank(players);
+      const dotsOpts  = gameOpts.Dots || gameOpts.Specials || {};
+      const dolPt     = dotsOpts.bet || 0;
+      const dotsMode  = dotsOpts.dotsMode ?? 'spread';
+      const dotsPayStyle = dotsOpts.payStyle ?? 'payup';
+      const ens       = (dots || []).filter(s => s.enabled);
+      const gb        = initBank(players);
 
       const entryCount = v => typeof v === 'number' ? v : (v === true ? 1 : 0);
 
@@ -1524,19 +1600,65 @@ export function computePayouts({
           });
 
         } else {
-          // Individual mode — pairwise loop
+          // Individual mode — pairwise loop (spread) or rank-based (total)
           if (dolPt > 0) {
-            for (let ii = 0; ii < dtIdxs.length; ii++) {
-              for (let jj = ii + 1; jj < dtIdxs.length; jj++) {
-                const ei = dtIdxs[ii], ej = dtIdxs[jj];
-                if (!players[ei] || !players[ej]) continue;
-                const diff = indivDots[ei] - indivDots[ej];
-                if (diff > 0) {
-                  gb[players[ei].name] += diff * dolPt;
-                  gb[players[ej].name] -= diff * dolPt;
-                } else if (diff < 0) {
-                  gb[players[ej].name] += (-diff) * dolPt;
-                  gb[players[ei].name] -= (-diff) * dolPt;
+            if (dotsMode === 'total') {
+              // Total mode: flat bet per rank-position
+              const ranked = dtIdxs
+                .map(pi => ({ name: players[pi].name, pts: indivDots[pi] }))
+                .sort((a, b) => b.pts - a.pts);
+              if (dotsPayStyle === 'paywinner') {
+                // Pay Winner: all losers pay only the top dot-earner
+                const maxPts  = ranked[0].pts;
+                const winners = ranked.filter(r => r.pts === maxPts);
+                const losers  = ranked.filter(r => r.pts < maxPts);
+                if (losers.length > 0) {
+                  const share = (losers.length * dolPt) / winners.length;
+                  losers.forEach(r  => { gb[r.name] -= dolPt; });
+                  winners.forEach(r => { gb[r.name] += share; });
+                }
+              } else {
+                // Pay Up (default): each loser pays every player ranked above them dolPt
+                for (let i = 0; i < ranked.length; i++)
+                  for (let j = i + 1; j < ranked.length; j++)
+                    if (ranked[i].pts > ranked[j].pts) {
+                      gb[ranked[i].name] += dolPt;
+                      gb[ranked[j].name] -= dolPt;
+                    }
+              }
+            } else {
+              // Spread mode (default): pairwise differential
+              if (dotsPayStyle === 'paywinner') {
+                // Pay Winner on spread: each loser pays their diff from the top earner to the winner(s)
+                const ranked = dtIdxs
+                  .map(pi => ({ name: players[pi].name, pts: indivDots[pi] }))
+                  .sort((a, b) => b.pts - a.pts);
+                const maxPts  = ranked[0].pts;
+                const winners = ranked.filter(r => r.pts === maxPts);
+                const losers  = ranked.filter(r => r.pts < maxPts);
+                losers.forEach(r => {
+                  const diff = maxPts - r.pts;
+                  if (diff > 0) {
+                    const share = (diff * dolPt) / winners.length;
+                    gb[r.name] -= diff * dolPt;
+                    winners.forEach(w => { gb[w.name] += share; });
+                  }
+                });
+              } else {
+                // Pay Up (default): bilateral pairwise differential
+                for (let ii = 0; ii < dtIdxs.length; ii++) {
+                  for (let jj = ii + 1; jj < dtIdxs.length; jj++) {
+                    const ei = dtIdxs[ii], ej = dtIdxs[jj];
+                    if (!players[ei] || !players[ej]) continue;
+                    const diff = indivDots[ei] - indivDots[ej];
+                    if (diff > 0) {
+                      gb[players[ei].name] += diff * dolPt;
+                      gb[players[ej].name] -= diff * dolPt;
+                    } else if (diff < 0) {
+                      gb[players[ej].name] += (-diff) * dolPt;
+                      gb[players[ei].name] -= (-diff) * dolPt;
+                    }
+                  }
                 }
               }
             }

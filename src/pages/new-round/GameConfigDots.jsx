@@ -33,7 +33,7 @@ import { ls, SK } from '../../services/storage.js';
 import { Btn, Tog } from '../../components/ui.jsx';
 import { StyledSel } from '../PlayerDropdown.jsx';
 import {
-  BetSection, PlayerSubsetDropdown,
+  BetSection, PlayerSubsetDropdown, PayStylePill,
   GameRangePill, GameRangePopup,
 } from './GameConfigShared.jsx';
 
@@ -263,7 +263,7 @@ export function GameConfigDots({
         />
       )}
       <BetSection
-        modes={[{ value:'spread', label:'Spread' }, { value:'total', label:'Total' }]}
+        modes={[{ value:'spread', label:'Point Spread' }, { value:'total', label:'Total' }]}
         mode={opts.dotsMode || 'spread'}
         onModeChange={v => setOpt('dotsMode', v)}
         values={{ single: bet }}
@@ -272,6 +272,12 @@ export function GameConfigDots({
         activeFieldId={activeFieldId}
         betSectionId="dots"
       />
+      {!isTeamMode && players.length > 2 && (
+        <PayStylePill
+          value={opts.payStyle || 'payup'}
+          onChange={v => setOpt('payStyle', v)}
+        />
+      )}
       <div style={{ marginTop:10 }}>
         <div style={{ fontSize:11, fontWeight:700, color:'#666', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.04em' }}>Dots to Track</div>
         <div style={{ display:'grid', gap:'5px' }}>

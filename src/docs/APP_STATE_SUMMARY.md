@@ -33,15 +33,15 @@ Before logging a session anywhere, confirm all of the following:
 
 ## Work in Flight
 
-_None. Session 15-Bugs.2 fully complete and device-confirmed. **Next session: 15-Bugs.3 — Nines Total Bet Mode**._
+_None. Session 15-I fully complete and device-confirmed. **Next session: 15-J — Pay Up vs Pay Winner + GameConfig file move + Dots defaults**._
 
 ---
 
 ## Current State
 
-_Last refresh: May 2026 — Session 15-Bugs.2 complete and confirmed on device._
+_Last refresh: May 2026 — Session 15-I complete and confirmed on device._
 
-Session 15-Bugs.2 complete. Three fixes: (1) `ResultsPage.jsx` save-gate now exempts post-departure holes for departed players — `getMissingScoresError` accepts `earlyDepartureOpts` and skips `h > departureHole` per player. (2) `payouts.js` + `roundUtils.js` decoration string for early-end rounds: unresolved segments default to `'abandon'` instead of `'pay'`; zero-bet segments excluded from paid label; "Ended"/"Paid" capitalized; comma separator replaced with period; trailing period added. No engine logic changes, no contract amendments.
+Session 15-I complete. Nines `'total'` bet mode added: `Nines_Contract.md` v1.7 and `App_Data_Model_Contract.md` §5.5 amended to add `'total'` to the betMode value set (`'perpoint' | 'total' | 'segments'`). `payouts.js` gains a `'total'` branch using pairwise flat-bet settlement (each lower-ranked player pays each higher-ranked player `bet` — same structure as `'segments'` but over 18-hole totals with a single bet). `GameConfigNines.jsx` "Total" pill added between "Per Point" and "F/B/T". Blitz applies in all three modes.
 
 ---
 
@@ -339,7 +339,7 @@ Contract version pins below verified against each contract's actual version head
 | Document | Version | Purpose |
 |---|---|---|
 | `ARCHITECTURE_FOUNDATIONS.md` | — | Mental models, layer system, the "why" |
-| `App_Data_Model_Contract.md` | v3.8 | State schema, storage keys, mutation rules. v3.7 (13-G.2): Player schema gains `siArray`. v3.8 (15-E.1): §1 — app-preference localStorage keys (`moneyListRange`, `historyRange`) documented as direct-string exception to SK-only rule. §1.1 NEW — range pref shape. §1.2 NEW — backup payload `settings` field (carries app preferences through export/import). Course schema gains `nineComboNames?: string[]` (14-A). `website` field removed (14-B). Player library record has `starred?` and `inMoneyLists?` fields (15-E §5.3). |
+| `App_Data_Model_Contract.md` | v3.8 | State schema, storage keys, mutation rules. v3.7 (13-G.2): Player schema gains `siArray`. v3.8 (15-E.1): §1 — app-preference localStorage keys documented. §1.1 NEW — range pref shape. §1.2 NEW — backup payload `settings` field. Course schema gains `nineComboNames?: string[]` (14-A). `website` field removed (14-B). Player library record has `starred?` and `inMoneyLists?` fields (15-E §5.3). §5.5 Nines betMode updated to `'perpoint' \| 'total' \| 'segments'` (15-I). |
 | `Round_Lifecycle_Contract.md` | v2.3 | Setup→score→save flow, activeRound lifecycle. v2.3 (15-E.1): §5.2 — auto-export payload now carries top-level `settings` field; cross-references App_Data_Model §1.2. |
 | `Handicap_Contract.md` | v2.0 | USGA math, `buildPlayerSI`, engine SI source rule |
 | `Payout_Contract.md` | v1.13 | `computePayouts` entry point, `subsetMin` pattern |
@@ -347,7 +347,7 @@ Contract version pins below verified against each contract's actual version head
 | `Sixes_Contract.md` | v1.11 | Sixes team rotation, hole scoring, press system |
 | `Skins_Contract.md` | v1.8 | Skins carryover, subset behavior, departure handling |
 | `Stableford_Contract.md` | v1.7 | Stableford points table, `betMode`, team scoring |
-| `Nines_Contract.md` | v1.6 | Nines point table, `betMode`, blitz rule, 3-player constraint |
+| `Nines_Contract.md` | v1.7 | Nines point table, `betMode`, blitz rule, 3-player constraint. v1.7 (15-I): `'total'` betMode added — pairwise flat-bet over 18h totals; blitz applies in all modes. |
 | `Stroke_Play_Contract.md` | v1.7 | Stroke play `betMode`, `strokePlayPlayers` subset |
 | `Dots_Contract.md` | v2.5 | Dots/Junk: `DOTS_DEF`, specials, mutual exclusivity, team payout |
 | `PartialGameContract.md` | v2.2 AUTHORITATIVE | Partial round, predetermined ranges, early departure |

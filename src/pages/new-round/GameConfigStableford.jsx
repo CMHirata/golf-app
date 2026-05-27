@@ -26,7 +26,7 @@ import { DEFAULT_STAB } from '../../engine/handicap.js';
 import { G } from '../../components/ui.jsx';
 import { PlayerDropdown, ReadOnlyBubble, StyledSel } from '../PlayerDropdown.jsx';
 import {
-  BetSection, PlayerSubsetDropdown,
+  BetSection, PlayerSubsetDropdown, PayStylePill,
   GameRangePill, GameRangePopup,
 } from './GameConfigShared.jsx';
 
@@ -122,7 +122,7 @@ export function GameConfigStableford({
       {/* Bet section */}
       <BetSection
         modes={[
-          { value:'perpoint', label:'Per Point' },
+          { value:'perpoint', label:'Point Spread' },
           { value:'total',    label:'Total' },
           { value:'segments', label:'F/B/T' },
         ]}
@@ -139,6 +139,13 @@ export function GameConfigStableford({
         activeFieldId={activeFieldId}
         betSectionId="stableford"
       />
+      {/* Pay Style — individual mode only, 3+ players */}
+      {!isTeam && players.length > 2 && (
+        <PayStylePill
+          value={opts.payStyle || 'paywinner'}
+          onChange={v => setOpt('payStyle', v)}
+        />
+      )}
 
       {/* Points table — 8 rows including condor */}
       <div style={{ marginTop:10 }}>

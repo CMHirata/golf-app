@@ -6,14 +6,14 @@
 // H-6: StyledSel consumed from PlayerDropdown — no new picker implementations.
 // H-8: GAME_CONFIGS / betType stay in NewRoundPage; GamesCard receives only the
 //       data it needs to render (activeGames, gameOpts, etc.) — no betType in props.
-// GameTile, GameConfig, MatchCard imported from their existing locations.
+// GameTile, GameConfig, GameConfigMatch imported from their existing locations.
 // ALL_GAMES imported from engine for the sorted tile loop.
 
 import { G, GA, Card } from '../../components/ui.jsx';
 import { ALL_GAMES } from '../../engine/games.js';
 import { StyledSel } from '../PlayerDropdown.jsx';
-import GameConfig, { GameTile } from '../tables/GameConfig.jsx';
-import MatchCard from '../MatchCard.jsx';
+import GameConfig, { GameTile } from '../new-round/GameConfig.jsx';
+import GameConfigMatch from '../new-round/GameConfigMatch.jsx';
 
 // Props:
 //   Data:    activeGames, activePlayers, gameOpts, gameBets, matches, dots,
@@ -125,7 +125,7 @@ export default function GamesCard({
                     includeNOL={true}
                     showScoring={true}
                   >
-                    <MatchCard
+                    <GameConfigMatch
                       match={m}
                       players={activePlayers}
                       onChange={updated => setMatches(prev => prev.map(x => x.id === m.id ? updated : x))}
