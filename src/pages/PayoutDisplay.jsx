@@ -148,7 +148,7 @@ export function PayoutsSection({ bank, breakdown, matchPayouts }) {
     e.game !== '🥊 Match / Nassau' &&
     e.game !== 'Match / Nassau' &&
     !String(e.game || '').startsWith('🥊 Match ')
-  );
+  ).sort((a, b) => cleanGameName(a.game).localeCompare(cleanGameName(b.game)));
 
   return (
     <div>
