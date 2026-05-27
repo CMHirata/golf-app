@@ -27,8 +27,8 @@
 // NewRoundPage — no [✕] button here.
 
 import { useState } from 'react';
-import { BetSection, GameRangePill, GameRangePopup } from './new-round/GameConfig.jsx';
-import { PlayerDropdown, ReadOnlyBubble, StyledSel } from './PlayerDropdown.jsx';
+import { BetSection, GameRangePill, GameRangePopup } from './GameConfigShared.jsx';
+import { PlayerDropdown, ReadOnlyBubble, StyledSel } from '../PlayerDropdown.jsx';
 
 const TIEBREAK_OPTS = [
   { value:'none',       label:'Best Ball' },
