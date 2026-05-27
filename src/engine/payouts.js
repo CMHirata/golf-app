@@ -358,7 +358,7 @@ function summarizeSegmentDecisions(segs) {
   const abandoned  = segs.filter(s => s.decision === 'abandon');
   if (abandoned.length === 0) return null;
   if (paid.length === 0)      return 'all abandoned';
-  return `Paid ${paid.map(s => s.label).join(', ')} only`;
+  return `Paid ${paid.map(s => s.label).join(', ')} only.`;
 }
 
 // 13-C.8 — Decorate a game header with resolution outcome.
