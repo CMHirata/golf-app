@@ -326,12 +326,12 @@ function decisionForSegment(agg, segKey) {
   if (agg.groupStop) {
     const v = agg.groupStop.segments?.[segKey];
     if (v === 'abandon' || v === 'pay') return v;
-    return 'pay';
+    return 'abandon';
   }
   if (agg.endAtK) {
     const v = agg.endAtK.segments?.[segKey];
     if (v === 'abandon' || v === 'pay') return v;
-    return 'pay';
+    return 'abandon';
   }
   return 'pay';
 }
@@ -358,7 +358,7 @@ function summarizeSegmentDecisions(segs) {
   const abandoned  = segs.filter(s => s.decision === 'abandon');
   if (abandoned.length === 0) return null;
   if (paid.length === 0)      return 'all abandoned';
-  return `paid ${paid.map(s => s.label).join(', ')} only`;
+  return `Paid ${paid.map(s => s.label).join(', ')} only`;
 }
 
 // 13-C.8 — Decorate a game header with resolution outcome.
@@ -372,7 +372,7 @@ function decorateHeader(baseLabel, agg, players, segDecisions = null) {
     const hole     = (agg.groupStop ?? agg.endAtK).hole;
     const stopWord = agg.groupStop ? 'Round ended' : 'Ended';
     const segSummary = segDecisions ? summarizeSegmentDecisions(segDecisions) : null;
-    if (segSummary) parts.push(`${stopWord} at hole ${hole + 1}, ${segSummary}`);
+    if (segSummary) parts.push(`${stopWord} at hole ${hole + 1}. ${segSummary}`);
     else            parts.push(`${stopWord} at hole ${hole + 1}`);
   }
   if (Object.keys(agg.continueByPlayer).length > 0) {

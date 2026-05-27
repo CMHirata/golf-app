@@ -281,12 +281,12 @@ export function computePerMatchPayouts(
     if (agg.groupStop) {
       const v = agg.groupStop.segments?.[segKey];
       if (v === 'abandon' || v === 'pay') return v;
-      return 'pay';
+      return 'abandon';
     }
     if (agg.endAtK) {
       const v = agg.endAtK.segments?.[segKey];
       if (v === 'abandon' || v === 'pay') return v;
-      return 'pay';
+      return 'abandon';
     }
     return 'pay';
   };
@@ -309,7 +309,7 @@ export function computePerMatchPayouts(
     const abandoned = segs.filter(s => s.decision === 'abandon');
     if (abandoned.length === 0) return null;
     if (paid.length === 0)      return 'all abandoned';
-    return `paid ${paid.map(s => s.label).join(', ')} only`;
+    return `Paid ${paid.map(s => s.label).join(', ')} only`;
   };
 
   const buildDecoration = (agg, segDecisions) => {
@@ -319,7 +319,7 @@ export function computePerMatchPayouts(
       const hole     = (agg.groupStop ?? agg.endAtK).hole;
       const stopWord = agg.groupStop ? 'Round ended' : 'Ended';
       const segSummary = segDecisions ? summarizeSegmentDecisions(segDecisions) : null;
-      if (segSummary) parts.push(`${stopWord} at hole ${hole + 1}, ${segSummary}`);
+      if (segSummary) parts.push(`${stopWord} at hole ${hole + 1}. ${segSummary}`);
       else            parts.push(`${stopWord} at hole ${hole + 1}`);
     }
     if (Object.keys(agg.continueByPlayer).length > 0) {
