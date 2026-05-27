@@ -23,7 +23,7 @@
 //   pressable wiring (autoPress) unchanged. Scoring StyledSel unchanged.
 
 import { useState } from 'react';
-import { RED, G } from '../../components/ui.jsx';
+import { RED } from '../../components/ui.jsx';
 import { PlayerDropdown, ReadOnlyBubble, StyledSel } from '../PlayerDropdown.jsx';
 import {
   BetSection,
@@ -40,17 +40,26 @@ export function GameConfigSixes({
 }) {
   const [rangeOpen, setRangeOpen] = useState(false);
 
-  // Fisher-Yates shuffle of player indices [0,1,2,3].
-  // Assigns Match 1 and Match 2 teams; Match 3 auto-derives as before.
+  // With 4 players there are exactly 3 distinct pairings:
+  //   {0+1 vs 2+3}, {0+2 vs 1+3}, {0+3 vs 1+2}
+  // Pick randomly from the 2 pairings that differ from the current Match 1,
+  // then assign the remaining pairing to Match 2.
+  // Guarantees no two matches share the same partner pair.
   function randomizeTeams() {
-    const idx = [0, 1, 2, 3];
-    for (let i = idx.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [idx[i], idx[j]] = [idx[j], idx[i]];
-    }
+    const allPairings = [
+      [[0,1],[2,3]],
+      [[0,2],[1,3]],
+      [[0,3],[1,2]],
+    ];
+    const cur1a = sixesTeams[0]?.a, cur1b = sixesTeams[0]?.b;
+    const sameAsM1 = ([a, b]) =>
+      (a === cur1a && b === cur1b) || (a === cur1b && b === cur1a);
+    const others = allPairings.filter(([m1]) => !sameAsM1(m1));
+    const pick = others[Math.floor(Math.random() * others.length)];
+    const [m1, m2] = pick;
     setSixesTeams([
-      { a: idx[0], b: idx[1] },
-      { a: idx[2], b: idx[3] },
+      { a: m1[0], b: m1[1] },
+      { a: m2[0], b: m2[1] },
     ]);
   }
 
@@ -135,10 +144,10 @@ export function GameConfigSixes({
                           footerSlot: close => (
                             <div
                               onClick={() => { randomizeTeams(); close(); }}
-                              style={{ width:'100%', padding:'8px 0',
-                                       borderRadius:8, border:`1.5px solid ${G}`,
-                                       background:'#fff', color:G,
-                                       fontSize:13, fontWeight:700,
+                              style={{ width:'100%', padding:'6px 9px',
+                                       borderRadius:10, border:'1.5px solid #ddd',
+                                       background:'#f9fdf9', color:'#333',
+                                       fontSize:12, fontWeight:700,
                                        textAlign:'center', cursor:'pointer',
                                        boxSizing:'border-box' }}>
                               Randomize Teams
