@@ -106,8 +106,14 @@ export default function App() {
         return [g, o];
       })
     );
-    if (!changed) return ar;
-    return { ...ar, gameOpts: migratedOpts };
+    // 15-J: condor default changed to enabled:true — patch stored dots on load.
+    const dotsNeedsPatch = (ar.dots || []).some(d => d.id === 'condor' && d.enabled === false);
+    const migratedDots = dotsNeedsPatch
+      ? (ar.dots || []).map(d => d.id === 'condor' ? { ...d, enabled: true } : d)
+      : ar.dots;
+
+    if (!changed && !dotsNeedsPatch) return ar;
+    return { ...ar, gameOpts: migratedOpts, dots: migratedDots };
   }, []);
 
   const saveActiveRound = useCallback((data) => {
