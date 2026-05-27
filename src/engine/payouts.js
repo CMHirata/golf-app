@@ -1119,14 +1119,12 @@ export function computePayouts({
         } else if (ninesMode === 'total') {
           const ranked = calcTots(ninesAll).sort((a, b) => b.pts - a.pts);
           if (bet > 0) {
-            const maxPts  = ranked[0]?.pts ?? 0;
-            const winners = ranked.filter(r => r.pts === maxPts);
-            const losers  = ranked.filter(r => r.pts < maxPts);
-            if (losers.length > 0) {
-              const share = (losers.length * bet) / winners.length;
-              losers.forEach(r  => { gb[r.name] -= bet; });
-              winners.forEach(r => { gb[r.name] += share; });
-            }
+            for (let i = 0; i < ranked.length; i++)
+              for (let j = i + 1; j < ranked.length; j++)
+                if (ranked[i].pts > ranked[j].pts) {
+                  gb[ranked[i].name] += bet;
+                  gb[ranked[j].name] -= bet;
+                }
           }
           Object.entries(gb).forEach(([n, v]) => (bank[n] += v));
           breakdown.push({
