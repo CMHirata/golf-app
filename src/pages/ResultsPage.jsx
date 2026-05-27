@@ -105,7 +105,7 @@ function PlayerInitial({ name, index, size = 36 }) {
   );
 }
 
-function getMissingScoresError(scores, activePlayers, roundStartHole = 0, roundNumHoles = 18) {
+function getMissingScoresError(scores, activePlayers, roundStartHole = 0, roundNumHoles = 18, earlyDepartureOpts = {}) {
   const rsh = roundStartHole ?? 0;
   const reh = rsh + (roundNumHoles ?? 18) - 1;
   const numPlayers = (activePlayers || []).length;
@@ -113,6 +113,8 @@ function getMissingScoresError(scores, activePlayers, roundStartHole = 0, roundN
 
   for (let h = rsh; h <= reh; h++) {
     for (let pi = 0; pi < numPlayers; pi++) {
+      const dep = earlyDepartureOpts[pi];
+      if (dep != null && h > dep.departureHole) continue;
       const val = scores?.[h]?.[pi];
       if (val === '' || val === null || val === undefined) {
         const name = activePlayers[pi]?.name || `Player ${pi + 1}`;
@@ -194,7 +196,7 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
 
   const { activePlayers, breakdown, bank, courseHcps } = ar;
   const hasScores    = (ar.scores || []).some(r => r.some(s => s !== ''));
-  const missingError = getMissingScoresError(ar.scores, activePlayers, ar.roundStartHole ?? 0, ar.roundNumHoles ?? 18);
+  const missingError = getMissingScoresError(ar.scores, activePlayers, ar.roundStartHole ?? 0, ar.roundNumHoles ?? 18, ar.earlyDepartureOpts || {});
   const canSave      = hasScores && !missingError;
 
   const handleSave = () => {
