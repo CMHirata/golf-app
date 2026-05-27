@@ -288,9 +288,8 @@ export function ReadOnlyScorecard({ players, scores, pars, hcps, courseSnapshot,
   }
 
   // Portrait: two stacked half-tables. Each uses same COL_W/TOT_W/NAME_MIN as GameTable.
-  // R-3: Use named nine labels if available, matching ScoreGrid.jsx format.
-  const frontLabel = frontNineName ? `Front 9 (${frontNineName})` : 'Front 9';
-  const backLabel  = backNineName  ? `Back 9 (${backNineName})`   : 'Back 9';
+  const frontLabel = 'Front';
+  const backLabel  = 'Back';
 
   const renderHalf = (hs, label, parTot, isFront) => (
     <div style={{ marginBottom:10 }}>

@@ -238,7 +238,9 @@ export function RoundSummaryModal({ r, onClose }) {
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
             <div>
               <div style={{ fontWeight:800, fontSize: isLandscape ? 15 : 17, color:'#fff' }}>
-                {r.course_name || 'Unknown Course'}{ninesSuffix}
+                {(r.course_name || 'Unknown Course').split(' - ').reduce((acc, part, i) =>
+                  i === 0 ? [part] : [...acc, <br key={i}/>, part], []
+                )}{ninesSuffix}
               </div>
               <div style={{ fontSize:12, color:'#a8d8a8', marginTop:2 }}>
                 {fmtDate(r.date)} · Read-only summary
@@ -251,7 +253,10 @@ export function RoundSummaryModal({ r, onClose }) {
               ✕
             </button>
           </div>
-          {/* Player chips: Name · HI · CH · Tee — equal-width, 2-per-row (or 3 if exactly 3) */}
+        </div>
+
+        {/* Player chip band — matches share image style */}
+        <div style={{ background:'#ddeedd', padding:'8px 14px' }}>
           <PlayerChipsGrid players={players} courseHcps={courseHcps} selectedTee={r.selected_tee} />
         </div>
 
@@ -423,24 +428,27 @@ export function RoundSummaryModal({ r, onClose }) {
 }
 
 // ── PlayerChipsGrid ────────────────────────────────────────────────────────────
-// Equal-width chips. If exactly 3 players, all 3 on one row.
-// Otherwise 2-per-row. Each chip is ~half the available width.
+// Matches share image chip style: white card, first name / last name stacked,
+// HI + CH below. Grid mirrors share image: up to 4 columns.
 function PlayerChipsGrid({ players, courseHcps, selectedTee }) {
   const n = players.length;
-  // 3 players → single row of 3; all other counts → 2-per-row
-  const cols = n === 3 ? 3 : 2;
+  const cols = Math.min(n, 4);
   return (
-    <div style={{ display:'grid', gridTemplateColumns:`repeat(${cols}, 1fr)`, gap:5, marginTop:8 }}>
+    <div style={{ display:'grid', gridTemplateColumns:`repeat(${cols}, 1fr)`, gap:6 }}>
       {players.map((p, i) => {
-        const hi  = p.ghin != null && p.ghin !== '' ? p.ghin : null;
-        const ch  = courseHcps[i] != null ? courseHcps[i] : (p.courseHcpVal ?? null);
-        const tee = p.selectedTee || selectedTee || '';
+        const ch = courseHcps?.[i] != null ? courseHcps[i] : (p.courseHcpVal ?? null);
+        const nameParts = (p.name || '').trim().split(/\s+/);
+        const firstName = nameParts[0] || '';
+        const lastName  = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
         return (
-          <div key={i} style={{ background:'rgba(255,255,255,.18)', borderRadius:20, padding:'4px 10px', fontSize:11, minWidth:0 }}>
-            <span style={{ fontWeight:700, color:'#fff' }}>{p.name}</span>
-            {hi  != null && <span style={{ color:'#b8d8b8', marginLeft:4 }}>HI {hi}</span>}
-            {ch  != null && <span style={{ color:'#a8c8a8', marginLeft:4 }}>CH {ch}</span>}
-            {tee          && <span style={{ color:'#c8e8c8', marginLeft:4 }}>{tee}</span>}
+          <div key={i} style={{ background:'#fff', borderRadius:8, padding:'4px 4px', textAlign:'center', minWidth:0 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'#1a472a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{firstName}</div>
+            {lastName && <div style={{ fontSize:10, fontWeight:500, color:'#1a472a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{lastName}</div>}
+            <div style={{ fontSize:9, color:'#666', whiteSpace:'nowrap', marginTop:1 }}>
+              {p.ghin != null && p.ghin !== '' ? `HI ${p.ghin}` : ''}
+              {p.ghin != null && p.ghin !== '' && ch != null ? ' · ' : ''}
+              {ch != null ? `CH ${ch}` : ''}
+            </div>
           </div>
         );
       })}

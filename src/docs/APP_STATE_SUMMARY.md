@@ -33,15 +33,15 @@ Before logging a session anywhere, confirm all of the following:
 
 ## Work in Flight
 
-_None. Session 15-B fully complete and device-confirmed. **Next session: 15-A — Display Polish**._
+_None. Session 15-Bugs.1 fully complete and device-confirmed. **Next session: 15-A — Display Polish**._
 
 ---
 
 ## Current State
 
-_Last refresh: May 2026 — Session 15-B complete and confirmed on device._
+_Last refresh: May 2026 — Session 15-Bugs.1 complete and confirmed on device._
 
-Session 15-B complete. Game table display consistency pass across all 7 game tables and `ScoreGrid`. All per-game legend/help text (`ColNote` lines) removed from `NinesTable`, `SkinsTable`, `StablefordTable`, `StrokePlayTable`, and the dots hint line from `ScoreGrid`. Upper-right badge labels stripped to Gross/Net only across all tables; `DotsTable` gains its missing Gross/Net badge (`scoringLabel` imported, `dotsMode` variable derived from `gameOpts`). Column header standardization: "Skins"→"Total" (`SkinsTable`), "F"/"B"→"Total" (`StablefordTable`), "Status"→"Total" (`SixesTable`, `MatchNassauTable`). "Front 9"/"Back 9"→"Front"/"Back" in `MatchNassauTable`, `DotsTable`, and `ScoreGrid` half labels. Dots pivot winner highlight removed (all totals render uniformly). Dead `frontLabel`/`backLabel` prop removed from `ScoreGrid` prop interface and `ScorecardPage` call site; variables retained in `ScorecardPage` for toolbar nine-name display. No contract changes. No engine changes.
+Session 15-Bugs.1 complete. Fixed female course handicap calculation on 3-nine courses. `computePlayerCH` and the `groupCourseHandicaps` call in `NewRoundPage.jsx` were passing all of `course.nines` when summing `parsWomen` for `womensPar`, overcounting par by one full nine (e.g. 108 instead of 72 at Sahalee). Fixed by deriving `activeNines` filtered to the active front + back nines at both call sites. Two surgical `str_replace` edits to `NewRoundPage.jsx` only. No engine changes. No contract changes.
 
 ---
 
@@ -284,7 +284,6 @@ action first causes a re-render that replaces event handler references mid-gestu
 Do not refactor to use `useState` for live offset tracking — it breaks on iOS Safari.
 
 ### H-42: When adding a field to an entity record, audit the import field-list
-
 `HistoryPage.applyImport` rebuilds player records using a fixed string array of
 field names (`f = ['name', 'gender', 'ghin', 'email', 'phone', 'starred', 'inMoneyLists']`)
 at two sites: conflict-detection (line ~158) and conflict-resolution (line ~199).
@@ -293,6 +292,18 @@ sites or it will be silently dropped when the user imports a backup containing a
 conflicting record. Brand-new (non-conflicting) records are written verbatim and
 are not affected. The same audit applies if the course or round schema gains a
 similar import-time field-list filter in the future. Surfaced and fixed in 15-E.1.
+
+### H-43: Filter `course.nines` to active nines before summing `womensPar`
+`groupCourseHandicaps` and `computePlayerCH` in `NewRoundPage.jsx` accept a `nines`
+array for gender-aware par. This array MUST be filtered to only the active front and
+back nines before being passed — never pass the full `course.nines`. On 3-nine
+courses, passing all nines overcounts par by one nine (e.g. 108 instead of 72),
+producing a wildly wrong course handicap for female players. Pattern:
+```js
+const activeNines = (course?.nines || []).filter(n => n.name === frontNine || n.name === backNine);
+```
+Use `activeNines` at both the `computePlayerCH` internal par sum and the
+`groupCourseHandicaps` call in `handleStart`. Surfaced and fixed in 15-Bugs.1.
 
 ---
 
@@ -349,7 +360,7 @@ Contract version pins below verified against each contract's actual version head
 | Document | Purpose |
 |---|---|
 | `BUILD_PLAN.md` | Authoritative session history, completed sessions table, open session plan, deferred items, decision log |
-| `APP_STATE_SUMMARY.md` (this file) | Lean status, gotchas (H-1…H-42), open items, document index |
+| `APP_STATE_SUMMARY.md` (this file) | Lean status, gotchas (H-1…H-43), open items, document index |
 | `Session_Intro_Template.md` | Boilerplate prompt for starting a fresh chat session |
 | `Session_Closing_Maintenance_Template.md` | Step-by-step closing-session checklist for BP and ASS maintenance |
 | `NewRoundPage_Design_Spec.md` | 11-H output: full NewRoundPage setup UI design spec. 13-E.7: three card body sections now in `pages/new-round/NewRoundCourseCard.jsx`, `PlayersCard.jsx`, `GamesCard.jsx` |

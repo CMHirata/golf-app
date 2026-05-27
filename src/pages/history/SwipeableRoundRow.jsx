@@ -205,7 +205,7 @@ export default function SwipeableRoundRow({ r, canEdit, onEdit, onDelete, onOpen
             <div style={{ fontSize:11, color:'#888', marginTop:1 }}>{fmtDate(r.date)} · {playerNames}</div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginTop:4, alignItems:'center' }}>
               {(r.active_games || []).map(g => (
-                <span key={g} style={{ background:GA, color:G, borderRadius:20, padding:'2px 8px', fontSize:10, fontWeight:600 }}>{g}</span>
+                <span key={g} style={{ background:GA, color:G, borderRadius:20, padding:'2px 8px', fontSize:10, fontWeight:600 }}>{g === 'Match / Nassau' ? 'Match' : g}</span>
               ))}
             </div>
           </div>

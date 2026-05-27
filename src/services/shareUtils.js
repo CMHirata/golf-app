@@ -275,7 +275,7 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
 
   const ninesLabel = (() => {
     const n = (r.course_snapshot?.nines||[]).length;
-    if (n <= 1 || !frontNine) return '';
+    if (n <= 2 || !frontNine) return '';
     return `${frontNine}/${backNine||'B9'}`;
   })();
   // Landscape: inline with dot separator. Portrait: separate line, no dot.
@@ -329,7 +329,7 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
 
   let scorecardHtml;
   if (isPortrait) {
-    scorecardHtml = makeHalfTable(FRONT, parF, 'Front 9') + makeHalfTable(BACK, parB, 'Back 9');
+    scorecardHtml = makeHalfTable(FRONT, parF, 'Front') + makeHalfTable(BACK, parB, 'Back');
   } else {
     // Landscape: single 18-hole table with F9 + B9 total columns
     const hdCols18 = `<colgroup><col style="width:70px"/>${[...FRONT,...BACK].map(()=>`<col style="width:28px"/>`).join('')}<col style="width:36px"/><col style="width:36px"/></colgroup>`;
