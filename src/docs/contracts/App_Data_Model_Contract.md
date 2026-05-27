@@ -465,8 +465,9 @@ throughout the app use this order.
 {
   grossNetNOL: 'net' | 'gross' | 'netofflow',  // default 'net'
   bet:         number,                           // per-point/segments per-segment fallback
-  betMode:     'perpoint' | 'segments',         // default 'perpoint'. Canonical field as of v2.7.
+  betMode:     'perpoint' | 'total' | 'segments',  // default 'perpoint'. Canonical field as of v2.7.
                                                  // 'perpoint'  = pairwise differential over 18h (default)
+                                                 // 'total'     = highest total wins pot; tied winners split equally
                                                  // 'segments'  = F9/B9/18h settle independently (formerly 'nassau')
   // Legacy fallback: ninesMode retained for backward compat. Engine reads:
   //   betMode ?? ninesMode ?? 'perpoint'

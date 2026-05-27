@@ -1,6 +1,8 @@
 # Nines Contract
 
-_Version 1.6 — April 2026_
+_Version 1.7 — May 2026_
+_Changes in v1.7 (15-Bugs.3): §1.3 — `'total'` added to `betMode` value set (between `'perpoint'` and `'segments'`); UI label "Total". §4.1 — `'total'` semantics documented. §4.2 — `betMode` value set updated. §8.1 — schema updated. Blitz applies in all three modes._
+_Supersedes: Nines Contract v1.6._
 _Supersedes: Nines Contract v1.5._
 _Changes in v1.6 (13-E): Setup UI references updated to reflect the `GameConfig.jsx` 7-file split. The Nines config panel now lives in `GameConfigNines.jsx` (panel file). `validateGameRange`'s canonical home is `GameConfigShared.jsx`; it is re-exported from `GameConfig.jsx` so existing import paths continue to work. §9 validation-rule table location column updated to "Nines panel" (in `GameConfigNines.jsx`) — behavior unchanged. Pure reorganization — no behavior change. See `BUILD_PLAN.md` Architectural Decision #26._
 _Changes in v1.5 (13-C.3 Phase 2A):
@@ -59,6 +61,7 @@ config UI. A mismatch causes silent non-payout.
 | Variant | UI label | Stored `betMode` | Description | Configured by |
 |---|---|---|---|---|
 | `'perpoint'` | Per Point | `'perpoint'` | Points accumulate over 18 holes; each unordered player pair settles at `bet × differential`. **Default.** | `gameOpts.Nines.betMode` |
+| `'total'` | Total | `'total'` | Highest cumulative point total over the game range wins the pot; tied winners split the losers' contributions equally (same semantics as Stableford `'total'`). Blitz applies per-hole. | `gameOpts.Nines.betMode` |
 | `'segments'` | F/B/T | `'segments'` | Front 9, Back 9, and 18-hole totals evaluated as independent segments; each pair settles per-segment bet per segment won | `gameOpts.Nines.betMode` |
 
 Default variant: `'perpoint'` (unchanged).
@@ -289,6 +292,7 @@ byte-identical to pre-13-C.3 behavior.
 | `betMode` | `bet` meaning |
 |---|---|
 | `perpoint` | Dollars per point of differential between any pair of players; paid bilaterally per pair |
+| `total` | Pot game: all losers each pay `bet`; winner(s) split the total pot equally. Tied highest totals → each winner receives `(losers.length × bet) / winners.length`. All tied → no movement. |
 | `segments` | Dollars per segment won between any pair; per-segment overrides `betF`/`betB`/`bet18` take precedence; falls back to `bet` |
 
 `bet = 0` suppresses all payout computation — the game tracks points but no
@@ -302,7 +306,7 @@ Source: `gameOpts.Nines`
 |---|---|---|---|
 | `bet` | number | 0 | Dollar amount per point (perpoint) or per segment win (segments); segments per-segment fallback |
 | `grossNetNOL` | `'gross'`\|`'net'`\|`'netofflow'` | `'net'` | Scoring mode applied to all 3 players |
-| `betMode` | `'perpoint'`\|`'segments'` | `'perpoint'` | Payout variant. Canonical field as of v1.3. Engine reads: `betMode ?? ninesMode ?? 'perpoint'` |
+| `betMode` | `'perpoint'`\|`'total'`\|`'segments'` | `'perpoint'` | Payout variant. Canonical field as of v1.3. Engine reads: `betMode ?? ninesMode ?? 'perpoint'` |
 | `blitz` | boolean | `false` | Enable 9-point blitz rule |
 | `betF` | number | 0 | Segments mode: F9 bet override; falls back to `bet` if `0` or absent |
 | `betB` | number | 0 | Segments mode: B9 bet override; falls back to `bet` if `0` or absent |
@@ -614,7 +618,7 @@ No other `scorecardUtils` helpers are used.
 gameOpts.Nines = {
   bet:         number,  // default 0; segments per-segment fallback
   grossNetNOL: string,  // 'gross' | 'net' | 'netofflow'; default 'net'
-  betMode:     string,  // 'perpoint' | 'segments'; default 'perpoint'. Canonical field as of v1.3.
+  betMode:     string,  // 'perpoint' | 'total' | 'segments'; default 'perpoint'. Canonical field as of v1.3.
                         // Engine reads: betMode ?? ninesMode ?? 'perpoint'
   blitz:       boolean, // default false
   betF:        number,  // segments F9 override; 0/absent → falls back to bet

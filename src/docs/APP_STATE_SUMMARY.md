@@ -33,15 +33,15 @@ Before logging a session anywhere, confirm all of the following:
 
 ## Work in Flight
 
-_None. Session 15-Bugs.1 fully complete and device-confirmed. **Next session: 15-A — Display Polish**._
+_None. Session 15-Bugs.2 fully complete and device-confirmed. **Next session: 15-Bugs.3 — Nines Total Bet Mode**._
 
 ---
 
 ## Current State
 
-_Last refresh: May 2026 — Session 15-Bugs.1 complete and confirmed on device._
+_Last refresh: May 2026 — Session 15-Bugs.2 complete and confirmed on device._
 
-Session 15-Bugs.1 complete. Fixed female course handicap calculation on 3-nine courses. `computePlayerCH` and the `groupCourseHandicaps` call in `NewRoundPage.jsx` were passing all of `course.nines` when summing `parsWomen` for `womensPar`, overcounting par by one full nine (e.g. 108 instead of 72 at Sahalee). Fixed by deriving `activeNines` filtered to the active front + back nines at both call sites. Two surgical `str_replace` edits to `NewRoundPage.jsx` only. No engine changes. No contract changes.
+Session 15-Bugs.2 complete. Three fixes: (1) `ResultsPage.jsx` save-gate now exempts post-departure holes for departed players — `getMissingScoresError` accepts `earlyDepartureOpts` and skips `h > departureHole` per player. (2) `payouts.js` + `roundUtils.js` decoration string for early-end rounds: unresolved segments default to `'abandon'` instead of `'pay'`; zero-bet segments excluded from paid label; "Ended"/"Paid" capitalized; comma separator replaced with period; trailing period added. No engine logic changes, no contract amendments.
 
 ---
 

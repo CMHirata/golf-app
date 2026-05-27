@@ -58,7 +58,7 @@ export function GameConfigNines({
         />
       )}
       <BetSection
-        modes={[{ value:'perpoint', label:'Per Point' }, { value:'segments', label:'F/B/T' }]}
+        modes={[{ value:'perpoint', label:'Per Point' }, { value:'total', label:'Total' }, { value:'segments', label:'F/B/T' }]}
         mode={opts.betMode || 'perpoint'}
         onModeChange={v => setOpt('betMode', v)}
         values={{ single: bet, front: opts.betF ?? bet, back: opts.betB ?? bet, total: opts.bet18 ?? bet }}

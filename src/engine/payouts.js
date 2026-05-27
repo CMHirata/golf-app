@@ -1116,6 +1116,23 @@ export function computePayouts({
             game: decorateHeader('🔢 Nines', agg, players),
             rows: ranked.map(r => ({ name: r.name, detail: `${r.pts} pts`, net: gb[r.name] || 0 })),
           });
+        } else if (ninesMode === 'total') {
+          const ranked = calcTots(ninesAll).sort((a, b) => b.pts - a.pts);
+          if (bet > 0) {
+            const maxPts  = ranked[0]?.pts ?? 0;
+            const winners = ranked.filter(r => r.pts === maxPts);
+            const losers  = ranked.filter(r => r.pts < maxPts);
+            if (losers.length > 0) {
+              const share = (losers.length * bet) / winners.length;
+              losers.forEach(r  => { gb[r.name] -= bet; });
+              winners.forEach(r => { gb[r.name] += share; });
+            }
+          }
+          Object.entries(gb).forEach(([n, v]) => (bank[n] += v));
+          breakdown.push({
+            game: decorateHeader('🔢 Nines', agg, players),
+            rows: ranked.map(r => ({ name: r.name, detail: `${r.pts} pts`, net: gb[r.name] || 0 })),
+          });
         } else {
           const f9 = calcTots(ninesFront).sort((a, b) => b.pts - a.pts);
           const b9 = calcTots(ninesBack).sort((a, b) => b.pts - a.pts);
