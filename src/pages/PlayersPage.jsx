@@ -50,14 +50,6 @@ const IconPerson = () => (
   </svg>
 );
 
-const IconCamera = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-    <circle cx="12" cy="13" r="4"/>
-  </svg>
-);
-
 const IconMoney = ({ included }) => (
   <svg width="16" height="16" viewBox="0 0 24 24"
     fill="none"
@@ -87,9 +79,15 @@ function Field({ label, error, required, children }) {
 }
 
 // ─── PlayerModal ──────────────────────────────────────────────────────────────
-function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNames = [], onActivate, activeFieldId }) {
+function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNames = [],
+  onActivate, activeFieldId, playerRecord, onPhotoChange, onToggleStar }) {
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initial });
   const [errors, setErrors] = useState({});
+  const [showCrop, setShowCrop] = useState(false);
+  const [cropSrc,  setCropSrc]  = useState(null);
+  const fileRef = useRef(null);
+
+  const isEdit = title !== 'Add Player';
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })); };
 
@@ -106,6 +104,15 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     onSave({ name: form.name.trim(), gender: form.gender, ghin: form.ghin.trim(), email: form.email.trim(), phone: form.phone.trim() });
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { setCropSrc(ev.target.result); setShowCrop(true); };
+    reader.readAsDataURL(file);
   };
 
   const handleGhinFocus = onActivate ? (e) => {
@@ -152,45 +159,93 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
   );
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:1000 }}>
-      <div style={{ background:'#fff', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:520, padding:'24px 20px 32px', boxShadow:'0 -4px 24px rgba(0,0,0,0.18)', maxHeight:'92vh', overflowY:'auto' }}>
-        <div style={{ display:'flex', alignItems:'center', marginBottom:20 }}>
-          <div style={{ fontWeight:800, fontSize:17, color:G, flex:1 }}>{title}</div>
-          <button type="button" onClick={onCancel} style={{ border:'none', background:'#f0f0f0', borderRadius:'50%', width:30, height:30, fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>✕</button>
-        </div>
-        <Field label="Full Name" required error={errors.name}>
-          <Inp value={form.name} onChange={v => set('name', v)} placeholder="e.g. John Smith" />
-        </Field>
-        <Field label="Gender" required>
-          <div style={{ display:'flex', gap:10 }}>
-            {[{ v:'M', label:'Male' }, { v:'F', label:'Female' }].map(opt => (
-              <button type="button" key={opt.v} onClick={() => set('gender', opt.v)} style={{ flex:1, padding:'9px 0', borderRadius:10, border:`2px solid ${form.gender===opt.v?G:'#ddd'}`, background:form.gender===opt.v?GA:'#fff', fontWeight:700, fontSize:14, color:form.gender===opt.v?G:'#666', cursor:'pointer' }}>{opt.label}</button>
-            ))}
+    <>
+      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:1000 }}>
+        <div style={{ background:'#fff', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:520, padding:'24px 20px 32px', boxShadow:'0 -4px 24px rgba(0,0,0,0.18)', maxHeight:'92vh', overflowY:'auto' }}>
+          <div style={{ display:'flex', alignItems:'center', marginBottom:20 }}>
+            <div style={{ fontWeight:800, fontSize:17, color:G, flex:1 }}>{title}</div>
+            <button type="button" onClick={onCancel} style={{ border:'none', background:'#f0f0f0', borderRadius:'50%', width:30, height:30, fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>✕</button>
           </div>
-        </Field>
-        <Field label="Handicap Index" required error={errors.ghin}>
-          {ghinField}
-          <div style={{ fontSize:11, color:'#999', marginTop:3 }}>Enter plus handicaps as +5.4. Used to calculate course handicap.</div>
-        </Field>
-        <div style={{ borderTop:'1px solid #eee', margin:'4px 0 14px', position:'relative' }}>
-          <span style={{ position:'absolute', top:-9, left:'50%', transform:'translateX(-50%)', background:'#fff', padding:'0 8px', fontSize:11, color:'#aaa' }}>Optional — for round summary sharing</span>
-        </div>
-        <Field label="Email" error={errors.email}>
-          <Inp value={form.email} onChange={v => set('email', v)} placeholder="player@email.com" type="email" />
-        </Field>
-        <Field label="Phone">
-          <Inp value={form.phone} onChange={v => set('phone', v)} placeholder="(555) 123-4567" type="tel" />
-        </Field>
-        <div style={{ display:'flex', gap:10, marginTop:8 }}>
-          <Btn variant="outline" onClick={onCancel} style={{ flex:1 }}>Cancel</Btn>
-          <Btn onClick={handleSave} style={{ flex:2 }}>
-            {title === 'Add Player' ? '+ Add Player' : 'Save Changes'}
-          </Btn>
+
+          {/* Photo + starred row — edit mode only */}
+          {isEdit && playerRecord && (
+            <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:20, padding:'12px 14px', background:'#f8fbf8', borderRadius:12, border:'1px solid #e8f0e8' }}>
+              <PlayerAvatar player={playerRecord} size={52} starred={playerRecord.starred} />
+              <div style={{ flex:1 }}>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  style={{ fontSize:13, fontWeight:600, color:G, background:'none', border:`1.5px solid ${G}`, borderRadius:8, padding:'6px 12px', cursor:'pointer', fontFamily:'inherit', display:'block', marginBottom:6 }}
+                >
+                  {playerRecord.photo ? 'Change Photo' : 'Add Photo'}
+                </button>
+                {playerRecord.photo && (
+                  <button
+                    type="button"
+                    onClick={() => onPhotoChange(null)}
+                    style={{ fontSize:12, color:RED, background:'none', border:'none', cursor:'pointer', padding:0, fontFamily:'inherit' }}
+                  >
+                    Remove Photo
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onToggleStar}
+                title={playerRecord.starred ? 'Remove from favorites' : 'Mark as favorite'}
+                style={{ border:'none', background:'none', cursor:'pointer', padding:'4px', fontSize:26, color: playerRecord.starred ? '#fff9c4' : '#ddd', flexShrink:0, textShadow: playerRecord.starred ? '0 0 2px rgba(0,0,0,0.4)' : 'none' }}
+              >
+                ★
+              </button>
+            </div>
+          )}
+
+          <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleFileChange} />
+
+          <Field label="Full Name" required error={errors.name}>
+            <Inp value={form.name} onChange={v => set('name', v)} placeholder="e.g. John Smith" />
+          </Field>
+          <Field label="Gender" required>
+            <div style={{ display:'flex', gap:10 }}>
+              {[{ v:'M', label:'Male' }, { v:'F', label:'Female' }].map(opt => (
+                <button type="button" key={opt.v} onClick={() => set('gender', opt.v)} style={{ flex:1, padding:'9px 0', borderRadius:10, border:`2px solid ${form.gender===opt.v?G:'#ddd'}`, background:form.gender===opt.v?GA:'#fff', fontWeight:700, fontSize:14, color:form.gender===opt.v?G:'#666', cursor:'pointer' }}>{opt.label}</button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Handicap Index" required error={errors.ghin}>
+            {ghinField}
+            <div style={{ fontSize:11, color:'#999', marginTop:3 }}>Enter plus handicaps as +5.4. Used to calculate course handicap.</div>
+          </Field>
+          <div style={{ borderTop:'1px solid #eee', margin:'4px 0 14px', position:'relative' }}>
+            <span style={{ position:'absolute', top:-9, left:'50%', transform:'translateX(-50%)', background:'#fff', padding:'0 8px', fontSize:11, color:'#aaa' }}>Optional — for round summary sharing</span>
+          </div>
+          <Field label="Email" error={errors.email}>
+            <Inp value={form.email} onChange={v => set('email', v)} placeholder="player@email.com" type="email" />
+          </Field>
+          <Field label="Phone">
+            <Inp value={form.phone} onChange={v => set('phone', v)} placeholder="(555) 123-4567" type="tel" />
+          </Field>
+          <div style={{ display:'flex', gap:10, marginTop:8 }}>
+            <Btn variant="outline" onClick={onCancel} style={{ flex:1 }}>Cancel</Btn>
+            <Btn onClick={handleSave} style={{ flex:2 }}>
+              {title === 'Add Player' ? '+ Add Player' : 'Save Changes'}
+            </Btn>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Crop overlay — rendered above modal (zIndex 2000 in ImageCropOverlay) */}
+      {showCrop && cropSrc && (
+        <ImageCropOverlay
+          imageSrc={cropSrc}
+          onSave={(base64) => { onPhotoChange(base64); setShowCrop(false); setCropSrc(null); }}
+          onCancel={() => { setShowCrop(false); setCropSrc(null); }}
+        />
+      )}
+    </>
   );
 }
+
 
 // ─── MergeModal ───────────────────────────────────────────────────────────────
 function MergeModal({ dupes, onMerge, onCancel }) {
@@ -241,77 +296,8 @@ function MergeModal({ dupes, onMerge, onCancel }) {
   );
 }
 
-// ─── FullScreenPhotoOverlay ───────────────────────────────────────────────────
-// H-35: dismiss uses touchHandledRef pattern; H-39: native non-passive touchmove.
-function FullScreenPhotoOverlay({ player, onRemove, onClose }) {
-  const touchHandledRef = useRef(0);
-  const overlayRef = useRef(null);
-
-  useEffect(() => {
-    const el = overlayRef.current;
-    if (!el) return;
-    const prevent = (e) => e.preventDefault();
-    el.addEventListener('touchmove', prevent, { passive: false });
-    return () => el.removeEventListener('touchmove', prevent);
-  }, []);
-
-  const handleTouch = () => { touchHandledRef.current = Date.now(); };
-  const handleClick = () => {
-    if (Date.now() - touchHandledRef.current < 600) return;
-    onClose();
-  };
-
-  return (
-    <div
-      ref={overlayRef}
-      onTouchEnd={handleTouch}
-      onClick={handleClick}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1500,
-        background: 'rgba(0,0,0,0.92)',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-      }}
-    >
-      <img
-        src={player.photo}
-        alt={player.name}
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: '80vw', height: '80vw', maxWidth: 360, maxHeight: 360,
-          borderRadius: '50%', objectFit: 'cover',
-          border: '3px solid #fff',
-        }}
-      />
-      <div style={{ marginTop: 16, color: '#fff', fontSize: 16, fontWeight: 700 }}>{player.name}</div>
-      <div style={{ display: 'flex', gap: 12, marginTop: 20 }} onClick={e => e.stopPropagation()}>
-        <button
-          onClick={onRemove}
-          style={{
-            padding: '10px 24px', borderRadius: 12,
-            border: `2px solid ${RED}`, background: 'transparent',
-            color: RED, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-          }}
-        >
-          Remove Photo
-        </button>
-        <button
-          onClick={onClose}
-          style={{
-            padding: '10px 24px', borderRadius: 12,
-            border: '2px solid rgba(255,255,255,0.4)', background: 'transparent',
-            color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-          }}
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── PlayerRow ────────────────────────────────────────────────────────────────
-function PlayerRow({ p, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, onDelete, onAvatarTap, onCameraClick }) {
+function PlayerRow({ p, onToggleMoney, openId, setOpenId, onEdit, onDelete }) {
   const parts     = p.name?.trim().split(/\s+/) || [];
   const firstName = parts.slice(0, -1).join(' ');
   const lastName  = parts[parts.length - 1];
@@ -328,30 +314,13 @@ function PlayerRow({ p, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, 
     >
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 12px', borderRadius:13, border:'1.5px solid #e8f0e8', background:'#fff' }}>
 
-        {/* Avatar + camera badge */}
-        <div style={{ position:'relative', flexShrink:0 }}>
-          <PlayerAvatar
-            player={p}
-            size={40}
-            starred={p.starred}
-            onPress={() => p.photo ? onAvatarTap(p) : onCameraClick(p)}
-          />
-          {/* Camera badge — always visible, bottom-right of avatar */}
-          <button
-            type="button"
-            onClick={e => { e.stopPropagation(); onCameraClick(p); }}
-            title="Add / change photo"
-            style={{
-              position: 'absolute', bottom: -3, right: p.starred ? 10 : -3,
-              width: 18, height: 18, borderRadius: '50%',
-              background: '#fff', border: '1.5px solid #ddd',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', padding: 0, color: '#888',
-            }}
-          >
-            <IconCamera />
-          </button>
-        </div>
+        {/* Avatar — tap to edit */}
+        <PlayerAvatar
+          player={p}
+          size={40}
+          starred={p.starred}
+          onPress={onEdit}
+        />
 
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:14, color:'#222', lineHeight:1.3 }}>
@@ -363,16 +332,6 @@ function PlayerRow({ p, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, 
             {p.phone && <span style={{ color:'#bbb', display:'flex', alignItems:'center' }}><IconPhone /></span>}
           </div>
         </div>
-
-        {/* Star toggle */}
-        <button
-          type="button"
-          onClick={e => { e.stopPropagation(); onToggleStar(p); }}
-          title={p.starred ? 'Remove from favorites' : 'Mark as favorite'}
-          style={{ border:'none', background:'none', cursor:'pointer', padding:'4px', display:'flex', alignItems:'center', flexShrink:0, fontSize:18, color: p.starred ? '#ffd700' : '#ddd' }}
-        >
-          ★
-        </button>
 
         {/* Money list toggle */}
         <button
@@ -394,12 +353,6 @@ export default function PlayersPage() {
   const [modal,   setModal]   = useState(null);
   const [merging, setMerging] = useState(null);
   const [openRowId, setOpenRowId] = useState(null);
-
-  // Photo state
-  const [cropTarget,     setCropTarget]     = useState(null); // { player, imageSrc }
-  const [expandPlayer,   setExpandPlayer]   = useState(null); // player record
-  const fileInputRef = useRef(null);
-  const pendingPlayerRef = useRef(null);
 
   // B-11: Setup keypad
   const [setupKp, setSetupKp] = useState(null);
@@ -448,47 +401,22 @@ export default function PlayersPage() {
   const handleToggleStar  = (p) => { playerLib.update(p.id, { starred: !p.starred }); refresh(); };
   const handleToggleMoney = (p) => { playerLib.update(p.id, { inMoneyLists: !(p.inMoneyLists ?? true) }); refresh(); };
 
-  // ── Photo flow ─────────────────────────────────────────────────────────────
-  const handleCameraClick = useCallback((p) => {
-    pendingPlayerRef.current = p;
-    fileInputRef.current?.click();
-  }, []);
-
-  const handleFileChange = useCallback((e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file || !pendingPlayerRef.current) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setCropTarget({ player: pendingPlayerRef.current, imageSrc: ev.target.result });
-    };
-    reader.readAsDataURL(file);
-  }, []);
-
-  const handleCropSave = useCallback((base64) => {
-    if (!cropTarget) return;
-    playerLib.update(cropTarget.player.id, { photo: base64 });
-    setCropTarget(null);
-    refresh();
-  }, [cropTarget, refresh]);
-
-  const handlePhotoRemove = useCallback((p) => {
-    playerLib.update(p.id, { photo: undefined });
-    setExpandPlayer(null);
+  const handlePhotoChange = useCallback((playerId, base64OrNull) => {
+    if (base64OrNull) {
+      playerLib.update(playerId, { photo: base64OrNull });
+    } else {
+      playerLib.update(playerId, { photo: undefined });
+    }
+    // Refresh modal's playerRecord by updating modal state
+    setModal(prev => {
+      if (!prev || prev === 'add') return prev;
+      return { ...prev, photo: base64OrNull || undefined };
+    });
     refresh();
   }, [refresh]);
 
   return (
     <div style={{ minHeight:'100vh', background:'#eef4ee' }}>
-
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        style={{ display:'none' }}
-        onChange={handleFileChange}
-      />
 
       {/* ── Header ── */}
       <div style={{ background:G, padding:'8px 16px 7px', position:'sticky', top:0, zIndex:10, boxShadow:'0 2px 12px rgba(0,0,0,.2)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -518,7 +446,7 @@ export default function PlayersPage() {
         {/* Legend */}
         {players.length > 0 && (
           <div style={{ fontSize:11, color:'#aaa', marginBottom:8, display:'flex', alignItems:'center', gap:10, paddingLeft:2 }}>
-            <span>Tap avatar to view/change photo</span>
+            <span>Tap avatar to edit player</span>
             <span style={{ display:'flex', alignItems:'center', gap:3 }}><IconMoney included /> = on Money List</span>
           </div>
         )}
@@ -544,10 +472,7 @@ export default function PlayersPage() {
                   setOpenId={setOpenRowId}
                   onEdit={() => { setOpenRowId(null); setModal(p); }}
                   onDelete={() => handleDelete(p)}
-                  onToggleStar={handleToggleStar}
                   onToggleMoney={handleToggleMoney}
-                  onAvatarTap={setExpandPlayer}
-                  onCameraClick={handleCameraClick}
                 />
               ))}
             </div>
@@ -561,27 +486,31 @@ export default function PlayersPage() {
         )}
       </div>
 
-      {modal === 'add' && <PlayerModal title="Add Player" onSave={handleAdd} onCancel={() => { setModal(null); setSetupKp(null); }} existingNames={allNormNames} onActivate={activateSetupKp} activeFieldId={setupKp?.fieldId} />}
-      {modal && modal !== 'add' && <PlayerModal title="Edit Player" initial={modal} onSave={handleSaveEdit} onCancel={() => { setModal(null); setSetupKp(null); }} existingNames={editNormNames} onActivate={activateSetupKp} activeFieldId={setupKp?.fieldId} />}
+      {modal === 'add' && (
+        <PlayerModal
+          title="Add Player"
+          onSave={handleAdd}
+          onCancel={() => { setModal(null); setSetupKp(null); }}
+          existingNames={allNormNames}
+          onActivate={activateSetupKp}
+          activeFieldId={setupKp?.fieldId}
+        />
+      )}
+      {modal && modal !== 'add' && (
+        <PlayerModal
+          title="Edit Player"
+          initial={modal}
+          onSave={handleSaveEdit}
+          onCancel={() => { setModal(null); setSetupKp(null); }}
+          existingNames={editNormNames}
+          onActivate={activateSetupKp}
+          activeFieldId={setupKp?.fieldId}
+          playerRecord={modal}
+          onPhotoChange={(base64OrNull) => handlePhotoChange(modal.id, base64OrNull)}
+          onToggleStar={() => handleToggleStar(modal)}
+        />
+      )}
       {merging && <MergeModal dupes={merging} onMerge={handleMerge} onCancel={() => setMerging(null)} />}
-
-      {/* Full-screen photo expand */}
-      {expandPlayer && (
-        <FullScreenPhotoOverlay
-          player={expandPlayer}
-          onRemove={() => handlePhotoRemove(expandPlayer)}
-          onClose={() => setExpandPlayer(null)}
-        />
-      )}
-
-      {/* Crop overlay */}
-      {cropTarget && (
-        <ImageCropOverlay
-          imageSrc={cropTarget.imageSrc}
-          onSave={handleCropSave}
-          onCancel={() => setCropTarget(null)}
-        />
-      )}
 
       {/* B-11: Setup keypad — zIndex 1100 renders above PlayerModal (zIndex 1000) */}
       {setupKp && (

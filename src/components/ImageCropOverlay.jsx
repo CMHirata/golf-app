@@ -99,14 +99,25 @@ export default function ImageCropOverlay({ imageSrc, onSave, onCancel }) {
 
   const onTouchStart = useCallback((e) => {
     if (e.touches.length === 2) {
-      pinchRef.current = { startDist: touchDist(e.touches), startScale: scaleRef.current };
-      dragRef.current = null; // cancel pan during pinch
+      // Cancel any active pan when second finger lands
+      dragRef.current = null;
+      // Don't set pinchRef here — iOS fires two separate touchstart events
+      // (one per finger), so e.touches.length === 2 only on the second event
+      // but the first touch position captured at that point may be stale.
+      // Instead, initialise pinch lazily on the first two-finger touchmove.
+      pinchRef.current = null;
     }
   }, []);
 
   const onTouchMove = useCallback((e) => {
-    if (e.touches.length === 2 && pinchRef.current) {
+    if (e.touches.length === 2) {
       const dist = touchDist(e.touches);
+      if (!pinchRef.current) {
+        // Lazy init: first move with two fingers — set baseline here where
+        // both finger positions are guaranteed accurate.
+        pinchRef.current = { startDist: dist, startScale: scaleRef.current };
+        return;
+      }
       const newScale = clamp(
         pinchRef.current.startScale * (dist / pinchRef.current.startDist),
         0.3, 8
