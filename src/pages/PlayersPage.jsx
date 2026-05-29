@@ -50,6 +50,24 @@ const IconPerson = () => (
   </svg>
 );
 
+const IconCameraAdd = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a472a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+    <circle cx="12" cy="13" r="4"/>
+    <line x1="12" y1="11" x2="12" y2="15"/>
+    <line x1="10" y1="13" x2="14" y2="13"/>
+  </svg>
+);
+
+const IconCameraRemove = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+    <circle cx="12" cy="13" r="4"/>
+    <line x1="10" y1="11" x2="14" y2="15"/>
+    <line x1="14" y1="11" x2="10" y2="15"/>
+  </svg>
+);
+
 const IconMoney = ({ included }) => (
   <svg width="16" height="16" viewBox="0 0 24 24"
     fill="none"
@@ -167,36 +185,34 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
             <button type="button" onClick={onCancel} style={{ border:'none', background:'#f0f0f0', borderRadius:'50%', width:30, height:30, fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>✕</button>
           </div>
 
-          {/* Photo + starred row — edit mode only */}
+          {/* Photo row — edit mode only */}
           {isEdit && playerRecord && (
             <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:20, padding:'12px 14px', background:'#f8fbf8', borderRadius:12, border:'1px solid #e8f0e8' }}>
               <PlayerAvatar player={playerRecord} size={52} starred={playerRecord.starred} />
-              <div style={{ flex:1 }}>
+              <div style={{ display:'flex', gap:8, flex:1 }}>
+                {/* Add / Change Photo */}
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  style={{ fontSize:13, fontWeight:600, color:G, background:'none', border:`1.5px solid ${G}`, borderRadius:8, padding:'6px 12px', cursor:'pointer', fontFamily:'inherit', display:'block', marginBottom:6 }}
+                  title={playerRecord.photo ? 'Change photo' : 'Add photo'}
+                  style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4, padding:'8px 6px', borderRadius:10, border:`1.5px solid ${G}`, background:'#fff', cursor:'pointer', fontFamily:'inherit' }}
                 >
-                  {playerRecord.photo ? 'Change Photo' : 'Add Photo'}
+                  <IconCameraAdd />
+                  <span style={{ fontSize:11, fontWeight:600, color:G }}>{playerRecord.photo ? 'Change' : 'Add Photo'}</span>
                 </button>
+                {/* Remove Photo — only shown when photo exists */}
                 {playerRecord.photo && (
                   <button
                     type="button"
                     onClick={() => onPhotoChange(null)}
-                    style={{ fontSize:12, color:RED, background:'none', border:'none', cursor:'pointer', padding:0, fontFamily:'inherit' }}
+                    title="Remove photo"
+                    style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4, padding:'8px 6px', borderRadius:10, border:'1.5px solid #ddd', background:'#fff', cursor:'pointer', fontFamily:'inherit' }}
                   >
-                    Remove Photo
+                    <IconCameraRemove />
+                    <span style={{ fontSize:11, fontWeight:600, color:'#888' }}>Remove</span>
                   </button>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={onToggleStar}
-                title={playerRecord.starred ? 'Remove from favorites' : 'Mark as favorite'}
-                style={{ border:'none', background:'none', cursor:'pointer', padding:'4px', fontSize:26, color: playerRecord.starred ? '#fff9c4' : '#ddd', flexShrink:0, textShadow: playerRecord.starred ? '0 0 2px rgba(0,0,0,0.4)' : 'none' }}
-              >
-                ★
-              </button>
             </div>
           )}
 

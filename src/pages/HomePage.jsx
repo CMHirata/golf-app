@@ -173,31 +173,19 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
                 {moneyList.map(([name, total], i) => {
                   const positive = total > 0;
                   const negative = total < 0;
-                  const accentColor = positive ? '#27500A' : negative ? '#A32D2D' : '#bbb';
-                  // Look up player record for photo/starred
+                  const amountColor = positive ? '#27500A' : negative ? '#A32D2D' : '#bbb';
                   const playerRecord = players.find(p => p.name === name) || { name };
                   return (
                     <div key={name} style={{
-                      display: 'flex', alignItems: 'center',
-                      background: '#f8faf8', borderRadius: 9,
-                      overflow: 'hidden', border: '1px solid #e8f0e8',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      background: '#f8faf8', borderRadius: 9, padding: '6px 12px 6px 8px',
+                      border: '1px solid #e8f0e8',
                     }}>
-                      {/* Left accent bar */}
-                      <div style={{ width: 4, alignSelf: 'stretch', background: accentColor, flexShrink: 0 }} />
-                      {/* Place number */}
-                      <div style={{ width: 28, textAlign: 'center', flexShrink: 0, fontSize: 12, fontWeight: 700, color: '#999', padding: '9px 0' }}>
-                        {i + 1}
-                      </div>
-                      {/* Avatar */}
-                      <div style={{ padding: '6px 8px 6px 2px', flexShrink: 0 }}>
-                        <PlayerAvatar player={playerRecord} size={30} starred={false} />
-                      </div>
-                      {/* Name */}
-                      <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#222', padding: '9px 4px 9px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <PlayerAvatar player={playerRecord} size={30} starred={false} />
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#222', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {name}
                       </div>
-                      {/* Amount */}
-                      <div style={{ padding: '9px 12px 9px 8px', fontSize: 13, fontWeight: 700, color: accentColor, flexShrink: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: amountColor, flexShrink: 0 }}>
                         {fmtDollar(total)}
                       </div>
                     </div>
