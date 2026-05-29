@@ -73,19 +73,14 @@ export default function PlayerAvatar({ player, size = 36, starred = false, onPre
       {starred && (
         <div style={{
           position: 'absolute',
-          bottom: -1,
-          right: -1,
-          width: badgeSize,
-          height: badgeSize,
-          borderRadius: '50%',
-          background: '#ffd700',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: Math.round(badgeSize * 0.7),
+          bottom: -2,
+          right: -2,
+          fontSize: badgeSize,
           lineHeight: 1,
-          boxShadow: '0 0 0 1.5px #fff',
+          color: '#fff9c4',
           userSelect: 'none',
+          pointerEvents: 'none',
+          textShadow: '0 0 2px rgba(0,0,0,0.4)',
         }}>
           ★
         </div>
