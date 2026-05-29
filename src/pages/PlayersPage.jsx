@@ -107,17 +107,20 @@ function FullScreenPhotoOverlay({ player, onChangeTap, onRemove, onClose }) {
       }} />
       <div style={{ marginTop: 14, color: '#fff', fontSize: 16, fontWeight: 700 }}>{player.name}</div>
       <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-        <button onClick={onChangeTap} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'10px 20px', borderRadius:12, border:'1.5px solid rgba(255,255,255,0.5)', background:'transparent', cursor:'pointer', fontFamily:'inherit' }}>
-          <IconCameraAdd color="#fff" />
-          <span style={{ fontSize:12, fontWeight:600, color:'#fff' }}>Change</span>
-        </button>
-        <button onClick={onRemove} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'10px 20px', borderRadius:12, border:'1.5px solid rgba(255,255,255,0.3)', background:'transparent', cursor:'pointer', fontFamily:'inherit' }}>
-          <IconCameraRemove color="rgba(255,255,255,0.6)" />
-          <span style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.6)' }}>Remove</span>
-        </button>
-        <button onClick={onClose} style={{ padding:'10px 20px', borderRadius:12, border:'1.5px solid rgba(255,255,255,0.3)', background:'transparent', color:'rgba(255,255,255,0.6)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-          Close
-        </button>
+        {[
+          { label: 'Change', action: onChangeTap },
+          { label: 'Delete', action: onRemove },
+          { label: 'Cancel', action: onClose },
+        ].map(({ label, action }) => (
+          <button key={label} onClick={action} style={{
+            flex: 1, padding: '10px 0', borderRadius: 10,
+            border: '1.5px solid rgba(255,255,255,0.4)',
+            background: 'transparent', color: '#fff',
+            fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            {label}
+          </button>
+        ))}
       </div>
     </div>
   );
