@@ -291,14 +291,21 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     const nameParts = (p.name||'').trim().split(/\s+/);
     const firstName = nameParts[0] || '';
     const lastName  = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+    const ini = nameParts.length >= 2
+      ? (nameParts[0][0] + nameParts[nameParts.length-1][0]).toUpperCase()
+      : (nameParts[0]?.[0] || '?').toUpperCase();
+    const circleHtml = (size) =>
+      `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#1a472a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.38)}px;font-weight:700;margin:0 auto 3px;flex-shrink:0;">${xe(ini)}</div>`;
     if (isPortrait) {
       return `<div style="background:#fff;border-radius:8px;padding:4px 4px;text-align:center;min-width:0;">
+        ${circleHtml(28)}
         <div style="font-size:10px;font-weight:700;color:#1a472a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${xe(firstName)}</div>
         ${lastName ? `<div style="font-size:9px;font-weight:500;color:#1a472a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${xe(lastName)}</div>` : ''}
         <div style="font-size:8px;color:#666;white-space:nowrap;margin-top:1px;">HI ${xe(p.ghin||'—')} · CH ${xe(ch)}</div>
       </div>`;
     }
     return `<div style="background:#fff;border-radius:8px;padding:5px 8px;text-align:center;">
+      ${circleHtml(32)}
       <div style="font-size:12px;font-weight:700;color:#1a472a;">${xe(p.name)}</div>
       <div style="font-size:10px;color:#666;">HI ${xe(p.ghin||'—')} · CH ${xe(ch)}</div>
     </div>`;

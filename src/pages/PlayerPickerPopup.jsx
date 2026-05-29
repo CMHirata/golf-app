@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Btn, G, GA } from '../components/ui.jsx';
+import PlayerAvatar from '../components/PlayerAvatar.jsx';
 
 export default function PlayerPickerPopup({ allPlayers, selectedIds, onConfirm, onClose }) {
   const [ids, setIds] = useState([...selectedIds]);
@@ -34,16 +35,14 @@ export default function PlayerPickerPopup({ allPlayers, selectedIds, onConfirm, 
               return (
                 <div key={p.id} style={{ display:'flex',alignItems:'center',gap:8,padding:'9px 12px',borderRadius:12,border:`1.5px solid ${sel?G:'#eee'}`,background:sel?GA:'#fff',cursor:'pointer' }}
                   onClick={()=>toggle(p.id)}>
-                  <div style={{ width:32,height:32,flexShrink:0,position:'relative' }}>
-                    <svg width="32" height="32" viewBox="0 0 32 32" style={{ position:'absolute',inset:0 }}>
-                      <circle cx="16" cy="16" r="16" fill={sel ? G : GA}/>
-                      {!sel && p.starred && (
-                        <polygon points="16,5 18.9,12.3 26.7,12.9 21,17.8 22.9,25.4 16,21.3 9.1,25.4 11,17.8 5.3,12.9 13.1,12.3" fill="#fff9e6" opacity="0.95"/>
-                      )}
-                      <text x="16" y="21" textAnchor="middle" fontSize="13" fontWeight="500" fill={sel ? '#fff' : '#27500A'} fontFamily="inherit">
-                        {sel ? pos+1 : p.name[0]?.toUpperCase()}
-                      </text>
-                    </svg>
+                  <div style={{ width:32, height:32, flexShrink:0, position:'relative' }}>
+                    {sel ? (
+                      <div style={{ width:32, height:32, borderRadius:'50%', background:G, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color:'#fff', fontFamily:'inherit' }}>
+                        {pos + 1}
+                      </div>
+                    ) : (
+                      <PlayerAvatar player={p} size={32} starred={p.starred} />
+                    )}
                   </div>
                   <div style={{ flex:1 }}>
                     <div style={{ fontWeight:600,fontSize:14,color:sel?G:'#333' }}>{p.name}</div>

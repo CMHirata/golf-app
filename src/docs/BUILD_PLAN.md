@@ -1,6 +1,6 @@
 # The Card — Master Build Plan
 
-_Last updated: May 2026 — 15-I complete and confirmed on device. Nines 'total' bet mode added. Next session: **15-J — Pay Up vs Pay Winner + GameConfig file move + Dots defaults**._
+_Last updated: May 2026 — 15-K complete and confirmed on device. Randomize Teams button added to Sixes config. Next session: **16-A — Wolf**._
 _Maintained in this chat as the authoritative sequence and history of all build sessions._
 _The APP_STATE_SUMMARY.md in the project knowledge base is the authoritative record of_
 _what is implemented. This file is the authoritative record of what was planned, why,_
@@ -28,7 +28,7 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 - **14-B** scope significantly exceeded plan — originally "CourseImportReviewModal new component"; became full ManualCourseModal redesign + import flow wiring + extensive iOS keypad debugging.
 - **14-C.bugs** (Open Session Plan designation) → corrected to **14-bugs.1** at session start per owner. Non-sequential designation; logged here for traceability.
 - **15-E** scope significantly exceeded original plan — original spec covered swipe-to-delete, star toggle, money toggle on Players page only. Expanded to include: shared `SwipeableRow` component (refactoring CoursesPage swipe at the same time), Money List moved from History to Home page, YTD Leader removed, cumulative winnings removed from History page, starred avatar treatment in PlayerPickerPopup, `new-round/CourseCard.jsx` renamed to `NewRoundCourseCard.jsx` to resolve naming collision.
-- **15-C** scope significantly exceeded original plan — original spec was "pre-extraction commented blocks cleanup"; became full Payouts page redesign (rename, chips, settle up tile, game cards).
+- **15-J** scope significantly exceeded original plan — original spec was payStyle toggle + file move + condor default. Expanded to include: `dotsMode` contract gap discovered and filled, Dots `'total'` engine branch implemented, `MatchCard.jsx` renamed `GameConfigMatch.jsx`, multiple engine bugs found and fixed during testing (Stroke Play Pay Up tie check; Stableford and Nines perpoint missing payStyle fork), payout sort by game added.
 - **15-Bugs.1** non-sequential designation per owner. Bug-fix session for female course handicap on 3-nine courses.
 - **15-Bugs.3** → corrected to **15-I** at owner direction. Non-sequential designation; logged here for traceability. Nines 'total' bet mode: contract amendment + engine + config UI. Payout logic corrected mid-session from pool to pairwise flat-bet.
 
@@ -101,7 +101,10 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 | 15-Bugs.1 | Female course handicap fix on 3-nine courses. `groupCourseHandicaps` and `computePlayerCH` in `NewRoundPage.jsx` were summing `parsWomen` across all nines in `course.nines` instead of only the two active nines, producing a wildly wrong `womensPar` (e.g. 108 instead of 72 at Sahalee). Fixed by filtering to `activeNines` (front + back only) at both call sites. Two surgical `str_replace` edits to `NewRoundPage.jsx` only. H-43 added. | — | Confirmed on device |
 | 15-Bugs.2 | Save-gate exempts post-departure holes for departed players (`ResultsPage.jsx`). Nines Nassau decoration string fixes: unresolved segments default to `'abandon'`, zero-bet segments excluded from label, capitalize "Ended"/"Paid", period separator, trailing period. Changes to `payouts.js`, `roundUtils.js`, `ResultsPage.jsx`. | — | Confirmed on device |
 | 15-I | Nines `'total'` bet mode. `Nines_Contract.md` v1.7 + `App_Data_Model_Contract.md` §5.5 amended. `payouts.js` new `'total'` branch (pairwise flat-bet: each lower-ranked player pays each higher-ranked player `bet`). `GameConfigNines.jsx` "Total" pill added between "Per Point" and "F/B/T". Initial pool implementation corrected mid-session to pairwise flat-bet to match owner-specified semantics. | — | Confirmed on device |
+| 15-J | Pay Up / Pay Winner toggle + Point Spread rename + GameConfig file move + Dots total mode + condor default fix + payout sort. `payStyle: 'payup' | 'paywinner'` added to Nines (default payup), Stableford (default paywinner), Stroke Play (default paywinner), Dots (default payup). `dotsMode: 'spread' | 'total'` contracted and Dots `'total'` engine branch implemented. `'perpoint'`/`'spread'` UI labels renamed "Point Spread" for consistency. `PayStylePill` shared component added to `GameConfigShared.jsx`. All `GameConfig*.jsx` files moved from `src/pages/tables/` to `src/pages/new-round/`. `MatchCard.jsx` renamed to `GameConfigMatch.jsx` and moved to `new-round/`. Condor default changed to `enabled:true` in `DOTS_DEF`; runtime migration shim in `App.jsx` `getActiveRound`. By Game payout sections sorted alphabetically in `PayoutDisplay.jsx`. Five contracts amended: Nines v1.8, Stableford v1.8, Stroke Play v1.8, Dots v2.6, App_Data_Model v3.9. Multiple engine bugs found and fixed during testing (Stroke Play Pay Up tie check; Stableford and Nines perpoint branches missing payStyle fork). Scope significantly exceeded plan. | Nines v1.8, Stableford v1.8, Stroke Play v1.8, Dots v2.6, App_Data_Model v3.9 | Confirmed on device |
+| 15-H | Export filename fix. `makeExportFilename()` in `exportUtils.js`: time separator changed from `-` to `.` (e.g. `The Card 2026-05-27 14.35.json`). Colon rejected — iOS converts `:` to `_` in filenames. Single `str_replace` edit. | — | Confirmed on device |
 | 15-A | Display polish pass. Player chips moved out of dark green header into `#ddeedd` band beneath it, matching share image style (white card chips, first/last name stacked, HI/CH). Course name smart line-break on ` - ` in `RoundSummaryModal` header. `ReadOnlyScorecard` half-row labels simplified to `'Front'`/`'Back'` (nine names removed). `shareUtils` half-table labels same; `ninesLabel` gated to 27-hole courses only (was firing for all multi-nine courses). History game pills: `'Match / Nassau'` displays as `'Match'` in `SwipeableRoundRow`. No contract changes. | — | Confirmed on device |
+| 15-K | Randomize Teams button in Sixes config. `footerSlot` render prop added to `PlayerDropdown` — optional `(close: () => void) => ReactNode`; rendered below player grid in open panel; absent on all other call sites. Button wired to Match 1 / Player 1 dropdown only (`seg === 0` spread). Randomize logic enumerates all 3 valid pairings from real player indices, picks one for Match 1, picks a different one for Match 2; Match 3 auto-derives as before. Button style matches unselected player cell (`#ddd` border, `#f9fdf9` bg, `#333` text, `borderRadius:10`). Two files changed: `PlayerDropdown.jsx`, `GameConfigSixes.jsx`. No contract changes. | — | Confirmed on device |
 
 ---
 
@@ -216,7 +219,7 @@ let markdown = (data.pages || []).map(p => {
 
 ## Open Session Plan
 
-> **Next session: 15-J — Pay Up vs Pay Winner + GameConfig file move + Dots defaults.** 15-I complete. Sprint 15 remaining sessions may be tackled in any order. 14-A.2 (Mistral OCR) remains gated on real WiFi.
+> **Next session: 16-A — Wolf.** Sprint 15 fully closed. Sprint 16 is next. All Sprint 16 sessions are contract-first.
 
 ---
 
@@ -242,21 +245,7 @@ _14-A complete. 14-B complete. 14-bugs.1 complete. AI Assistant + Review & Save 
 
 ### Sprint 15 — Display Polish + Features
 
-_15-A, 15-B, 15-Bugs.1, 15-C, 15-E, 15-E.1, 15-F, 15-G, 15-I complete and confirmed on device — see Completed Sessions table above. Next session: 15-J._
-
-**15-J: Pay Up vs Pay Winner + GameConfig file move + Dots defaults**
-- Add Pay Up / Pay Winner toggle to Dots, Nines, Stableford, Stroke Play game config tiles — visible only when `betMode === 'total'` or `'segments'` and player count > 2. Toggle position: bottom of tile, left of the Holes pill.
-- New `payStyle: 'payup' | 'paywinner'` field in relevant `gameOpts` objects. Contract amendments required for Dots_Contract, Nines_Contract, Stableford_Contract, Stroke_Play_Contract, and App_Data_Model_Contract before any code.
-- Move all `GameConfig*.jsx` files from `src/pages/tables/` to `src/pages/new-round/`. Update all import sites.
-- Dots: all dot toggles default to `true` (currently `condor` defaults to `false`).
-- Priority: Medium
-
-**15-D: Save Game Settings as Defaults**
-- Save last-used game configuration as default for next round.
-- Priority: Medium
-
-**15-H: Verify iCloud Export Naming**
-- Priority: Low
+_15-A, 15-B, 15-Bugs.1, 15-C, 15-E, 15-E.1, 15-F, 15-G, 15-H, 15-I, 15-J, 15-K complete and confirmed on device — see Completed Sessions table above. 15-D deferred (owner unsure about implementing). Next session: 16-A._
 
 ---
 
@@ -316,8 +305,19 @@ _None._
 | Gemini 2.0 Flash for scorecard photo OCR | Sprint 14 planning | Tied with GPT-4o at 100% accuracy on app fields; chosen on cost (~25× cheaper) and latency. |
 | API key storage = Option B (localStorage prompt) for build phase | Sprint 14 planning | Zero infrastructure; key never in bundle. Option C proxy deferred to production hardening. |
 | On-device OCR (Tesseract.js) rejected | Sprint 14 planning | Not an offline use case; character recognizer not a table parser; WASM too heavy. |
-| Engine signature changes require auditing every call site by function name | 13-G.2 | Always grep by function name across `*.js`/`*.jsx`. Captured as H-37. |
+| `PayStylePill` is a shared component in `GameConfigShared.jsx` | 15-J | Identical two-pill toggle across all four game panels — one component, not four copies |
+| All `GameConfig*.jsx` files live in `src/pages/new-round/` | 15-J | Moved from `src/pages/tables/` — config panels belong with new-round setup, not with display tables |
+| `MatchCard.jsx` renamed `GameConfigMatch.jsx` and moved to `new-round/` | 15-J | Consistent naming with all other GameConfig panel files |
+| Pay Up / Pay Winner semantics: flat `bet` per rank-position pair (not per-pot) | 15-J | Pay Up: j pays i `bet` for every pair where i ranked above j. Pay Winner: all losers pay only top scorer `bet`. Applies uniformly across flat-bet and differential modes. |
 | iOS double-cell-advance fix: `touchHandledRef` timestamp guard | 13-G | React 18 passive touch listeners; synthetic click suppressed within 600ms of touchend. |
+| `footerSlot` on `PlayerDropdown` is a render prop `(close) => ReactNode` | 15-K | Caller receives `close()` directly; no companion prop needed. Cleaner than a static ReactNode + separate `onFooterAction` callback. |
+
+---
+
+## Key Architectural Decisions
+
+| Decision | Session | Notes |
+|---|---|---|
 | Cloudflare Pages + Workers for scorecard parsing | 14-A | Netlify 10s timeout too short for multi-pass OCR. Cloudflare Worker has no hard wall-clock timeout. |
 | Transcription-first CSV for Gemini OCR | 14-A | Stop asking model to structure; ask it to transcribe. JS does all structuring. Key breakthrough. |
 | AI Assistant import path as primary reliable path | 14-A | User copies prompt → Gemini chat → paste JSON back. Works flawlessly. Primary until Auto Scan perfected. |
@@ -344,7 +344,7 @@ _None._
 | Payouts page: greedy debt-simplification for Settle Up tile | 15-C | `buildSettlements(bank)` sorts debtors/creditors by magnitude, matches greedily for fewest transactions. |
 | "Total — All Games" section removed from Payouts page | 15-C | Redundant with player chips which already show each player's net. |
 | ScoreGrid half labels simplified to Front/Back | 15-B | `frontLabel`/`backLabel` props removed from `ScoreGrid` — dead after label simplification. Variables retained in `ScorecardPage` for toolbar nine-name display. |
-| Female CH on 3-nine courses: filter to active nines before summing womensPar | 15-Bugs.1 | `course.nines` must be filtered to the active front + back nines before summing parsWomen for the womensPar used in courseHandicap(). Summing all nines produces wildly wrong par (e.g. 108 instead of 72 at Sahalee). Fixed at both call sites in `NewRoundPage.jsx`. Captured as H-43. |
+| Female CH on 3-nine courses: filter to active nines before summing womensPar | 15-Bugs.1 | `course.nines` must be filtered to the active front and back nines before summing parsWomen for the womensPar used in courseHandicap(). Summing all nines produces wildly wrong par (e.g. 108 instead of 72 at Sahalee). Fixed at both call sites in `NewRoundPage.jsx`. Captured as H-43. |
 
 ---
 
@@ -352,6 +352,7 @@ _None._
 
 | Item | Priority | Reason deferred |
 |---|---|---|
+| 15-D: Save Game Settings as Defaults | Deferred | Owner unsure about implementing |
 | 11-B: Shared GameTable shell | Low | Pattern already working; documentation value only |
 | Dark mode | Deferred | Token structure ready in `ui.jsx`; low demand |
 | Undo delete toast | Deferred | Low impact |

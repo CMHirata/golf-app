@@ -12,6 +12,7 @@ import {
   loadRangePref, saveRangePref, filterByRange, rangeLabel,
   RangePickerRow, ML_KEY,
 } from '../components/RangePicker.jsx';
+import PlayerAvatar from '../components/PlayerAvatar.jsx';
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
 const IconPlus = () => (
@@ -173,6 +174,8 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
                   const positive = total > 0;
                   const negative = total < 0;
                   const accentColor = positive ? '#27500A' : negative ? '#A32D2D' : '#bbb';
+                  // Look up player record for photo/starred
+                  const playerRecord = players.find(p => p.name === name) || { name };
                   return (
                     <div key={name} style={{
                       display: 'flex', alignItems: 'center',
@@ -185,8 +188,12 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
                       <div style={{ width: 28, textAlign: 'center', flexShrink: 0, fontSize: 12, fontWeight: 700, color: '#999', padding: '9px 0' }}>
                         {i + 1}
                       </div>
+                      {/* Avatar */}
+                      <div style={{ padding: '6px 8px 6px 2px', flexShrink: 0 }}>
+                        <PlayerAvatar player={playerRecord} size={30} starred={false} />
+                      </div>
                       {/* Name */}
-                      <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#222', padding: '9px 4px 9px 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#222', padding: '9px 4px 9px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {name}
                       </div>
                       {/* Amount */}

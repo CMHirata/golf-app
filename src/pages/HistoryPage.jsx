@@ -158,7 +158,7 @@ export default function HistoryPage({ onLoadRound }) {
       const ep = ls.get(SK.players) || [];
       parsed.players.forEach(inc => {
         const im = ep.find(e => e.id === inc.id);
-        if (im) { const f=['name','gender','ghin','email','phone','starred','inMoneyLists']; if (f.some(k=>(im[k]||'')!==(inc[k]||''))) conflicts.push({ type:'player', existing:im, incoming:inc }); return; }
+        if (im) { const f=['name','gender','ghin','email','phone','starred','inMoneyLists','photo']; if (f.some(k=>(im[k]||'')!==(inc[k]||''))) conflicts.push({ type:'player', existing:im, incoming:inc }); return; }
         const nm = ep.find(e => likelySamePlayer(e.name, inc.name));
         if (nm) conflicts.push({ type:'player', existing:nm, incoming:inc });
       });
@@ -199,7 +199,7 @@ export default function HistoryPage({ onLoadRound }) {
       });
     }
     if (sel.players && parsed.players?.length) {
-      const ep=ls.get(SK.players)||[];const f=['name','gender','ghin','email','phone','starred','inMoneyLists'];
+      const ep=ls.get(SK.players)||[];const f=['name','gender','ghin','email','phone','starred','inMoneyLists','photo'];
       parsed.players.forEach(inc=>{
         const im=ep.find(e=>e.id===inc.id);
         if(im){if(!f.some(k=>(im[k]||'')!==(inc[k]||''))){pr[inc.id]='skip';return;}const dec=decisions[ci++]||{action:'keep'};pr[inc.id]=dec.action==='replace'?inc:'skip';return;}

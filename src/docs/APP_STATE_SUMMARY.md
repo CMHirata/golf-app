@@ -33,15 +33,15 @@ Before logging a session anywhere, confirm all of the following:
 
 ## Work in Flight
 
-_None. Session 15-I fully complete and device-confirmed. **Next session: 15-J — Pay Up vs Pay Winner + GameConfig file move + Dots defaults**._
+_None. Session 15-K fully complete and device-confirmed. **Next session: 16-A — Wolf**._
 
 ---
 
 ## Current State
 
-_Last refresh: May 2026 — Session 15-I complete and confirmed on device._
+_Last refresh: May 2026 — Session 15-K complete and confirmed on device._
 
-Session 15-I complete. Nines `'total'` bet mode added: `Nines_Contract.md` v1.7 and `App_Data_Model_Contract.md` §5.5 amended to add `'total'` to the betMode value set (`'perpoint' | 'total' | 'segments'`). `payouts.js` gains a `'total'` branch using pairwise flat-bet settlement (each lower-ranked player pays each higher-ranked player `bet` — same structure as `'segments'` but over 18-hole totals with a single bet). `GameConfigNines.jsx` "Total" pill added between "Per Point" and "F/B/T". Blitz applies in all three modes.
+Session 15-K complete. `footerSlot` render prop added to `PlayerDropdown` — optional `(close: () => void) => ReactNode` rendered below the player grid in the open panel. `GameConfigSixes.jsx` passes a Randomize Teams button as `footerSlot` to the Match 1 / Player 1 dropdown only. Randomize logic enumerates all 3 valid pairings from real player indices and picks two distinct ones; Match 3 auto-derives as before. Sprint 15 fully closed.
 
 ---
 
@@ -158,7 +158,7 @@ component state.
 
 ### H-21: `PayoutDisplay.jsx` owns all payout display sub-components
 `DotsColTable`, `SubHeader`, `PayRow`, `splitGameHeader`, `fmtMoney`, `PayoutsSection`
-are defined only in `PayoutDisplay.jsx`. Do not re-inline these sub-components in
+are defined only in `pages/PayoutDisplay.jsx`. Do not re-inline these sub-components in
 `ResultsPage.jsx` or `RoundSummaryModal.jsx`. Pre-extraction commented blocks in
 those files were confirmed unneeded in 15-C and may be removed.
 
@@ -305,6 +305,18 @@ const activeNines = (course?.nines || []).filter(n => n.name === frontNine || n.
 Use `activeNines` at both the `computePlayerCH` internal par sum and the
 `groupCourseHandicaps` call in `handleStart`. Surfaced and fixed in 15-Bugs.1.
 
+### H-44: `payStyle` fork must be added to ALL betMode branches, including `'perpoint'`
+When adding a new payout option (like `payStyle`) to a game engine block, every `betMode` branch needs the fork — not just `'total'` and `'segments'`. In 15-J, the `'perpoint'` branches in both Stableford and Nines were initially missed because the existing pairwise-differential logic happened to be the correct "Pay Up" behavior but silently ignored `payStyle:'paywinner'`. Always audit every branch of the affected payout block when adding a new option field.
+
+### H-45: Sixes `randomizeTeams` must enumerate pairings from real player indices, not positions
+`sixesTeams` stores global player indices (e.g. 0, 2, 3, 1 — whatever order the
+players appear in the `players` array). A randomize function that hardcodes `[0,1,2,3]`
+as array positions will produce correct-looking assignments but will silently violate
+the unique-pairing constraint when players are not in identity order. Always derive
+the 3 valid pairings from `players.map((_, i) => i)` and pick two distinct ones.
+The uniqueness check must mirror the `usedPairs` / `priorTeammates` logic in the
+manual picker — not a simplified heuristic. Surfaced and fixed in 15-K.
+
 ---
 
 ## Open Items
@@ -339,17 +351,17 @@ Contract version pins below verified against each contract's actual version head
 | Document | Version | Purpose |
 |---|---|---|
 | `ARCHITECTURE_FOUNDATIONS.md` | — | Mental models, layer system, the "why" |
-| `App_Data_Model_Contract.md` | v3.8 | State schema, storage keys, mutation rules. v3.7 (13-G.2): Player schema gains `siArray`. v3.8 (15-E.1): §1 — app-preference localStorage keys documented. §1.1 NEW — range pref shape. §1.2 NEW — backup payload `settings` field. Course schema gains `nineComboNames?: string[]` (14-A). `website` field removed (14-B). Player library record has `starred?` and `inMoneyLists?` fields (15-E §5.3). §5.5 Nines betMode updated to `'perpoint' \| 'total' \| 'segments'` (15-I). |
+| `App_Data_Model_Contract.md` | v3.9 | State schema, storage keys, mutation rules. v3.7 (13-G.2): Player schema gains `siArray`. v3.8 (15-E.1): §1 — app-preference localStorage keys documented. §1.1 NEW — range pref shape. §1.2 NEW — backup payload `settings` field. Course schema gains `nineComboNames?: string[]` (14-A). `website` field removed (14-B). Player library record has `starred?` and `inMoneyLists?` fields (15-E §5.3). §5.5 Nines betMode updated to `'perpoint' \| 'total' \| 'segments'` (15-I). v3.9 (15-J): `payStyle` added to Stroke Play, Stableford, Nines, Dots gameOpts schemas; `dotsMode` added to Dots schema. |
 | `Round_Lifecycle_Contract.md` | v2.3 | Setup→score→save flow, activeRound lifecycle. v2.3 (15-E.1): §5.2 — auto-export payload now carries top-level `settings` field; cross-references App_Data_Model §1.2. |
 | `Handicap_Contract.md` | v2.0 | USGA math, `buildPlayerSI`, engine SI source rule |
 | `Payout_Contract.md` | v1.13 | `computePayouts` entry point, `subsetMin` pattern |
 | `Nassau_Match_Contract.md` | v3.0 | Nassau/Match Play rules, press system, engine API |
 | `Sixes_Contract.md` | v1.11 | Sixes team rotation, hole scoring, press system |
 | `Skins_Contract.md` | v1.8 | Skins carryover, subset behavior, departure handling |
-| `Stableford_Contract.md` | v1.7 | Stableford points table, `betMode`, team scoring |
-| `Nines_Contract.md` | v1.7 | Nines point table, `betMode`, blitz rule, 3-player constraint. v1.7 (15-I): `'total'` betMode added — pairwise flat-bet over 18h totals; blitz applies in all modes. |
-| `Stroke_Play_Contract.md` | v1.7 | Stroke play `betMode`, `strokePlayPlayers` subset |
-| `Dots_Contract.md` | v2.5 | Dots/Junk: `DOTS_DEF`, specials, mutual exclusivity, team payout |
+| `Stableford_Contract.md` | v1.8 | Stableford points table, `betMode`, team scoring. v1.8 (15-J): `payStyle` field added (default `'paywinner'`; individual mode only); `'perpoint'` UI label renamed "Point Spread". |
+| `Nines_Contract.md` | v1.8 | Nines point table, `betMode`, blitz rule, 3-player constraint. v1.7 (15-I): `'total'` betMode added. v1.8 (15-J): `payStyle` field added (default `'payup'`); `'perpoint'` UI label renamed "Point Spread". |
+| `Stroke_Play_Contract.md` | v1.8 | Stroke play `betMode`, `strokePlayPlayers` subset. v1.8 (15-J): `payStyle` field added (default `'paywinner'`). |
+| `Dots_Contract.md` | v2.6 | Dots/Junk: `DOTS_DEF`, specials, mutual exclusivity, team payout. v2.6 (15-J): `dotsMode: 'spread' \| 'total'` contracted (was UI-only gap); `'total'` engine branch implemented; `payStyle` field added (default `'payup'`); "Spread" UI label renamed "Point Spread". |
 | `PartialGameContract.md` | v2.2 AUTHORITATIVE | Partial round, predetermined ranges, early departure |
 | `ScoreKeypad_Contract.md` | v2.4 AUTHORITATIVE | Custom keypad: universal system-keyboard replacement |
 | `UI_Component_Contract.md` | v1.7 | `ui.jsx` tokens, all components, `style` prop pattern. v1.6 (15-E.1): §10 NEW — `RangePicker.jsx` shared component documented. v1.7 (15-G): §3.6 NEW — `BIRDIE_COLOR` and `BOGEY_COLOR` tokens. §4.11 NEW — ScoreGrid score-cell indicator overlay rules (eagle/birdie/par/bogey/double-bogey). |
@@ -360,7 +372,7 @@ Contract version pins below verified against each contract's actual version head
 | Document | Purpose |
 |---|---|
 | `BUILD_PLAN.md` | Authoritative session history, completed sessions table, open session plan, deferred items, decision log |
-| `APP_STATE_SUMMARY.md` (this file) | Lean status, gotchas (H-1…H-43), open items, document index |
+| `APP_STATE_SUMMARY.md` (this file) | Lean status, gotchas (H-1…H-45), open items, document index |
 | `Session_Intro_Template.md` | Boilerplate prompt for starting a fresh chat session |
 | `Session_Closing_Maintenance_Template.md` | Step-by-step closing-session checklist for BP and ASS maintenance |
 | `NewRoundPage_Design_Spec.md` | 11-H output: full NewRoundPage setup UI design spec. 13-E.7: three card body sections now in `pages/new-round/NewRoundCourseCard.jsx`, `PlayersCard.jsx`, `GamesCard.jsx` |

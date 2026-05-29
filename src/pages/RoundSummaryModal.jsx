@@ -76,6 +76,7 @@ import { buildPayoutArgs, computePerMatchPayouts } from '../services/roundUtils.
 import { triggerRoundShare, buildShareImage } from '../services/shareUtils.js';
 import { PayoutsSection } from './PayoutDisplay.jsx';
 import { ReadOnlyScorecard } from '../components/ReadOnlyScorecard.jsx';
+import PlayerAvatar from '../components/PlayerAvatar.jsx';
 
 const FRONT = [0,1,2,3,4,5,6,7,8];
 const BACK  = [9,10,11,12,13,14,15,16,17];
@@ -428,8 +429,7 @@ export function RoundSummaryModal({ r, onClose }) {
 }
 
 // ── PlayerChipsGrid ────────────────────────────────────────────────────────────
-// Matches share image chip style: white card, first name / last name stacked,
-// HI + CH below. Grid mirrors share image: up to 4 columns.
+// Player chips: avatar circle above first/last name + HI/CH. Grid: up to 4 cols.
 function PlayerChipsGrid({ players, courseHcps, selectedTee }) {
   const n = players.length;
   const cols = Math.min(n, 4);
@@ -441,9 +441,10 @@ function PlayerChipsGrid({ players, courseHcps, selectedTee }) {
         const firstName = nameParts[0] || '';
         const lastName  = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
         return (
-          <div key={i} style={{ background:'#fff', borderRadius:8, padding:'4px 4px', textAlign:'center', minWidth:0 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:'#1a472a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{firstName}</div>
-            {lastName && <div style={{ fontSize:10, fontWeight:500, color:'#1a472a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{lastName}</div>}
+          <div key={i} style={{ background:'#fff', borderRadius:8, padding:'6px 4px', textAlign:'center', minWidth:0, display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+            <PlayerAvatar player={p} size={32} starred={false} />
+            <div style={{ fontSize:11, fontWeight:700, color:'#1a472a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', width:'100%', textAlign:'center' }}>{firstName}</div>
+            {lastName && <div style={{ fontSize:10, fontWeight:500, color:'#1a472a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', width:'100%', textAlign:'center' }}>{lastName}</div>}
             <div style={{ fontSize:9, color:'#666', whiteSpace:'nowrap', marginTop:1 }}>
               {p.ghin != null && p.ghin !== '' ? `HI ${p.ghin}` : ''}
               {p.ghin != null && p.ghin !== '' && ch != null ? ' · ' : ''}

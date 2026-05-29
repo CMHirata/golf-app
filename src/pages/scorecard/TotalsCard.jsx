@@ -25,6 +25,7 @@
 import { escTotal, xGrossScore } from '../../engine/handicap.js';
 import { G } from '../../components/ui.jsx';
 import { applyDepartureGuardrailToScores } from './scorecardUtils.js';
+import PlayerAvatar from '../../components/PlayerAvatar.jsx';
 
 export function TotalsCard({
   players, pars, scores, courseHcps, hcps,
@@ -80,9 +81,10 @@ export function TotalsCard({
           const first = parts[0] || '?';
           const last  = parts.length >= 2 ? parts[parts.length - 1] : '';
           return (
-            <div key={pi} style={{ textAlign: 'center', borderRadius: 8, padding: '6px 4px', background: '#f5fbf5', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: G, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{first}</div>
-              {last && <div style={{ fontSize: 10, fontWeight: 400, color: G, opacity: 0.6, lineHeight: 1.2, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{last}</div>}
+            <div key={pi} style={{ textAlign: 'center', borderRadius: 8, padding: '6px 4px', background: '#f5fbf5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <PlayerAvatar player={p} size={28} starred={false} />
+              <div style={{ fontSize: 11, fontWeight: 600, color: G, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 3, width: '100%', textAlign: 'center' }}>{first}</div>
+              {last && <div style={{ fontSize: 10, fontWeight: 400, color: G, opacity: 0.6, lineHeight: 1.2, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>{last}</div>}
               {hasScores ? (
                 <>
                   <div style={{ fontSize: 15, fontWeight: 700, color: '#222', lineHeight: 1.1 }}>{gt}</div>

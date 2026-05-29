@@ -1,6 +1,8 @@
 # App Data Model Contract
 
-_Version 3.8 — May 2026_
+_Version 3.9 — May 2026_
+_Changes in v3.9 (15-L): §5.3 Player library record gains `photo?: string` — base64-encoded JPEG, compressed client-side before storage (max 400×400px, JPEG quality 0.7). Library-only; never copied into `activePlayers` snapshot (same rule as `starred` and `inMoneyLists`). Rendered via new `PlayerAvatar` shared component (`src/components/PlayerAvatar.jsx`); falls back to initial circle when absent. H-42 applies: `'photo'` must be added to the `f` array at both conflict-detection and conflict-resolution sites in `HistoryPage.applyImport` or it will be silently dropped on conflicting import._
+_Supersedes v3.8._
 _Changes in v3.8 (15-E.1): §1 Storage Keys — two app-preference keys (`moneyListRange`, `historyRange`) documented as the exception to the SK-only rule. New §1.1 — shape and valid values for the range pref object. §1.2 — backup payload `settings` field documented as a new top-level export field carrying app preferences (`moneyListRange` and `historyRange`); preserved through `HistoryPage.applyImport` and applied to localStorage on import. New shared component `RangePicker.jsx` in `src/components/` is the sole owner of read/write to these keys — see `UI_Component_Contract.md` §10._
 _Supersedes v3.7._
 _Changes in v3.7 (13-G.2): §5.3 Players — Player object schema gains `siArray: number[18]` (per-player stroke index, required at round-start; never null for a started round; built once via `buildPlayerSI(player, layout)` from `Handicap_Contract.md` §2.8; not serialized — `roundLib.toActiveRound` rebuilds defensively on reload). Engines read `players[pi].siArray[h]` for stroke allocation in every game (§5 amendment in `Handicap_Contract.md`). The shared `activeRound.hcps` field is retained for SI display rows only._
@@ -357,11 +359,13 @@ throughout the app use this order.
   phone?:        string,
   starred?:      boolean,  // absent = false; sorts above non-starred in playerLib.list()
   inMoneyLists?: boolean,  // absent = true; included in Money List on Home page
+  photo?:        string,   // base64-encoded JPEG; compressed client-side before storage; library-only
 }
 ```
 
 - `starred` — library-only. Not copied into `activePlayers` snapshot. Absent = `false`. Starred players sort before non-starred; last-name order preserved within each group. Surfaces in `playerLib.list()` and all player-picker UIs.
 - `inMoneyLists` — library-only. Not copied into `activePlayers` snapshot. Absent = `true`. Controls whether a player's cumulative winnings appear on the Home page Money List. Toggle set on Players page only.
+- `photo` — library-only. Not copied into `activePlayers` snapshot. Absent = no photo. Base64-encoded JPEG, compressed client-side (max 400×400px, quality 0.7) before storage via `ImageCropOverlay` → canvas pipeline. Rendered by `PlayerAvatar` shared component; falls back to initial circle when absent. **H-42 applies:** `'photo'` must be present in the `f` array at both conflict-detection and conflict-resolution sites in `HistoryPage.applyImport`, or it will be silently dropped on import of a conflicting record.
 
 ### 5.4 Games
 

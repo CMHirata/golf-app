@@ -1,16 +1,21 @@
 // ─── PlayersPage.jsx ──────────────────────────────────────────────────────────
 //
-// ✅ Self-checked: SwipeableRow openId lifted to page level (one open at a time);
-//    star toggle uses playerLib.update + refresh — no stale closure; inMoneyLists
-//    toggle correctly inverts p.inMoneyLists ?? true (absent = true); handleDelete
-//    passes deleteWarning string to SwipeableRow (not inline confirm); H-35 touch
-//    guard lives inside SwipeableRow — no synthetic preventDefault here.
+// ✅ Self-checked (15-L): PlayerAvatar replaces inline SVG circle in PlayerRow.
+// ImageCropOverlay added for photo upload/crop. Camera icon tap opens crop flow;
+// avatar tap when photo present opens full-screen expand with Remove option.
+// H-41: camera icon is inside row content area — no interference with SwipeableRow
+// swipe gesture (swipe is tracked on the SlideDiv, not row content).
+// H-35: full-screen expand dismiss uses touchHandledRef pattern.
+// H-39: ImageCropOverlay owns its own scroll lock (native non-passive touchmove).
+// photo stored as base64 via playerLib.update; cleared via playerLib.update({ photo: undefined }).
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { playerLib } from '../services/playerLib.js';
 import { Btn, Inp, Card, G, GA, RED } from '../components/ui.jsx';
 import { ScoreKeypad } from './ScoreKeypad.jsx';
 import SwipeableRow from '../components/SwipeableRow.jsx';
+import PlayerAvatar from '../components/PlayerAvatar.jsx';
+import ImageCropOverlay from '../components/ImageCropOverlay.jsx';
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
 const IconWarning = () => (
@@ -45,7 +50,14 @@ const IconPerson = () => (
   </svg>
 );
 
-// Money icon — dollar sign, green when included, muted when excluded
+const IconCamera = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+    <circle cx="12" cy="13" r="4"/>
+  </svg>
+);
+
 const IconMoney = ({ included }) => (
   <svg width="16" height="16" viewBox="0 0 24 24"
     fill="none"
@@ -57,13 +69,6 @@ const IconMoney = ({ included }) => (
 );
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-function initials(name) {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 function normName(n) { return (n || '').trim().toLowerCase().replace(/\s+/g, ' '); }
 
 const EMPTY_FORM = { name: '', gender: 'M', ghin: '', email: '', phone: '' };
@@ -236,8 +241,77 @@ function MergeModal({ dupes, onMerge, onCancel }) {
   );
 }
 
+// ─── FullScreenPhotoOverlay ───────────────────────────────────────────────────
+// H-35: dismiss uses touchHandledRef pattern; H-39: native non-passive touchmove.
+function FullScreenPhotoOverlay({ player, onRemove, onClose }) {
+  const touchHandledRef = useRef(0);
+  const overlayRef = useRef(null);
+
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el) return;
+    const prevent = (e) => e.preventDefault();
+    el.addEventListener('touchmove', prevent, { passive: false });
+    return () => el.removeEventListener('touchmove', prevent);
+  }, []);
+
+  const handleTouch = () => { touchHandledRef.current = Date.now(); };
+  const handleClick = () => {
+    if (Date.now() - touchHandledRef.current < 600) return;
+    onClose();
+  };
+
+  return (
+    <div
+      ref={overlayRef}
+      onTouchEnd={handleTouch}
+      onClick={handleClick}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1500,
+        background: 'rgba(0,0,0,0.92)',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <img
+        src={player.photo}
+        alt={player.name}
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '80vw', height: '80vw', maxWidth: 360, maxHeight: 360,
+          borderRadius: '50%', objectFit: 'cover',
+          border: '3px solid #fff',
+        }}
+      />
+      <div style={{ marginTop: 16, color: '#fff', fontSize: 16, fontWeight: 700 }}>{player.name}</div>
+      <div style={{ display: 'flex', gap: 12, marginTop: 20 }} onClick={e => e.stopPropagation()}>
+        <button
+          onClick={onRemove}
+          style={{
+            padding: '10px 24px', borderRadius: 12,
+            border: `2px solid ${RED}`, background: 'transparent',
+            color: RED, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          Remove Photo
+        </button>
+        <button
+          onClick={onClose}
+          style={{
+            padding: '10px 24px', borderRadius: 12,
+            border: '2px solid rgba(255,255,255,0.4)', background: 'transparent',
+            color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── PlayerRow ────────────────────────────────────────────────────────────────
-function PlayerRow({ p, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, onDelete }) {
+function PlayerRow({ p, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, onDelete, onAvatarTap, onCameraClick }) {
   const parts     = p.name?.trim().split(/\s+/) || [];
   const firstName = parts.slice(0, -1).join(' ');
   const lastName  = parts[parts.length - 1];
@@ -253,26 +327,32 @@ function PlayerRow({ p, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, 
       deleteWarning={`Remove ${p.name} from the roster?`}
     >
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 12px', borderRadius:13, border:'1.5px solid #e8f0e8', background:'#fff' }}>
-        {/* Tappable circle — tap to toggle favorite */}
-        <div
-          onClick={e => { e.stopPropagation(); onToggleStar(p); }}
-          title={p.starred ? 'Remove from favorites' : 'Mark as favorite'}
-          style={{ width:40, height:40, flexShrink:0, cursor:'pointer' }}
-        >
-          <svg width="40" height="40" viewBox="0 0 40 40">
-            <circle cx="20" cy="20" r="20" fill={p.gender==='F' ? '#fce8f3' : '#e8f5e9'}/>
-            {p.starred && (
-              <polygon
-                points="20,6 22.9,14.3 31.5,14.9 25,20.3 27.2,28.8 20,24.3 12.8,28.8 15,20.3 8.5,14.9 17.1,14.3"
-                fill="#fff9c4" opacity="0.95"
-              />
-            )}
-            <text x="20" y="26" textAnchor="middle" fontSize="14" fontWeight="800"
-              fill={p.gender==='F' ? '#a0327a' : '#27500A'} fontFamily="inherit">
-              {initials(p.name)}
-            </text>
-          </svg>
+
+        {/* Avatar + camera badge */}
+        <div style={{ position:'relative', flexShrink:0 }}>
+          <PlayerAvatar
+            player={p}
+            size={40}
+            starred={p.starred}
+            onPress={() => p.photo ? onAvatarTap(p) : onCameraClick(p)}
+          />
+          {/* Camera badge — always visible, bottom-right of avatar */}
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); onCameraClick(p); }}
+            title="Add / change photo"
+            style={{
+              position: 'absolute', bottom: -3, right: p.starred ? 10 : -3,
+              width: 18, height: 18, borderRadius: '50%',
+              background: '#fff', border: '1.5px solid #ddd',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', padding: 0, color: '#888',
+            }}
+          >
+            <IconCamera />
+          </button>
         </div>
+
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:14, color:'#222', lineHeight:1.3 }}>
             {parts.length >= 2 ? <>{firstName} <strong>{lastName}</strong></> : <strong>{p.name}</strong>}
@@ -283,6 +363,17 @@ function PlayerRow({ p, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, 
             {p.phone && <span style={{ color:'#bbb', display:'flex', alignItems:'center' }}><IconPhone /></span>}
           </div>
         </div>
+
+        {/* Star toggle */}
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onToggleStar(p); }}
+          title={p.starred ? 'Remove from favorites' : 'Mark as favorite'}
+          style={{ border:'none', background:'none', cursor:'pointer', padding:'4px', display:'flex', alignItems:'center', flexShrink:0, fontSize:18, color: p.starred ? '#ffd700' : '#ddd' }}
+        >
+          ★
+        </button>
+
         {/* Money list toggle */}
         <button
           type="button"
@@ -304,7 +395,13 @@ export default function PlayersPage() {
   const [merging, setMerging] = useState(null);
   const [openRowId, setOpenRowId] = useState(null);
 
-  // B-11: Setup keypad — ScoreKeypad_Contract §10.5
+  // Photo state
+  const [cropTarget,     setCropTarget]     = useState(null); // { player, imageSrc }
+  const [expandPlayer,   setExpandPlayer]   = useState(null); // player record
+  const fileInputRef = useRef(null);
+  const pendingPlayerRef = useRef(null);
+
+  // B-11: Setup keypad
   const [setupKp, setSetupKp] = useState(null);
   const setupKpRef    = useRef(null);
   const setupKpCbsRef = useRef({ onChange: null, onCommit: null });
@@ -351,8 +448,47 @@ export default function PlayersPage() {
   const handleToggleStar  = (p) => { playerLib.update(p.id, { starred: !p.starred }); refresh(); };
   const handleToggleMoney = (p) => { playerLib.update(p.id, { inMoneyLists: !(p.inMoneyLists ?? true) }); refresh(); };
 
+  // ── Photo flow ─────────────────────────────────────────────────────────────
+  const handleCameraClick = useCallback((p) => {
+    pendingPlayerRef.current = p;
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !pendingPlayerRef.current) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setCropTarget({ player: pendingPlayerRef.current, imageSrc: ev.target.result });
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleCropSave = useCallback((base64) => {
+    if (!cropTarget) return;
+    playerLib.update(cropTarget.player.id, { photo: base64 });
+    setCropTarget(null);
+    refresh();
+  }, [cropTarget, refresh]);
+
+  const handlePhotoRemove = useCallback((p) => {
+    playerLib.update(p.id, { photo: undefined });
+    setExpandPlayer(null);
+    refresh();
+  }, [refresh]);
+
   return (
     <div style={{ minHeight:'100vh', background:'#eef4ee' }}>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display:'none' }}
+        onChange={handleFileChange}
+      />
 
       {/* ── Header ── */}
       <div style={{ background:G, padding:'8px 16px 7px', position:'sticky', top:0, zIndex:10, boxShadow:'0 2px 12px rgba(0,0,0,.2)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -382,7 +518,7 @@ export default function PlayersPage() {
         {/* Legend */}
         {players.length > 0 && (
           <div style={{ fontSize:11, color:'#aaa', marginBottom:8, display:'flex', alignItems:'center', gap:10, paddingLeft:2 }}>
-            <span>Tap circle to favorite</span>
+            <span>Tap avatar to view/change photo</span>
             <span style={{ display:'flex', alignItems:'center', gap:3 }}><IconMoney included /> = on Money List</span>
           </div>
         )}
@@ -410,6 +546,8 @@ export default function PlayersPage() {
                   onDelete={() => handleDelete(p)}
                   onToggleStar={handleToggleStar}
                   onToggleMoney={handleToggleMoney}
+                  onAvatarTap={setExpandPlayer}
+                  onCameraClick={handleCameraClick}
                 />
               ))}
             </div>
@@ -426,6 +564,24 @@ export default function PlayersPage() {
       {modal === 'add' && <PlayerModal title="Add Player" onSave={handleAdd} onCancel={() => { setModal(null); setSetupKp(null); }} existingNames={allNormNames} onActivate={activateSetupKp} activeFieldId={setupKp?.fieldId} />}
       {modal && modal !== 'add' && <PlayerModal title="Edit Player" initial={modal} onSave={handleSaveEdit} onCancel={() => { setModal(null); setSetupKp(null); }} existingNames={editNormNames} onActivate={activateSetupKp} activeFieldId={setupKp?.fieldId} />}
       {merging && <MergeModal dupes={merging} onMerge={handleMerge} onCancel={() => setMerging(null)} />}
+
+      {/* Full-screen photo expand */}
+      {expandPlayer && (
+        <FullScreenPhotoOverlay
+          player={expandPlayer}
+          onRemove={() => handlePhotoRemove(expandPlayer)}
+          onClose={() => setExpandPlayer(null)}
+        />
+      )}
+
+      {/* Crop overlay */}
+      {cropTarget && (
+        <ImageCropOverlay
+          imageSrc={cropTarget.imageSrc}
+          onSave={handleCropSave}
+          onCancel={() => setCropTarget(null)}
+        />
+      )}
 
       {/* B-11: Setup keypad — zIndex 1100 renders above PlayerModal (zIndex 1000) */}
       {setupKp && (

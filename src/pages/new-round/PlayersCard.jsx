@@ -10,6 +10,7 @@
 import { G, Card } from '../../components/ui.jsx';
 import { playerLib } from '../../services/playerLib.js';
 import { TeeDropdown, HIField, CHField } from './NewRoundHelpers.jsx';
+import PlayerAvatar from '../../components/PlayerAvatar.jsx';
 
 // Props:
 //   Data:    activePlayers, playerHIs, playerTees, playerCHOverrides,
@@ -52,7 +53,10 @@ export default function PlayersCard({
 
             return (
               <div key={p.id} style={{ background:'#f8fbf8', borderRadius:10, border:'1px solid #e8f0e8', padding:'6px 10px',
-                                       display:'flex', alignItems:'center', gap:6 }}>
+                                       display:'flex', alignItems:'center', gap:8 }}>
+
+                {/* Avatar */}
+                <PlayerAvatar player={p} size={32} starred={p.starred} />
 
                 {/* Name — flex left, centers against full right-side height */}
                 <div

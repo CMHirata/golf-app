@@ -47,6 +47,7 @@ import { computePerMatchPayouts } from '../services/roundUtils.js';
 import { triggerRoundShare, buildShareImage } from '../services/shareUtils.js';
 import { roundLib } from '../services/roundLib.js';
 import { PayoutsSection } from './PayoutDisplay.jsx';
+import PlayerAvatar from '../components/PlayerAvatar.jsx';
 
 // Layout constants — must match App.jsx
 const NAV_BAR_HEIGHT    = 68;
@@ -83,27 +84,7 @@ function buildSettlements(bank) {
   return result.sort((a, b) => b.amount - a.amount);
 }
 
-// ── PlayerInitial ─────────────────────────────────────────────────────────────
-// Colored circle with player initial — matches PlayerPickerPopup treatment.
-const CHIP_COLORS = ['#1a472a', '#2c5f8a', '#7b3f00', '#6b2d8b', '#8a4a00', '#2d6b5a'];
-function PlayerInitial({ name, index, size = 36 }) {
-  const parts = (name || '?').trim().split(/\s+/);
-  const initial = parts.length >= 2
-    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-    : parts[0][0].toUpperCase();
-  const bg = CHIP_COLORS[index % CHIP_COLORS.length];
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%',
-      background: bg, color: '#fff',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.36, fontWeight: 700, flexShrink: 0,
-      fontFamily: 'inherit',
-    }}>
-      {initial}
-    </div>
-  );
-}
+
 
 function getMissingScoresError(scores, activePlayers, roundStartHole = 0, roundNumHoles = 18, earlyDepartureOpts = {}) {
   const rsh = roundStartHole ?? 0;
@@ -256,7 +237,7 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
                   boxShadow:'0 1px 4px rgba(0,0,0,.07)', border:'1.5px solid #e0ece0',
                   minWidth:0, textAlign:'center',
                 }}>
-                  <PlayerInitial name={p.name} index={p.originalIndex} size={38} />
+                  <PlayerAvatar player={p} size={38} starred={false} />
                   <div style={{ width:'100%', textAlign:'center', lineHeight:1.25 }}>
                     <div style={{ fontWeight:700, fontSize:12, color:'#222' }}>{firstName}</div>
                     <div style={{ fontWeight:700, fontSize:12, color:'#222' }}>{lastName}</div>
