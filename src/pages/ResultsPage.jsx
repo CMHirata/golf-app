@@ -197,9 +197,10 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
   const n = (activePlayers || []).length;
 
   // Build sorted player list: highest net first
+  const libPlayers = playerLib.list();
   const sortedPlayers = (activePlayers || [])
     .map((p, i) => {
-      const lib = playerLib.getById(p.id);
+      const lib = libPlayers.find(lp => lp.id === p.id || lp.name === p.name);
       return { ...p, originalIndex: i, net: (bank || {})[p.name] ?? 0, photo: lib?.photo || null };
     })
     .sort((a, b) => b.net - a.net);

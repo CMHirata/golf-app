@@ -25,7 +25,6 @@
 import { escTotal, xGrossScore } from '../../engine/handicap.js';
 import { G } from '../../components/ui.jsx';
 import { applyDepartureGuardrailToScores } from './scorecardUtils.js';
-import PlayerAvatar from '../../components/PlayerAvatar.jsx';
 
 export function TotalsCard({
   players, pars, scores, courseHcps, hcps,
@@ -82,8 +81,7 @@ export function TotalsCard({
           const last  = parts.length >= 2 ? parts[parts.length - 1] : '';
           return (
             <div key={pi} style={{ textAlign: 'center', borderRadius: 8, padding: '6px 4px', background: '#f5fbf5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <PlayerAvatar player={p} size={28} starred={false} />
-              <div style={{ fontSize: 11, fontWeight: 600, color: G, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 3, width: '100%', textAlign: 'center' }}>{first}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: G, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>{first}</div>
               {last && <div style={{ fontSize: 10, fontWeight: 400, color: G, opacity: 0.6, lineHeight: 1.2, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>{last}</div>}
               {hasScores ? (
                 <>
