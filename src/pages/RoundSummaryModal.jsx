@@ -233,7 +233,7 @@ export function RoundSummaryModal({ r, onClose }) {
       onClick={onClose}>
 
       <div style={{ background:'#eef4ee', ...modalStyle,
-        display:'flex', flexDirection:'column', overflow:'hidden' }}
+        display:'flex', flexDirection:'column' }}
         onClick={e=>e.stopPropagation()}>
 
         {/* Header */}

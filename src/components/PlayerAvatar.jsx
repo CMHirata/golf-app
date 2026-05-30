@@ -31,7 +31,7 @@ export default function PlayerAvatar({ player, size = 36, starred = false, onPre
         borderRadius: '50%',
         position: 'relative',
         flexShrink: 0,
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: onPress ? 'pointer' : 'default',
