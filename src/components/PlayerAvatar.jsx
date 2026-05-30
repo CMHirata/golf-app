@@ -1,8 +1,10 @@
 // ─── components/PlayerAvatar.jsx ─────────────────────────────────────────────
 //
-// ✅ Self-checked (15-L): Single root div with background always set to G.
-// Photo rendered as background-image CSS property — no <img> element, no
-// load failures, no wrapper. Works in all contexts including flex columns.
+// ✅ Self-checked (15-L): Photo rendered as <img> (confirmed working on iOS
+// Safari via console test). Circular clip via overflow:hidden on container.
+// No object-fit (iOS Safari issue). No background-image (iOS Safari issue
+// with large data URIs on border-radius elements). Initial circle uses
+// line-height centering, no flexbox.
 
 const G = '#1a472a';
 
@@ -26,22 +28,27 @@ export default function PlayerAvatar({ player, size = 36, starred = false, onPre
         width: size,
         height: size,
         borderRadius: '50%',
-        backgroundColor: G,
-        backgroundImage: photo ? `url("${photo}")` : 'none',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        display: 'block',
+        overflow: 'hidden',
         position: 'relative',
         flexShrink: 0,
+        display: 'block',
         cursor: onPress ? 'pointer' : 'default',
-        overflow: 'hidden',
+        backgroundColor: G,
       }}
     >
-      {!photo && (
+      {photo ? (
+        <img
+          src={photo}
+          alt={name}
+          width={size}
+          height={size}
+          style={{ display: 'block', width: size, height: size }}
+        />
+      ) : (
         <span style={{
           display: 'block',
-          width: '100%',
+          width: size,
+          height: size,
           lineHeight: `${size}px`,
           textAlign: 'center',
           color: '#fff',
