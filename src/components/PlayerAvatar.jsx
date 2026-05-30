@@ -1,8 +1,9 @@
 // ─── components/PlayerAvatar.jsx ─────────────────────────────────────────────
 //
-// ✅ Self-checked (15-L): Container uses explicit px dimensions and no
-// position:relative unless starred badge needed. Inner circle uses explicit
-// width/height. Works in both flex-row and flex-column parent contexts.
+// ✅ Self-checked (15-L): Uses line-height + text-align for initial centering
+// instead of flexbox — avoids foreignObject/flex rendering failures in WebKit.
+// Photo branch uses <img> with borderRadius. Starred badge uses position:relative
+// wrapper only when needed.
 
 const G = '#1a472a';
 
@@ -38,21 +39,17 @@ export default function PlayerAvatar({ player, size = 36, starred = false, onPre
       height: size,
       borderRadius: '50%',
       background: G,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+      color: '#fff',
+      fontSize: Math.round(size * 0.38),
+      fontWeight: 700,
+      lineHeight: `${size}px`,
+      textAlign: 'center',
+      fontFamily: 'inherit',
+      userSelect: 'none',
       flexShrink: 0,
+      display: 'block',
     }}>
-      <span style={{
-        color: '#fff',
-        fontSize: Math.round(size * 0.38),
-        fontWeight: 700,
-        lineHeight: 1,
-        fontFamily: 'inherit',
-        userSelect: 'none',
-      }}>
-        {ini}
-      </span>
+      {ini}
     </div>
   );
 

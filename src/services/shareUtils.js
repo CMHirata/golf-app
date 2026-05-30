@@ -296,8 +296,8 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
       : (nameParts[0]?.[0] || '?').toUpperCase();
     const photo = photoMap[p.id] || null;
     const avatarHtml = (size) => photo
-      ? `<img src="${photo}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 3px;flex-shrink:0;" alt=""/>`
-      : `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#1a472a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.38)}px;font-weight:700;margin:0 auto 3px;flex-shrink:0;">${xe(ini)}</div>`;
+      ? `<img src="${photo}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 3px;" alt=""/>`
+      : `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#1a472a;margin:0 auto 3px;display:table-cell;vertical-align:middle;text-align:center;font-size:${Math.round(size*0.38)}px;font-weight:700;color:#fff;font-family:inherit;">${xe(ini)}</div>`;
     if (isPortrait) {
       return `<div style="background:#fff;border-radius:8px;padding:4px 4px;text-align:center;min-width:0;">
         ${avatarHtml(28)}
