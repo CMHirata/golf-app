@@ -28,14 +28,11 @@ export default function PlayerAvatar({ player, size = 36, starred = false, onPre
         width: size,
         height: size,
         borderRadius: '50%',
-        overflow: 'hidden',
         position: 'relative',
         flexShrink: 0,
         display: 'block',
         cursor: onPress ? 'pointer' : 'default',
         backgroundColor: G,
-        WebkitTransform: 'translateZ(0)',
-        transform: 'translateZ(0)',
       }}
     >
       {photo ? (
@@ -44,7 +41,13 @@ export default function PlayerAvatar({ player, size = 36, starred = false, onPre
           alt={name}
           width={size}
           height={size}
-          style={{ display: 'block', width: size, height: size }}
+          style={{
+            display: 'block',
+            width: size,
+            height: size,
+            borderRadius: '50%',
+            objectFit: 'cover',
+          }}
         />
       ) : (
         <span style={{
