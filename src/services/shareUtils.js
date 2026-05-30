@@ -297,7 +297,7 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     const photo = photoMap[p.id] || null;
     const avatarHtml = (size) => photo
       ? `<img src="${photo}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 3px;" alt=""/>`
-      : `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#1a472a;margin:0 auto 3px;line-height:${size}px;text-align:center;font-size:${Math.round(size*0.38)}px;font-weight:700;color:#fff;font-family:inherit;">${xe(ini)}</div>`;
+      : `<div data-avatar-id="${xe(p.id || p.name)}" style="width:${size}px;height:${size}px;border-radius:50%;background:#1a472a;margin:0 auto 3px;line-height:${size}px;text-align:center;font-size:${Math.round(size*0.38)}px;font-weight:700;color:#fff;font-family:inherit;">${xe(ini)}</div>`;
     if (isPortrait) {
       return `<div style="background:#fff;border-radius:8px;padding:4px 4px;text-align:center;min-width:0;">
         ${avatarHtml(28)}
@@ -819,25 +819,42 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
 
 async function buildShareImageForeignObject(r, ar, bank, breakdown, matchPayouts, orientation = 'landscape', photoMap = {}) {
   const logoDataUri = await getLogoDataUri();
-  const html = buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orientation, photoMap);
+  // Build HTML with NO photos — initial circles only. Photos are drawn
+  // directly onto the canvas after foreignObject renders, bypassing the
+  // iOS Safari limitation where <img> inside foreignObject doesn't render.
+  const html = buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orientation, {});
   const foWidth = orientation === 'portrait' ? FO_WIDTH_PORTRAIT : FO_WIDTH;
 
   const probe = document.createElement('div');
   probe.style.cssText = `position:fixed;top:0;left:0;width:${foWidth}px;visibility:hidden;pointer-events:none;z-index:9999;`;
   probe.innerHTML = html;
   document.body.appendChild(probe);
-  // Wait for all img elements (photo avatars) to finish loading before measuring
-  const probeImgs = Array.from(probe.querySelectorAll('img'));
-  if (probeImgs.length > 0) {
-    await Promise.all(probeImgs.map(img =>
-      img.complete ? Promise.resolve() : new Promise(res => {
-        img.onload = res;
-        img.onerror = res;
-      })
-    ));
-  }
   await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
   const measuredH = probe.scrollHeight;
+
+  // Find avatar positions by data-avatar-id before removing probe
+  const avatarPositions = [];
+  probe.querySelectorAll('[data-avatar-id]').forEach(el => {
+    const avatarId = el.getAttribute('data-avatar-id');
+    // Match by id or name
+    const photo = photoMap[avatarId] ||
+      Object.entries(photoMap).find(([id]) => {
+        const p = ar?.activePlayers?.find(ap => ap.id === id);
+        return p?.name === avatarId;
+      })?.[1] || null;
+    if (photo) {
+      const rect = el.getBoundingClientRect();
+      const probeRect = probe.getBoundingClientRect();
+      avatarPositions.push({
+        x: rect.left - probeRect.left,
+        y: rect.top  - probeRect.top,
+        w: rect.width,
+        h: rect.height,
+        photo,
+      });
+    }
+  });
+
   document.body.removeChild(probe);
 
   if (!measuredH || measuredH < 100) {
@@ -865,6 +882,26 @@ async function buildShareImageForeignObject(r, ar, bank, breakdown, matchPayouts
     img.onerror = () => reject(new Error('foreignObject img load failed'));
     img.src = dataUri;
   });
+
+  // Draw photos directly onto canvas as circular clips
+  if (avatarPositions.length > 0) {
+    await Promise.all(avatarPositions.map(av => new Promise(res => {
+      const img = new Image();
+      img.onload = () => {
+        ctx.save();
+        ctx.beginPath();
+        const cx = av.x + av.w / 2;
+        const cy = av.y + av.h / 2;
+        ctx.arc(cx, cy, av.w / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(img, av.x, av.y, av.w, av.h);
+        ctx.restore();
+        res();
+      };
+      img.onerror = res;
+      img.src = av.photo;
+    })));
+  }
 
   if (logoDataUri) {
     await new Promise(resolve => {
@@ -982,23 +1019,36 @@ async function buildSharePdf(r, ar, bank, breakdown, matchPayouts, photoMap = {}
 }
 
 export async function buildShareImage(r, ar, bank, breakdown, matchPayouts, orientation = 'landscape', photoMap = {}) {
-  // Pre-load all photos into browser image cache before building HTML/canvas.
-  // Even base64 data URIs decode asynchronously on iOS Safari — pre-warming
-  // ensures they're ready when foreignObject draws to canvas.
-  const photoValues = Object.values(photoMap).filter(Boolean);
-  if (photoValues.length > 0) {
-    await Promise.all(photoValues.map(src => new Promise(res => {
+  // Convert each photo to a canvas-drawn circular PNG data URI.
+  // SVG foreignObject on iOS Safari doesn't reliably render base64 JPEG <img> tags.
+  // Canvas-drawn PNGs are synchronously available when the foreignObject renders.
+  const resolvedPhotoMap = {};
+  await Promise.all(Object.entries(photoMap).filter(([,v]) => v).map(([id, src]) =>
+    new Promise(res => {
       const img = new Image();
-      img.onload  = res;
+      img.onload = () => {
+        try {
+          const SIZE = 64;
+          const c = document.createElement('canvas');
+          c.width = SIZE; c.height = SIZE;
+          const ctx = c.getContext('2d');
+          ctx.beginPath();
+          ctx.arc(SIZE/2, SIZE/2, SIZE/2, 0, Math.PI*2);
+          ctx.clip();
+          ctx.drawImage(img, 0, 0, SIZE, SIZE);
+          resolvedPhotoMap[id] = c.toDataURL('image/png');
+        } catch(e) { /* tainted canvas — skip photo */ }
+        res();
+      };
       img.onerror = res;
       img.src = src;
-    })));
-  }
+    })
+  ));
 
   if (orientation === 'portrait') {
-    return buildSharePdf(r, ar, bank, breakdown, matchPayouts, photoMap);
+    return buildSharePdf(r, ar, bank, breakdown, matchPayouts, resolvedPhotoMap);
   }
-  return buildShareImageForeignObject(r, ar, bank, breakdown, matchPayouts, orientation, photoMap);
+  return buildShareImageForeignObject(r, ar, bank, breakdown, matchPayouts, orientation, resolvedPhotoMap);
 }
 
 function downloadBlob(blob, filename) {
