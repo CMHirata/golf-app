@@ -106,17 +106,18 @@ function FullScreenPhotoOverlay({ player, onChangeTap, onRemove, onClose }) {
         borderRadius: '50%', objectFit: 'cover', border: '3px solid #fff',
       }} />
       <div style={{ marginTop: 14, color: '#fff', fontSize: 16, fontWeight: 700 }}>{player.name}</div>
-      <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+      <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
         {[
           { label: 'Change', action: onChangeTap },
           { label: 'Delete', action: onRemove },
           { label: 'Cancel', action: onClose },
         ].map(({ label, action }) => (
           <button key={label} onClick={action} style={{
-            flex: 1, padding: '10px 0', borderRadius: 10,
+            width: 90, padding: '12px 0', borderRadius: 10,
             border: '1.5px solid rgba(255,255,255,0.4)',
             background: 'transparent', color: '#fff',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center',
           }}>
             {label}
           </button>
@@ -277,7 +278,7 @@ function MergeModal({ dupes, onMerge, onCancel }) {
 // Three icon buttons on right: camera, star, $.
 // Avatar tap: photo exists → full-screen expand; no photo → file picker.
 // H-41: all buttons inside row content area, not on SwipeableRow handle.
-function PlayerRow({ p, onAvatarTap, onCameraTap, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, onDelete }) {
+function PlayerRow({ p, onAvatarTap, onToggleStar, onToggleMoney, openId, setOpenId, onEdit, onDelete }) {
   const parts     = p.name?.trim().split(/\s+/) || [];
   const firstName = parts.slice(0, -1).join(' ');
   const lastName  = parts[parts.length - 1];
@@ -314,16 +315,6 @@ function PlayerRow({ p, onAvatarTap, onCameraTap, onToggleStar, onToggleMoney, o
 
         {/* Icon button strip */}
         <div style={{ display:'flex', alignItems:'center', gap:2, flexShrink:0 }}>
-          {/* Camera */}
-          <button
-            type="button"
-            onPointerDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); onCameraTap(p); }}
-            title={p.photo ? 'View / change photo' : 'Add photo'}
-            style={{ border:'none', background:'none', cursor:'pointer', padding:'6px', display:'flex', alignItems:'center', color: p.photo ? G : '#ccc' }}
-          >
-            <IconCameraAdd color={p.photo ? G : '#ccc'} />
-          </button>
           {/* Star */}
           <button
             type="button"
@@ -421,15 +412,6 @@ export default function PlayersPage() {
     }
   }, []);
 
-  // Camera icon tap: same as avatar tap (always provides access to photo flow)
-  const handleCameraTap = useCallback((p) => {
-    if (p.photo) {
-      setExpandPlayer(p);
-    } else {
-      pendingPhotoRef.current = p;
-      fileInputRef.current?.click();
-    }
-  }, []);
 
   const handleFileChange = useCallback((e) => {
     const file = e.target.files?.[0];
@@ -511,7 +493,6 @@ export default function PlayersPage() {
                   onEdit={() => { setOpenRowId(null); setModal(p); }}
                   onDelete={() => handleDelete(p)}
                   onAvatarTap={handleAvatarTap}
-                  onCameraTap={handleCameraTap}
                   onToggleStar={handleToggleStar}
                   onToggleMoney={handleToggleMoney}
                 />
