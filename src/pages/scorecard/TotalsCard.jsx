@@ -61,7 +61,7 @@ export function TotalsCard({
   const n = players.length;
 
   return (
-    <div style={{ marginBottom: 14, background: '#fff', borderRadius: 12, border: '1px solid #e0ece0', overflow: 'hidden' }}>
+    <div style={{ marginBottom: 14, background: '#fff', borderRadius: 12, border: '1px solid #e0ece0' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px 5px' }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: G }}>Round Totals</span>
         <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 8, background: '#e0ece0', color: G }}>Par {parTotal}</span>

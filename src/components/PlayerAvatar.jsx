@@ -26,6 +26,8 @@ export default function PlayerAvatar({ player, size = 36, starred = false, onPre
       style={{
         width: size,
         height: size,
+        minWidth: size,
+        minHeight: size,
         borderRadius: '50%',
         position: 'relative',
         flexShrink: 0,

@@ -443,7 +443,7 @@ function PlayerChipsGrid({ players, courseHcps, selectedTee }) {
         const firstName = nameParts[0] || '';
         const lastName  = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
         return (
-          <div key={i} style={{ background:'#fff', borderRadius:8, padding:'6px 4px', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:3, overflow:'hidden' }}>
+          <div key={i} style={{ background:'#fff', borderRadius:8, padding:'6px 4px', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:3, minWidth:0 }}>
             <PlayerAvatar player={p} size={32} starred={false} />
             <div style={{ fontSize:11, fontWeight:700, color:'#1a472a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', width:'100%', textAlign:'center' }}>{firstName}</div>
             {lastName && <div style={{ fontSize:10, fontWeight:500, color:'#1a472a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', width:'100%', textAlign:'center' }}>{lastName}</div>}
