@@ -198,7 +198,10 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
 
   // Build sorted player list: highest net first
   const sortedPlayers = (activePlayers || [])
-    .map((p, i) => ({ ...p, originalIndex: i, net: (bank || {})[p.name] ?? 0 }))
+    .map((p, i) => {
+      const lib = playerLib.getById(p.id);
+      return { ...p, originalIndex: i, net: (bank || {})[p.name] ?? 0, photo: lib?.photo || null };
+    })
     .sort((a, b) => b.net - a.net);
 
   // All players in one row regardless of count

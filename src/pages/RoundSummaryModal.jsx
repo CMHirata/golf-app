@@ -260,7 +260,7 @@ export function RoundSummaryModal({ r, onClose }) {
 
         {/* Player chip band — matches share image style */}
         <div style={{ background:'#ddeedd', padding:'8px 14px' }}>
-          <PlayerChipsGrid players={players} courseHcps={courseHcps} selectedTee={r.selected_tee} />
+          <PlayerChipsGrid players={players.map(p => { const lib = playerLib.getById(p.id); return lib?.photo ? { ...p, photo: lib.photo } : p; })} courseHcps={courseHcps} selectedTee={r.selected_tee} />
         </div>
 
         {/* Scrollable body */}
