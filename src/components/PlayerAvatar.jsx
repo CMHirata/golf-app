@@ -1,10 +1,9 @@
 // ─── components/PlayerAvatar.jsx ─────────────────────────────────────────────
 //
-// ✅ Self-checked (15-L): Photo rendered as <img> (confirmed working on iOS
-// Safari via console test). Circular clip via overflow:hidden on container.
-// No object-fit (iOS Safari issue). No background-image (iOS Safari issue
-// with large data URIs on border-radius elements). Initial circle uses
-// line-height centering, no flexbox.
+// ✅ Self-checked (15-L): container is inline-flex for reliable centering in
+// all contexts. Photo has border-radius:50% directly on <img> (overflow:hidden
+// on container kills img render on iOS Safari — confirmed via console testing).
+// Initials centered via flex. Starred badge absolutely positioned.
 
 const G = '#1a472a';
 
@@ -30,7 +29,9 @@ export default function PlayerAvatar({ player, size = 36, starred = false, onPre
         borderRadius: '50%',
         position: 'relative',
         flexShrink: 0,
-        display: 'block',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         cursor: onPress ? 'pointer' : 'default',
         backgroundColor: G,
       }}
@@ -51,16 +52,12 @@ export default function PlayerAvatar({ player, size = 36, starred = false, onPre
         />
       ) : (
         <span style={{
-          display: 'block',
-          width: size,
-          height: size,
-          lineHeight: `${size}px`,
-          textAlign: 'center',
           color: '#fff',
           fontSize: Math.round(size * 0.38),
           fontWeight: 700,
           fontFamily: 'inherit',
           userSelect: 'none',
+          lineHeight: 1,
         }}>
           {ini}
         </span>
