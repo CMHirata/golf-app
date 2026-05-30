@@ -46,6 +46,7 @@ import { Btn, Card, G, RED, ShareOrientationPicker } from '../components/ui.jsx'
 import { computePerMatchPayouts } from '../services/roundUtils.js';
 import { triggerRoundShare, buildShareImage } from '../services/shareUtils.js';
 import { roundLib } from '../services/roundLib.js';
+import { playerLib } from '../services/playerLib.js';
 import { PayoutsSection } from './PayoutDisplay.jsx';
 import PlayerAvatar from '../components/PlayerAvatar.jsx';
 
@@ -155,7 +156,8 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
     setShareError('');
     try {
       const rShim = { ...roundLib.fromActiveRound(ar), id: ar.roundId || undefined };
-      const blob  = await buildShareImage(rShim, ar, ar.bank || {}, ar.breakdown || [], matchPayouts, orientation);
+      const photoMap = Object.fromEntries(playerLib.list().map(p => [p.id, p.photo]).filter(([,v]) => v));
+      const blob  = await buildShareImage(rShim, ar, ar.bank || {}, ar.breakdown || [], matchPayouts, orientation, photoMap);
       await triggerRoundShare(rShim, ar, ar.bank || {}, ar.breakdown || [], matchPayouts, blob, orientation);
       setShareStatus('done');
     } catch(err) {

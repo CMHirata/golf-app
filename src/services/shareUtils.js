@@ -155,7 +155,7 @@ function deriveShareDotMode(ar) {
   return { mode: 'netofflow', min: subsetMin };
 }
 
-function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orientation = 'landscape') {
+function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orientation = 'landscape', photoMap = {}) {
   const {
     activePlayers: players, pars, hcps, hcpsWomen, scores, courseHcps, minCourseHcp,
     activeGames, gameOpts,
@@ -294,18 +294,20 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     const ini = nameParts.length >= 2
       ? (nameParts[0][0] + nameParts[nameParts.length-1][0]).toUpperCase()
       : (nameParts[0]?.[0] || '?').toUpperCase();
-    const circleHtml = (size) =>
-      `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#1a472a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.38)}px;font-weight:700;margin:0 auto 3px;flex-shrink:0;">${xe(ini)}</div>`;
+    const photo = photoMap[p.id] || null;
+    const avatarHtml = (size) => photo
+      ? `<img src="${photo}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 3px;flex-shrink:0;" alt=""/>`
+      : `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#1a472a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.38)}px;font-weight:700;margin:0 auto 3px;flex-shrink:0;">${xe(ini)}</div>`;
     if (isPortrait) {
       return `<div style="background:#fff;border-radius:8px;padding:4px 4px;text-align:center;min-width:0;">
-        ${circleHtml(28)}
+        ${avatarHtml(28)}
         <div style="font-size:10px;font-weight:700;color:#1a472a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${xe(firstName)}</div>
         ${lastName ? `<div style="font-size:9px;font-weight:500;color:#1a472a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${xe(lastName)}</div>` : ''}
         <div style="font-size:8px;color:#666;white-space:nowrap;margin-top:1px;">HI ${xe(p.ghin||'—')} · CH ${xe(ch)}</div>
       </div>`;
     }
     return `<div style="background:#fff;border-radius:8px;padding:5px 8px;text-align:center;">
-      ${circleHtml(32)}
+      ${avatarHtml(32)}
       <div style="font-size:12px;font-weight:700;color:#1a472a;">${xe(p.name)}</div>
       <div style="font-size:10px;color:#666;">HI ${xe(p.ghin||'—')} · CH ${xe(ch)}</div>
     </div>`;
@@ -815,9 +817,9 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     </div>`;
 }
 
-async function buildShareImageForeignObject(r, ar, bank, breakdown, matchPayouts, orientation = 'landscape') {
+async function buildShareImageForeignObject(r, ar, bank, breakdown, matchPayouts, orientation = 'landscape', photoMap = {}) {
   const logoDataUri = await getLogoDataUri();
-  const html = buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orientation);
+  const html = buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orientation, photoMap);
   const foWidth = orientation === 'portrait' ? FO_WIDTH_PORTRAIT : FO_WIDTH;
 
   const probe = document.createElement('div');
@@ -882,9 +884,9 @@ async function buildShareImageForeignObject(r, ar, bank, breakdown, matchPayouts
 // Renders the portrait HTML into a single-page PDF whose height exactly matches
 // the content — no page breaks, one continuous scrollable document.
 // iOS PDF viewer opens it full-width with vertical scroll. Returns Promise<Blob>.
-async function buildSharePdf(r, ar, bank, breakdown, matchPayouts) {
+async function buildSharePdf(r, ar, bank, breakdown, matchPayouts, photoMap = {}) {
   const logoDataUri = await getLogoDataUri();
-  const html = buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, 'portrait');
+  const html = buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, 'portrait', photoMap);
 
   // ── Step 1: measure content height ─────────────────────────────────────────
   const probe = document.createElement('div');
@@ -959,11 +961,11 @@ async function buildSharePdf(r, ar, bank, breakdown, matchPayouts) {
   });
 }
 
-export async function buildShareImage(r, ar, bank, breakdown, matchPayouts, orientation = 'landscape') {
+export async function buildShareImage(r, ar, bank, breakdown, matchPayouts, orientation = 'landscape', photoMap = {}) {
   if (orientation === 'portrait') {
-    return buildSharePdf(r, ar, bank, breakdown, matchPayouts);
+    return buildSharePdf(r, ar, bank, breakdown, matchPayouts, photoMap);
   }
-  return buildShareImageForeignObject(r, ar, bank, breakdown, matchPayouts, orientation);
+  return buildShareImageForeignObject(r, ar, bank, breakdown, matchPayouts, orientation, photoMap);
 }
 
 function downloadBlob(blob, filename) {

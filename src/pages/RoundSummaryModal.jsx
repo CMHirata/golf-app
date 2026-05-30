@@ -61,6 +61,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { G, RED, AMB, fmtDate, ShareOrientationPicker } from '../components/ui.jsx';
 import { useIsLandscape } from '../hooks/useIsLandscape.js';
 import { roundLib } from '../services/roundLib.js';
+import { playerLib } from '../services/playerLib.js';
 import { restoreDotDefs, COL_W, TOT_W, NAME_MIN } from './scorecard/scorecardUtils.js';
 import { xGrossScore } from '../engine/handicap.js';
 import { MatchNassauTable } from './tables/MatchNassauTable.jsx';
@@ -152,7 +153,8 @@ export function RoundSummaryModal({ r, onClose }) {
     setShareStatus('building');
     setShareError('');
     try {
-      const blob = await buildShareImage(r, ar, bank, breakdown, matchPayouts, orientation);
+      const photoMap = Object.fromEntries(playerLib.list().map(p => [p.id, p.photo]).filter(([,v]) => v));
+      const blob = await buildShareImage(r, ar, bank, breakdown, matchPayouts, orientation, photoMap);
       await triggerRoundShare(r, ar, bank, breakdown, matchPayouts, blob, orientation);
       setShareStatus('done');
     } catch(err) {
