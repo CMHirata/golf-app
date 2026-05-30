@@ -982,6 +982,19 @@ async function buildSharePdf(r, ar, bank, breakdown, matchPayouts, photoMap = {}
 }
 
 export async function buildShareImage(r, ar, bank, breakdown, matchPayouts, orientation = 'landscape', photoMap = {}) {
+  // Pre-load all photos into browser image cache before building HTML/canvas.
+  // Even base64 data URIs decode asynchronously on iOS Safari — pre-warming
+  // ensures they're ready when foreignObject draws to canvas.
+  const photoValues = Object.values(photoMap).filter(Boolean);
+  if (photoValues.length > 0) {
+    await Promise.all(photoValues.map(src => new Promise(res => {
+      const img = new Image();
+      img.onload  = res;
+      img.onerror = res;
+      img.src = src;
+    })));
+  }
+
   if (orientation === 'portrait') {
     return buildSharePdf(r, ar, bank, breakdown, matchPayouts, photoMap);
   }
