@@ -826,6 +826,16 @@ async function buildShareImageForeignObject(r, ar, bank, breakdown, matchPayouts
   probe.style.cssText = `position:fixed;top:0;left:0;width:${foWidth}px;visibility:hidden;pointer-events:none;z-index:9999;`;
   probe.innerHTML = html;
   document.body.appendChild(probe);
+  // Wait for all img elements (photo avatars) to finish loading before measuring
+  const probeImgs = Array.from(probe.querySelectorAll('img'));
+  if (probeImgs.length > 0) {
+    await Promise.all(probeImgs.map(img =>
+      img.complete ? Promise.resolve() : new Promise(res => {
+        img.onload = res;
+        img.onerror = res;
+      })
+    ));
+  }
   await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
   const measuredH = probe.scrollHeight;
   document.body.removeChild(probe);
@@ -893,6 +903,16 @@ async function buildSharePdf(r, ar, bank, breakdown, matchPayouts, photoMap = {}
   probe.style.cssText = `position:fixed;top:0;left:0;width:${FO_WIDTH_PORTRAIT}px;visibility:hidden;pointer-events:none;z-index:9999;background:#fff;`;
   probe.innerHTML = html;
   document.body.appendChild(probe);
+  // Wait for all img elements (photo avatars) to finish loading before measuring
+  const probeImgs = Array.from(probe.querySelectorAll('img'));
+  if (probeImgs.length > 0) {
+    await Promise.all(probeImgs.map(img =>
+      img.complete ? Promise.resolve() : new Promise(res => {
+        img.onload = res;
+        img.onerror = res;
+      })
+    ));
+  }
   await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
   const measuredH = probe.scrollHeight;
   document.body.removeChild(probe);
