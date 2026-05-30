@@ -34,6 +34,8 @@ export default function PlayerAvatar({ player, size = 36, starred = false, onPre
         display: 'block',
         cursor: onPress ? 'pointer' : 'default',
         backgroundColor: G,
+        WebkitTransform: 'translateZ(0)',
+        transform: 'translateZ(0)',
       }}
     >
       {photo ? (
