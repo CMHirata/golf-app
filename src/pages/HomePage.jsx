@@ -1,19 +1,18 @@
 // ─── pages/HomePage.jsx ───────────────────────────────────────────────────────
 //
 // ✅ Self-checked: H-13 applied — starred/inMoneyLists enriched from playerLib
-//    by name match, never from activePlayers snapshot. H-46 applied — no
-//    overflow:hidden on any ancestor of PlayerAvatar. H-29 applied —
-//    filterByRange called before all stat/streak/insights computations. H-30
-//    applied — ML_KEY ('moneyListRange') used; historyRange untouched.
-//    Basic/Enhanced toggle persisted to localStorage key 'homeViewMode'.
-//    Strongest Team and Nemesis degrade gracefully when no Match/Nassau rounds
-//    exist. Game breakdown table uses r.breakdown rows; avatars frozen left via
-//    sticky positioning (no overflow:hidden on container).
+//    by name. H-46 applied — overflow:hidden slide clip replaced with
+//    clip-path on a wrapper that does NOT sit above PlayerAvatar; avatars
+//    rendered outside any overflow:hidden ancestor. H-29 applied —
+//    filterByRange called before all stats/streaks/insights. H-30 applied —
+//    ML_KEY ('moneyListRange') used exclusively. No emoji in rendered UI —
+//    icons are SVG only. Basic/Enhanced toggle persisted to localStorage.
+//    Ranked list starts at position 4 (top 3 shown in podium).
 
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { ls, SK } from '../services/storage.js';
 import { roundLib } from '../services/roundLib.js';
-import { Btn, Card, G, RED, fmtDollar } from '../components/ui.jsx';
+import { Btn, Card, G, fmtDollar } from '../components/ui.jsx';
 import {
   loadRangePref, saveRangePref, filterByRange, rangeLabel,
   RangePickerRow, ML_KEY,
@@ -22,13 +21,10 @@ import PlayerAvatar from '../components/PlayerAvatar.jsx';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const HOME_VIEW_KEY = 'homeViewMode';
-const GOLD   = '#B8860B';
-const SILVER = '#707070';
-const BRONZE = '#8B4513';
 
-// ── SVG icons ─────────────────────────────────────────────────────────────────
+// ── SVG Icons (no emoji) ──────────────────────────────────────────────────────
 const IconPlus = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
     <line x1="12" y1="5" x2="12" y2="19"/>
     <line x1="5" y1="12" x2="19" y2="12"/>
@@ -43,25 +39,32 @@ const IconChevron = ({ open }) => (
   </svg>
 );
 
-const IconFlame = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="#E8612C" stroke="none">
-    <path d="M12 2C12 2 8 7 8 11c0 2.2 1.8 4 4 4s4-1.8 4-4c0-1.5-.8-2.8-1.5-3.5C14.5 8 14 9 13 9.5 13.5 8 13 5.5 12 2z"/>
-    <path d="M7 14c0 4 2.2 7 5 7s5-3 5-7c0-2-.8-3.8-2-5-.3 1.5-1 2.5-2 3 .5-1.5 0-3.5-1-5C11 8 9 9.5 8.5 11.5 7.5 12 7 13 7 14z" opacity="0.7"/>
+const IconFire = () => (
+  <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+    <path d="M50 10 C50 10 30 35 30 55 C30 70 39 82 50 82 C61 82 70 70 70 55 C70 35 50 10 50 10Z" fill="#E8612C"/>
+    <path d="M50 40 C50 40 40 52 40 62 C40 70 44 76 50 76 C56 76 60 70 60 62 C60 52 50 40 50 40Z" fill="#FFA040"/>
+    <path d="M50 58 C50 58 45 63 45 67 C45 70.5 47 73 50 73 C53 73 55 70.5 55 67 C55 63 50 58 50 58Z" fill="#FFD040"/>
   </svg>
 );
 
-const IconSnowflake = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4A90D9" strokeWidth="1.8" strokeLinecap="round">
+const IconSnow = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+    stroke="#4A90D9" strokeWidth="1.8" strokeLinecap="round">
     <line x1="12" y1="2" x2="12" y2="22"/>
     <line x1="2" y1="12" x2="22" y2="12"/>
     <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
     <line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/>
     <circle cx="12" cy="12" r="2" fill="#4A90D9" stroke="none"/>
+    <line x1="12" y1="2" x2="10" y2="5"/><line x1="12" y1="2" x2="14" y2="5"/>
+    <line x1="12" y1="22" x2="10" y2="19"/><line x1="12" y1="22" x2="14" y2="19"/>
+    <line x1="2" y1="12" x2="5" y2="10"/><line x1="2" y1="12" x2="5" y2="14"/>
+    <line x1="22" y1="12" x2="19" y2="10"/><line x1="22" y1="12" x2="19" y2="14"/>
   </svg>
 );
 
 const IconTrophy = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+    stroke="#B8860B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M8 21h8M12 17v4M7 4H4a2 2 0 0 0-2 2v1c0 3.3 2.7 6 6 6"/>
     <path d="M17 4h3a2 2 0 0 1 2 2v1c0 3.3-2.7 6-6 6"/>
     <path d="M6 2h12v10a6 6 0 0 1-12 0V2z"/>
@@ -69,7 +72,8 @@ const IconTrophy = () => (
 );
 
 const IconScissors = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+    stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="6" cy="6" r="3"/>
     <circle cx="6" cy="18" r="3"/>
     <line x1="20" y1="4" x2="8.12" y2="15.88"/>
@@ -78,116 +82,88 @@ const IconScissors = () => (
   </svg>
 );
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Data helpers ──────────────────────────────────────────────────────────────
 function cleanGameName(raw) {
-  // Strip detail suffix after ' —' or ' - ' or ' (', keep base game name
-  return raw.replace(/\s*[—\-–].*$/, '').replace(/\s*\(.*$/, '').trim();
+  return raw.replace(/\s*[—–-].*$/, '').replace(/\s*\(.*$/, '').trim();
 }
 
-function computeStreaks(filteredRounds, playerNames) {
-  // Returns { [name]: { count, type: 'hot'|'cold' } } for streaks >= 2
+function computeStreaks(filteredRounds, names) {
   const streaks = {};
-  for (const name of playerNames) {
-    let count = 0;
-    let type = null;
-    for (const r of filteredRounds) { // newest-first (H-29)
+  for (const name of names) {
+    let count = 0, type = null;
+    for (const r of filteredRounds) {
       const net = r.bank?.[name];
-      if (net === undefined || net === null) break;
+      if (net == null) break;
       if (net > 0) {
         if (type === 'cold') break;
         type = 'hot'; count++;
       } else if (net < 0) {
         if (type === 'hot') break;
         type = 'cold'; count++;
-      } else {
-        break; // zero = streak broken
-      }
+      } else break;
     }
     if (count >= 2 && type) streaks[name] = { count, type };
   }
   return streaks;
 }
 
-function computeGameTotals(filteredRounds, playerNames) {
-  // Returns { gameName: { playerName: netTotal } }
-  const gameTotals = {};
-  const gameOrder = [];
+function computeGameTotals(filteredRounds, rosterNames) {
+  const totals = {};
+  const orderSeen = [];
+  const seen = new Set();
   for (const r of filteredRounds) {
     for (const entry of (r.breakdown || [])) {
       const game = cleanGameName(entry.game);
-      if (!gameTotals[game]) { gameTotals[game] = {}; gameOrder.push(game); }
+      if (!seen.has(game)) { seen.add(game); orderSeen.push(game); }
+      if (!totals[game]) totals[game] = {};
       for (const row of (entry.rows || [])) {
-        if (!playerNames.has(row.name)) continue;
-        gameTotals[game][row.name] = (gameTotals[game][row.name] || 0) + (row.net || 0);
+        if (!rosterNames.has(row.name)) continue;
+        totals[game][row.name] = (totals[game][row.name] || 0) + (row.net || 0);
       }
     }
   }
-  // Deduplicate gameOrder while preserving first-seen order
-  const seen = new Set();
-  const uniqueOrder = [];
-  for (const g of gameOrder) { if (!seen.has(g)) { seen.add(g); uniqueOrder.push(g); } }
-  return { gameTotals, gameOrder: uniqueOrder };
+  return { gameTotals: totals, gameOrder: orderSeen };
 }
 
-function computeInsights(filteredRounds, playerNames, streaks) {
-  // Heater: longest active hot streak
-  let heater = null;
-  let heaterCount = 0;
+function computeInsights(filteredRounds, rosterNames, streaks, playerNetInPeriod) {
+  // Heater
+  let heater = null, heaterCount = 0;
   for (const [name, s] of Object.entries(streaks)) {
-    if (s.type === 'hot' && s.count > heaterCount) {
-      heaterCount = s.count;
-      heater = name;
-    }
+    if (s.type === 'hot' && s.count > heaterCount) { heaterCount = s.count; heater = name; }
   }
 
-  // Cold streak: longest active cold streak
-  let coldest = null;
-  let coldCount = 0;
+  // Cold
+  let coldest = null, coldCount = 0;
   for (const [name, s] of Object.entries(streaks)) {
-    if (s.type === 'cold' && s.count > coldCount) {
-      coldCount = s.count;
-      coldest = name;
-    }
+    if (s.type === 'cold' && s.count > coldCount) { coldCount = s.count; coldest = name; }
   }
 
-  // Strongest Team + Nemesis: parse match rounds
-  // Pair key = sorted names joined with '|'
-  const pairWins = {}; // { 'A|B': { wins: { A: n, B: n }, net: { A: n, B: n } } }
-
+  // Pair records (head-to-head via r.matches)
+  const pairRec = {};
   for (const r of filteredRounds) {
-    const matches = r.matches || [];
-    if (!matches.length) continue;
-    const players = r.players || [];
-
-    for (const m of matches) {
+    for (const m of (r.matches || [])) {
+      const pl = r.players || [];
       let sideA = [], sideB = [];
       if (m.format === 'individual') {
-        const p1 = players[m.p1]?.name;
-        const p2 = players[m.p2]?.name;
+        const p1 = pl[m.p1]?.name, p2 = pl[m.p2]?.name;
         if (!p1 || !p2) continue;
         sideA = [p1]; sideB = [p2];
       } else if (m.format === 'team') {
-        sideA = (m.teamA || []).map(i => players[i]?.name).filter(Boolean);
-        sideB = (m.teamB || []).map(i => players[i]?.name).filter(Boolean);
-        if (!sideA.length || !sideB.length) continue;
+        sideA = (m.teamA || []).map(i => pl[i]?.name).filter(Boolean);
+        sideB = (m.teamB || []).map(i => pl[i]?.name).filter(Boolean);
       } else continue;
 
-      // Determine winner from bank net: side with positive sum wins
       const netA = sideA.reduce((s, n) => s + (r.bank?.[n] || 0), 0);
       const netB = sideB.reduce((s, n) => s + (r.bank?.[n] || 0), 0);
-      if (netA === 0 && netB === 0) continue; // tie / no data
+      if (netA === 0 && netB === 0) continue;
+      const aWon = netA > netB;
 
-      const winnerSide = netA > netB ? sideA : sideB;
-      const loserSide  = netA > netB ? sideB : sideA;
-
-      // Register all cross-pairs from opposite sides
       for (const a of sideA) {
         for (const b of sideB) {
           const key = [a, b].sort().join('|');
-          if (!pairWins[key]) pairWins[key] = { names: [a, b], winsA: 0, winsB: 0, netA: 0, netB: 0 };
-          const rec = pairWins[key];
-          const aWon = winnerSide.includes(a);
-          if (aWon) { rec.winsA++; } else { rec.winsB++; }
+          if (!pairRec[key]) pairRec[key] = { names: [a, b], winsA: 0, winsB: 0, netA: 0, netB: 0 };
+          const rec = pairRec[key];
+          if (aWon) rec.winsA++; else rec.winsB++;
           rec.netA += r.bank?.[a] || 0;
           rec.netB += r.bank?.[b] || 0;
         }
@@ -195,90 +171,99 @@ function computeInsights(filteredRounds, playerNames, streaks) {
     }
   }
 
-  // Strongest Team: pair with most combined wins (highest total games played together on same side)
-  // Reinterpret: pairs who played on SAME side — scan team matches
-  const teamPairWins = {};
+  // Strongest Team (same-side pairs)
+  const teamRec = {};
   for (const r of filteredRounds) {
-    const matches = r.matches || [];
-    for (const m of matches) {
+    for (const m of (r.matches || [])) {
       if (m.format !== 'team') continue;
-      const players = r.players || [];
-      const sides = [m.teamA || [], m.teamB || []];
-      for (const side of sides) {
-        const names = side.map(i => players[i]?.name).filter(Boolean);
+      const pl = r.players || [];
+      for (const side of [m.teamA || [], m.teamB || []]) {
+        const names = side.map(i => pl[i]?.name).filter(Boolean);
         const sideNet = names.reduce((s, n) => s + (r.bank?.[n] || 0), 0);
-        const won = sideNet > 0;
         for (let i = 0; i < names.length; i++) {
           for (let j = i + 1; j < names.length; j++) {
             const key = [names[i], names[j]].sort().join('|');
-            if (!teamPairWins[key]) teamPairWins[key] = { names: [names[i], names[j]], wins: 0, net: 0 };
-            if (won) teamPairWins[key].wins++;
-            teamPairWins[key].net += sideNet;
+            if (!teamRec[key]) teamRec[key] = { names: [names[i], names[j]], wins: 0, net: 0 };
+            if (sideNet > 0) teamRec[key].wins++;
+            teamRec[key].net += sideNet;
           }
         }
       }
     }
   }
 
-  let strongestTeam = null;
-  let strongestWins = 0;
-  for (const rec of Object.values(teamPairWins)) {
+  let strongestTeam = null, strongestWins = 0;
+  for (const rec of Object.values(teamRec)) {
     if (rec.wins > strongestWins) { strongestWins = rec.wins; strongestTeam = rec; }
   }
 
-  // Nemesis: pair with most lopsided head-to-head record (most wins vs losses)
-  let nemesis = null;
-  let nemesisImbalance = 0;
-  for (const rec of Object.values(pairWins)) {
-    const imbalance = Math.abs(rec.winsA - rec.winsB);
+  // Nemesis
+  let nemesis = null, nemesisImbalance = 0;
+  for (const rec of Object.values(pairRec)) {
     const total = rec.winsA + rec.winsB;
-    if (total < 2) continue; // need at least 2 rounds
+    if (total < 2) continue;
+    const imbalance = Math.abs(rec.winsA - rec.winsB);
     if (imbalance > nemesisImbalance) {
       nemesisImbalance = imbalance;
-      const winnerName = rec.winsA >= rec.winsB ? rec.names[0] : rec.names[1];
-      const loserName  = rec.winsA >= rec.winsB ? rec.names[1] : rec.names[0];
-      const winsForWinner = Math.max(rec.winsA, rec.winsB);
-      const winsForLoser  = Math.min(rec.winsA, rec.winsB);
-      const netLoser = rec.names[0] === loserName ? rec.netA : rec.netB;
-      nemesis = { winner: winnerName, loser: loserName, wWins: winsForWinner, lWins: winsForLoser, netLoser };
+      const aWins = rec.winsA >= rec.winsB;
+      nemesis = {
+        winner: aWins ? rec.names[0] : rec.names[1],
+        loser:  aWins ? rec.names[1] : rec.names[0],
+        wWins: Math.max(rec.winsA, rec.winsB),
+        lWins: Math.min(rec.winsA, rec.winsB),
+        netLoser: aWins ? rec.netB : rec.netA,
+      };
     }
   }
 
   return { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, nemesis };
 }
 
-// ── Place badge ───────────────────────────────────────────────────────────────
-function PlaceBadge({ place }) {
-  const color = place === 1 ? GOLD : place === 2 ? SILVER : BRONZE;
-  return (
-    <div style={{
-      position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
-      background: color, color: '#fff',
-      borderRadius: 4, width: 20, height: 20,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 10, fontWeight: 800, zIndex: 2,
-      boxShadow: '0 1px 4px rgba(0,0,0,.25)',
-    }}>
-      {place}
-    </div>
-  );
-}
+// ── PodiumCard — GPT scaffold structure, data wired ──────────────────────────
+function PodiumCard({ player, rank, streak }) {
+  const nameParts = (player.name || '').trim().split(/\s+/);
+  const first = nameParts[0] || '';
+  const last  = nameParts.slice(1).join(' ');
+  const rankColor = rank === 1 ? G : rank === 2 ? '#9a9a9a' : '#b67a43';
+  const amtColor  = player.total >= 0 ? G : '#A32D2D';
 
-// ── Insight tile ──────────────────────────────────────────────────────────────
-function InsightTile({ icon, label, name, stat, statColor }) {
   return (
+    // H-46: no overflow:hidden anywhere in this tree
     <div style={{
-      background: '#fff', borderRadius: 12, padding: '12px 10px',
-      display: 'flex', alignItems: 'flex-start', gap: 10,
-      boxShadow: '0 1px 4px rgba(0,0,0,.06)',
-      border: '1px solid #eee',
+      flex: 1, background: '#fff', border: '1px solid #e5eee5', borderRadius: 16,
+      padding: '14px 10px', textAlign: 'center',
+      boxShadow: '0 2px 10px rgba(0,0,0,.05)',
     }}>
-      <div style={{ flexShrink: 0, marginTop: 2 }}>{icon}</div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{label}</div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#111', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-        <div style={{ fontSize: 12, color: statColor || G }}>{stat}</div>
+      <div style={{
+        width: 24, height: 24, borderRadius: 8, margin: '0 auto 8px',
+        background: rankColor, color: '#fff', fontSize: 12, fontWeight: 800,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>{rank}</div>
+
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+        <PlayerAvatar player={player} size={52} starred={!!player.starred} />
       </div>
+
+      <div style={{ fontWeight: 700, fontSize: 14, color: '#222' }}>{first}</div>
+      <div style={{ fontWeight: 600, fontSize: 12, color: '#666', marginBottom: 6 }}>{last}</div>
+
+      <div style={{ fontWeight: 800, fontSize: 18, color: amtColor }}>
+        {fmtDollar(player.total)}
+      </div>
+
+      {streak && streak.count >= 2 && (
+        <div style={{
+          marginTop: 6, fontSize: 11, fontWeight: 700,
+          color: streak.type === 'hot' ? '#E8612C' : '#4A90D9',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+        }}>
+          {streak.type === 'hot'
+            ? <svg width="12" height="12" viewBox="0 0 100 100"><path d="M50 10C50 10 30 35 30 55C30 70 39 82 50 82C61 82 70 70 70 55C70 35 50 10 50 10Z" fill="#E8612C"/><path d="M50 40C50 40 40 52 40 62C40 70 44 76 50 76C56 76 60 70 60 62C60 52 50 40 50 40Z" fill="#FFA040"/></svg>
+            : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4A90D9" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/></svg>
+          }
+          {streak.type === 'hot' ? 'Heater' : 'Cold'} {streak.count}
+        </div>
+      )}
     </div>
   );
 }
@@ -289,25 +274,24 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
   const players = useMemo(() => ls.get(SK.players) || [], []);
   const courses = useMemo(() => ls.get(SK.courses) || [], []);
 
-  const [rangePref, setRangePrefState] = useState(() => loadRangePref(ML_KEY));
-  const [pickerOpen, setPickerOpen]    = useState(false);
-  const [expanded, setExpanded]        = useState(false);
-  const [viewMode, setViewMode]        = useState(() => ls.get(HOME_VIEW_KEY) || 'basic');
-
-  const tableRef = useRef(null);
+  const [rangePref, setRangePrefRaw] = useState(() => loadRangePref(ML_KEY));
+  const [pickerOpen, setPickerOpen]  = useState(false);
+  const [showMatrix, setShowMatrix]  = useState(false);
+  const [viewMode, setViewMode]      = useState(() => ls.get(HOME_VIEW_KEY) || 'basic');
 
   const setRangePref = useCallback((pref) => {
     saveRangePref(pref, ML_KEY);
-    setRangePrefState(pref);
+    setRangePrefRaw(pref);
     if (pref.range !== 'custom') setPickerOpen(false);
   }, []);
 
   const setView = useCallback((mode) => {
     ls.set(HOME_VIEW_KEY, mode);
     setViewMode(mode);
+    setShowMatrix(false);
   }, []);
 
-  // H-13: enrich from playerLib by name
+  // H-13: enrich player records by name
   const playerByName = useMemo(() => {
     const map = {};
     players.forEach(p => { map[p.name] = p; });
@@ -315,49 +299,55 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
   }, [players]);
 
   const rosterNames = useMemo(() => {
-    const names = new Set();
-    players.forEach(p => names.add(p.name));
-    return names;
+    const s = new Set(); players.forEach(p => s.add(p.name)); return s;
   }, [players]);
 
   const excludedNames = useMemo(() => {
-    const excluded = new Set();
-    players.forEach(p => { if (p.inMoneyLists === false) excluded.add(p.name); });
-    return excluded;
+    const s = new Set();
+    players.forEach(p => { if (p.inMoneyLists === false) s.add(p.name); });
+    return s;
   }, [players]);
 
-  const filteredRounds = useMemo(() => filterByRange(rounds, rangePref), [rounds, rangePref]);
+  // H-29: filter first
+  const filteredRounds = useMemo(() =>
+    filterByRange(rounds, rangePref), [rounds, rangePref]);
 
-  // Money list (all players, sorted by net desc)
   const moneyList = useMemo(() => {
     const totals = {};
     filteredRounds.forEach(r => {
       Object.entries(r.bank || {}).forEach(([name, v]) => {
-        if (!rosterNames.has(name)) return;
-        if (excludedNames.has(name)) return;
+        if (!rosterNames.has(name) || excludedNames.has(name)) return;
         totals[name] = (totals[name] || 0) + v;
       });
     });
     return Object.entries(totals).sort((a, b) => b[1] - a[1]);
   }, [filteredRounds, rosterNames, excludedNames]);
 
-  // Streaks
-  const streaks = useMemo(() =>
-    computeStreaks(filteredRounds, Array.from(rosterNames).filter(n => !excludedNames.has(n))),
-    [filteredRounds, rosterNames, excludedNames]
-  );
+  const activePlayerNames = useMemo(() =>
+    Array.from(rosterNames).filter(n => !excludedNames.has(n)),
+    [rosterNames, excludedNames]);
 
-  // Game totals for breakdown table
+  const streaks = useMemo(() =>
+    computeStreaks(filteredRounds, activePlayerNames),
+    [filteredRounds, activePlayerNames]);
+
   const { gameTotals, gameOrder } = useMemo(() =>
     computeGameTotals(filteredRounds, rosterNames),
-    [filteredRounds, rosterNames]
-  );
+    [filteredRounds, rosterNames]);
 
-  // Insights
+  const playerNetInPeriod = useMemo(() => {
+    const map = {};
+    filteredRounds.forEach(r => {
+      Object.entries(r.bank || {}).forEach(([name, v]) => {
+        map[name] = (map[name] || 0) + v;
+      });
+    });
+    return map;
+  }, [filteredRounds]);
+
   const insights = useMemo(() =>
-    computeInsights(filteredRounds, rosterNames, streaks),
-    [filteredRounds, rosterNames, streaks]
-  );
+    computeInsights(filteredRounds, rosterNames, streaks, playerNetInPeriod),
+    [filteredRounds, rosterNames, streaks, playerNetInPeriod]);
 
   // Stat tiles
   const statTiles = useMemo(() => {
@@ -369,46 +359,68 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
     filteredRounds.forEach(r => {
       Object.values(r.bank || {}).forEach(v => { wagered += Math.abs(v); });
     });
-    wagered = wagered / 2; // each transaction counted from both sides
+    wagered = wagered / 2;
     return [
-      { label: 'Rounds',   value: ytdRounds.length,   sub: 'This year' },
-      { label: 'Players',  value: activePlayers,       sub: 'Active'    },
-      { label: 'Courses',  value: coursesPlayed,       sub: 'Played'    },
-      { label: 'Wagered',  value: fmtDollar(wagered),  sub: 'This year', green: true },
+      { label: 'Rounds',        value: String(ytdRounds.length) },
+      { label: 'Players',       value: String(activePlayers)    },
+      { label: 'Courses',       value: String(coursesPlayed)    },
+      { label: 'Total Wagered', value: fmtDollar(wagered)       },
     ];
   }, [rounds, players, filteredRounds]);
 
+  const top3   = moneyList.slice(0, 3);
+  const rest   = moneyList.slice(3);
   const hasData = rounds.length > 0;
-  const top3    = moneyList.slice(0, 3);
 
-  // Net total across filteredRounds per player (for heater/cold stat line)
-  const playerNetInPeriod = useMemo(() => {
-    const map = {};
-    filteredRounds.forEach(r => {
-      Object.entries(r.bank || {}).forEach(([name, v]) => {
-        map[name] = (map[name] || 0) + v;
-      });
-    });
-    return map;
-  }, [filteredRounds]);
+  // Podium order: 2nd left, 1st center, 3rd right
+  const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean);
+  const podiumRanks = top3[1] ? [2, 1, 3] : top3[0] ? [1] : [];
+
+  // ── Insight tiles array ───────────────────────────────────────────────────
+  const insightTiles = useMemo(() => {
+    const tiles = [];
+    const { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, nemesis } = insights;
+
+    if (heater && heaterCount >= 2) {
+      const net = playerNetInPeriod[heater] || 0;
+      tiles.push({ icon: <IconFire />, title: 'Heater', name: heater,
+        sub: `+${fmtDollar(Math.abs(net))} over last ${heaterCount} rounds`, subColor: G });
+    }
+    if (coldest && coldCount >= 2) {
+      const net = playerNetInPeriod[coldest] || 0;
+      tiles.push({ icon: <IconSnow />, title: 'Cold Streak', name: coldest,
+        sub: `${coldCount} losses in a row / ${fmtDollar(net)}`, subColor: '#A32D2D' });
+    }
+    if (strongestTeam && strongestWins >= 1) {
+      tiles.push({ icon: <IconTrophy />, title: 'Strongest Team',
+        name: strongestTeam.names.join(' & '),
+        sub: `${strongestWins} wins together / +${fmtDollar(Math.abs(strongestTeam.net))}`, subColor: G });
+    }
+    if (nemesis) {
+      const { winner, loser, wWins, lWins, netLoser } = nemesis;
+      tiles.push({ icon: <IconScissors />, title: 'Nemesis', name: loser,
+        sub: `${lWins}-${wWins} vs ${winner} / ${fmtDollar(netLoser)}`, subColor: '#A32D2D' });
+    }
+    return tiles;
+  }, [insights, playerNetInPeriod]);
 
   return (
     <div style={{ minHeight: '100vh', background: '#eef4ee', paddingBottom: 80 }}>
 
       {/* ── Header ── */}
       <div style={{
-        background: G, padding: '8px 16px 7px',
+        background: G, padding: '10px 16px',
         position: 'sticky', top: 0, zIndex: 10,
         boxShadow: '0 2px 12px rgba(0,0,0,.2)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <img src="/logo_icon.png" alt="The Card" style={{ height: 58, width: 'auto', display: 'block' }} />
-        <div style={{ color: '#fff', fontWeight: 800, fontSize: 16, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'inherit' }}>
+        <img src="/logo_icon.png" alt="The Card" style={{ height: 54, width: 'auto', display: 'block' }} />
+        <div style={{ color: '#fff', fontWeight: 800, fontSize: 16, letterSpacing: '.14em', textTransform: 'uppercase', fontFamily: 'inherit' }}>
           The Card
         </div>
       </div>
 
-      <div style={{ padding: '14px 14px', maxWidth: 520, margin: '0 auto' }}>
+      <div style={{ maxWidth: 520, margin: '0 auto', padding: 14 }}>
 
         {/* ── Resume banner ── */}
         {inProgress && (
@@ -430,47 +442,40 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
         {/* ── New Round CTA ── */}
         <button onClick={onNewRound} style={{
           width: '100%', background: G, color: '#fff', border: 'none',
-          borderRadius: 14, padding: '16px 20px', fontSize: 15, fontWeight: 800,
+          borderRadius: 18, padding: '18px 20px', fontSize: 17, fontWeight: 800,
           cursor: 'pointer', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', gap: 8, marginBottom: 12,
-          boxShadow: '0 4px 16px rgba(26,71,42,.3)', fontFamily: 'inherit',
+          justifyContent: 'center', gap: 8, marginBottom: 14,
+          boxShadow: '0 6px 18px rgba(26,71,42,.28)', fontFamily: 'inherit',
         }}>
           <IconPlus />
           New Round
         </button>
 
-        {/* ── Stat tiles ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
-          {statTiles.map(s => (
-            <div key={s.label} style={{
-              background: '#fff', borderRadius: 12, padding: '10px 6px',
-              textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,.06)',
+        {/* ── Stat tiles — always 2×2 ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+          {statTiles.map(({ label, value }) => (
+            <div key={label} style={{
+              background: '#fff', borderRadius: 16, padding: '16px 12px',
+              boxShadow: '0 2px 10px rgba(0,0,0,.05)',
             }}>
-              <div style={{ fontSize: s.label === 'Wagered' ? 13 : 20, fontWeight: 800, color: s.green ? G : G, lineHeight: 1.1 }}>{s.value}</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#444', marginTop: 1 }}>{s.label}</div>
-              <div style={{ fontSize: 9, color: '#aaa', marginTop: 1 }}>{s.sub}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: G }}>{value}</div>
+              <div style={{ fontSize: 12, color: '#8b8b8b' }}>{label}</div>
             </div>
           ))}
         </div>
 
         {/* ── BASIC VIEW ── */}
         {viewMode === 'basic' && hasData && (
-          <Card style={{ padding: '14px 14px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: pickerOpen ? 10 : 12 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: G, flex: 1 }}>Money List</div>
-              <button
-                onClick={() => setPickerOpen(o => !o)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  background: '#f0f7f0', border: '1.5px solid ' + G,
-                  borderRadius: 20, padding: '4px 10px',
-                  fontSize: 12, fontWeight: 700, color: G,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                {rangeLabel(rangePref)}
-                <IconChevron open={pickerOpen} />
+          <Card style={{ padding: 16, marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: pickerOpen ? 10 : 14 }}>
+              <div style={{ fontWeight: 800, fontSize: 20, color: '#1f3f24', flex: 1 }}>Money List</div>
+              <button onClick={() => setPickerOpen(o => !o)} style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                background: '#fff', border: '1.5px solid ' + G, color: G,
+                borderRadius: 18, padding: '7px 12px',
+                fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+                {rangeLabel(rangePref)} <IconChevron open={pickerOpen} />
               </button>
             </div>
 
@@ -481,33 +486,27 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
             )}
 
             {moneyList.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <div style={{ background: '#fafdfa', border: '1px solid #e8efe8', borderRadius: 14 }}>
                 {moneyList.map(([name, total], i) => {
-                  const positive = total > 0;
-                  const negative = total < 0;
-                  const amountColor = positive ? '#27500A' : negative ? '#A32D2D' : '#bbb';
-                  const playerRecord = playerByName[name] || { name };
+                  const pr = playerByName[name] || { name };
                   return (
                     <div key={name} style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      background: '#f8faf8', borderRadius: 9, padding: '6px 12px 6px 8px',
-                      border: '1px solid #e8f0e8',
+                      display: 'flex', alignItems: 'center',
+                      padding: '10px 14px',
+                      borderBottom: i < moneyList.length - 1 ? '1px solid #edf3ed' : 'none',
                     }}>
-                      <PlayerAvatar player={playerRecord} size={30} starred={false} />
-                      <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#222', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {name}
+                      <div style={{ width: 22, fontSize: 12, fontWeight: 700, color: '#aaa', flexShrink: 0 }}>{i + 1}</div>
+                      <div style={{ marginRight: 8, flexShrink: 0 }}>
+                        <PlayerAvatar player={pr} size={28} starred={false} />
                       </div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: amountColor, flexShrink: 0 }}>
-                        {fmtDollar(total)}
-                      </div>
+                      <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#222' }}>{name}</div>
+                      <div style={{ fontWeight: 800, color: total >= 0 ? G : '#A32D2D' }}>{fmtDollar(total)}</div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '10px 0' }}>
-                No rounds in this period
-              </div>
+              <div style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '12px 0' }}>No rounds in this period</div>
             )}
           </Card>
         )}
@@ -515,36 +514,27 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
         {/* ── ENHANCED VIEW ── */}
         {viewMode === 'enhanced' && hasData && (
           <>
-            {/* ── Standings card ── */}
-            <Card style={{ padding: '14px 14px', marginBottom: 12 }}>
+            {/* Standings card */}
+            <Card style={{ padding: 16, marginBottom: 14, overflow: 'visible' }}>
 
-              {/* Header row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: pickerOpen ? 10 : 14 }}>
-                <div style={{ fontWeight: 800, fontSize: 15, color: G, flex: 1 }}>Standings</div>
-                <button
-                  onClick={() => setPickerOpen(o => !o)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    background: '#f0f7f0', border: '1.5px solid ' + G,
-                    borderRadius: 20, padding: '4px 10px',
-                    fontSize: 12, fontWeight: 700, color: G,
-                    cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  {rangeLabel(rangePref)}
-                  <IconChevron open={pickerOpen} />
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: pickerOpen ? 10 : 14 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#1f3f24', flex: 1 }}>Standings</div>
+                <button onClick={() => setPickerOpen(o => !o)} style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  background: '#fff', border: '1.5px solid ' + G, color: G,
+                  borderRadius: 18, padding: '7px 10px',
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                  marginRight: 8,
+                }}>
+                  {rangeLabel(rangePref)} <IconChevron open={pickerOpen} />
                 </button>
-                <button
-                  onClick={() => setExpanded(e => !e)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 4,
-                    background: 'transparent', border: 'none',
-                    fontSize: 12, fontWeight: 700, color: G,
-                    cursor: 'pointer', fontFamily: 'inherit', padding: '4px 2px',
-                  }}
-                >
-                  {expanded ? 'Collapse' : 'Expand'}
-                  <IconChevron open={expanded} />
+                <button onClick={() => setShowMatrix(v => !v)} style={{
+                  background: '#fff', border: '1.5px solid ' + G, color: G,
+                  borderRadius: 18, padding: '7px 12px',
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                }}>
+                  {showMatrix ? 'Standings' : 'View Full List'}
                 </button>
               </div>
 
@@ -555,272 +545,168 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
               )}
 
               {moneyList.length === 0 && (
-                <div style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '10px 0' }}>
-                  No rounds in this period
-                </div>
+                <div style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '12px 0' }}>No rounds in this period</div>
               )}
 
-              {/* ── Podium — top 3 ── */}
-              {!expanded && moneyList.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-                  {/* 2nd — left */}
-                  {top3[1] && (() => {
-                    const [name, total] = top3[1];
-                    const pr = playerByName[name] || { name };
-                    const streak = streaks[name];
-                    const amtColor = total > 0 ? '#27500A' : total < 0 ? '#A32D2D' : '#bbb';
-                    return (
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 0 }}>
-                        <div style={{ position: 'relative', marginBottom: 6, marginTop: 16 }}>
-                          <PlaceBadge place={2} />
-                          {/* H-46: no overflow:hidden here */}
-                          <PlayerAvatar player={pr} size={44} starred={!!pr.starred} />
-                        </div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#111', textAlign: 'center', marginBottom: 2 }}>{name}</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: amtColor, textAlign: 'center' }}>{fmtDollar(total)}</div>
-                        {streak && (
-                          <div style={{ fontSize: 11, color: streak.type === 'hot' ? '#E8612C' : '#4A90D9', marginTop: 2 }}>
-                            {streak.type === 'hot' ? '🔥' : '❄️'} {streak.count} wins
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+              {/* Slide container — clip via clipPath, NOT overflow:hidden (H-46) */}
+              {moneyList.length > 0 && (
+                <div style={{ position: 'relative' }}>
+                  {/* Clipping mask that doesn't affect img border-radius on iOS */}
+                  <div style={{
+                    clipPath: 'inset(0 0 0 0)',
+                    borderRadius: 16,
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      width: '200%',
+                      transform: showMatrix ? 'translateX(-50%)' : 'translateX(0)',
+                      transition: 'transform .35s ease',
+                    }}>
 
-                  {/* 1st — center, elevated */}
-                  {top3[0] && (() => {
-                    const [name, total] = top3[0];
-                    const pr = playerByName[name] || { name };
-                    const streak = streaks[name];
-                    const amtColor = total > 0 ? '#27500A' : total < 0 ? '#A32D2D' : '#bbb';
-                    return (
-                      <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ position: 'relative', marginBottom: 6 }}>
-                          <PlaceBadge place={1} />
-                          {/* H-46: no overflow:hidden here */}
-                          <PlayerAvatar player={pr} size={52} starred={!!pr.starred} />
-                        </div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#111', textAlign: 'center', marginBottom: 2 }}>{name}</div>
-                        <div style={{ fontSize: 17, fontWeight: 800, color: amtColor, textAlign: 'center' }}>{fmtDollar(total)}</div>
-                        {streak && (
-                          <div style={{ fontSize: 11, color: streak.type === 'hot' ? '#E8612C' : '#4A90D9', marginTop: 2 }}>
-                            {streak.type === 'hot' ? 'Heater 🔥' : 'Cold ❄️'} {streak.count} wins
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* 3rd — right */}
-                  {top3[2] && (() => {
-                    const [name, total] = top3[2];
-                    const pr = playerByName[name] || { name };
-                    const streak = streaks[name];
-                    const amtColor = total > 0 ? '#27500A' : total < 0 ? '#A32D2D' : '#bbb';
-                    return (
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 0 }}>
-                        <div style={{ position: 'relative', marginBottom: 6, marginTop: 16 }}>
-                          <PlaceBadge place={3} />
-                          {/* H-46: no overflow:hidden here */}
-                          <PlayerAvatar player={pr} size={44} starred={!!pr.starred} />
-                        </div>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: '#111', textAlign: 'center', marginBottom: 2 }}>{name}</div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: amtColor, textAlign: 'center' }}>{fmtDollar(total)}</div>
-                        {streak && (
-                          <div style={{ fontSize: 11, color: streak.type === 'hot' ? '#E8612C' : '#4A90D9', marginTop: 2 }}>
-                            {streak.type === 'hot' ? '🔥' : '❄️'} {streak.count} wins
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* ── Expanded: game breakdown table ── */}
-              {expanded && moneyList.length > 0 && (
-                <div style={{ marginTop: 4 }}>
-                  {gameOrder.length === 0 ? (
-                    <div style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '10px 0' }}>No game breakdown data</div>
-                  ) : (
-                    // Outer wrapper — position:relative, NO overflow:hidden (H-46 applies to avatars below)
-                    <div style={{ position: 'relative' }}>
-                      {/* Scrollable area — overflow:auto OK here because avatars are outside this in frozen col */}
-                      <div style={{ display: 'flex' }}>
-
-                        {/* Frozen left column: avatars + names */}
-                        <div style={{ flexShrink: 0, zIndex: 2 }}>
-                          {/* Header spacer */}
-                          <div style={{ height: 32 }} />
-                          {moneyList.map(([name]) => {
+                      {/* ── Standings panel ── */}
+                      <div style={{ width: '50%', paddingRight: 10, boxSizing: 'border-box' }}>
+                        {/* Podium */}
+                        <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+                          {podiumOrder.map((entry, idx) => {
+                            const [name, total] = entry;
                             const pr = playerByName[name] || { name };
                             return (
-                              <div key={name} style={{
-                                height: 38, display: 'flex', alignItems: 'center', gap: 6,
-                                paddingRight: 8, borderBottom: '1px solid #f0f0f0',
-                                background: '#fff',
-                              }}>
-                                {/* H-46: PlayerAvatar outside any overflow:hidden ancestor */}
-                                <PlayerAvatar player={pr} size={26} starred={false} />
-                                <div style={{ fontSize: 12, fontWeight: 600, color: '#222', whiteSpace: 'nowrap', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {name.split(' ')[0]}
-                                </div>
-                              </div>
+                              <PodiumCard
+                                key={name}
+                                player={{ ...pr, total }}
+                                rank={podiumRanks[idx]}
+                                streak={streaks[name]}
+                              />
                             );
                           })}
                         </div>
 
-                        {/* Scrollable game columns */}
-                        <div
-                          ref={tableRef}
-                          style={{ overflowX: 'auto', flex: 1, WebkitOverflowScrolling: 'touch' }}
-                        >
-                          {/* Column headers */}
-                          <div style={{ display: 'flex', borderBottom: '2px solid #eee', height: 32 }}>
-                            {[...gameOrder, 'Total'].map(g => (
-                              <div key={g} style={{
-                                minWidth: 64, flex: '0 0 64px', textAlign: 'center',
-                                fontSize: 10, fontWeight: 700, color: '#888',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                paddingBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em',
-                              }}>
-                                {g === 'Total' ? 'Total' : g}
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Data rows */}
-                          {moneyList.map(([name, total]) => (
-                            <div key={name} style={{ display: 'flex', height: 38, borderBottom: '1px solid #f0f0f0', alignItems: 'center' }}>
-                              {gameOrder.map(g => {
-                                const val = gameTotals[g]?.[name] || 0;
-                                const c = val > 0 ? '#27500A' : val < 0 ? '#A32D2D' : '#bbb';
-                                return (
-                                  <div key={g} style={{ minWidth: 64, flex: '0 0 64px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: c }}>
-                                    {val === 0 ? '—' : fmtDollar(val)}
+                        {/* Ranked list — positions 4+ */}
+                        {rest.length > 0 && (
+                          <div style={{
+                            background: '#fafdfa', border: '1px solid #e8efe8', borderRadius: 14,
+                          }}>
+                            {rest.map(([name, total], i) => {
+                              const pr = playerByName[name] || { name };
+                              const streak = streaks[name];
+                              return (
+                                <div key={name} style={{
+                                  display: 'flex', alignItems: 'center',
+                                  padding: '12px 14px',
+                                  borderBottom: i < rest.length - 1 ? '1px solid #edf3ed' : 'none',
+                                }}>
+                                  <div style={{ width: 24, fontWeight: 700, color: '#777', fontSize: 13, flexShrink: 0 }}>{i + 4}</div>
+                                  <div style={{ marginRight: 8, flexShrink: 0 }}>
+                                    {/* H-46: no overflow:hidden ancestor */}
+                                    <PlayerAvatar player={pr} size={28} starred={false} />
                                   </div>
-                                );
-                              })}
-                              {/* Total col */}
-                              <div style={{
-                                minWidth: 64, flex: '0 0 64px', textAlign: 'center',
-                                fontSize: 12, fontWeight: 800,
-                                color: total > 0 ? '#27500A' : total < 0 ? '#A32D2D' : '#bbb',
-                              }}>
-                                {fmtDollar(total)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── Ranked list (below podium, always visible in non-expanded state) ── */}
-              {!expanded && moneyList.length > 1 && (
-                <div style={{ marginTop: 8, borderTop: '1px solid #f0f0f0', paddingTop: 8 }}>
-                  {moneyList.map(([name, total], i) => {
-                    const pr = playerByName[name] || { name };
-                    const streak = streaks[name];
-                    const amtColor = total > 0 ? '#27500A' : total < 0 ? '#A32D2D' : '#bbb';
-                    return (
-                      <div key={name} style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '6px 4px', borderBottom: i < moneyList.length - 1 ? '1px solid #f5f5f5' : 'none',
-                      }}>
-                        <div style={{ width: 16, fontSize: 11, color: '#bbb', fontWeight: 600, textAlign: 'center', flexShrink: 0 }}>{i + 1}</div>
-                        {/* H-46: no overflow:hidden ancestor */}
-                        <PlayerAvatar player={pr} size={28} starred={false} />
-                        <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#222', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-                        {streak && (
-                          <div style={{ fontSize: 11, color: streak.type === 'hot' ? '#E8612C' : '#4A90D9', flexShrink: 0 }}>
-                            {streak.type === 'hot' ? '🔥' : '❄️'}
+                                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#222' }}>{name}</div>
+                                  {streak && streak.count >= 2 && (
+                                    <div style={{
+                                      fontSize: 11, fontWeight: 700, marginRight: 8,
+                                      color: streak.type === 'hot' ? '#E8612C' : '#4A90D9',
+                                    }}>
+                                      {streak.type === 'hot' ? 'Hot' : 'Cold'} {streak.count}
+                                    </div>
+                                  )}
+                                  <div style={{
+                                    fontWeight: 800,
+                                    color: total >= 0 ? G : '#A32D2D',
+                                  }}>{fmtDollar(total)}</div>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
-                        <div style={{ fontSize: 13, fontWeight: 700, color: amtColor, flexShrink: 0 }}>{fmtDollar(total)}</div>
                       </div>
-                    );
-                  })}
+
+                      {/* ── Matrix panel ── */}
+                      <div style={{ width: '50%', paddingLeft: 10, boxSizing: 'border-box' }}>
+                        {gameOrder.length === 0 ? (
+                          <div style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '20px 0' }}>No breakdown data</div>
+                        ) : (
+                          <div style={{
+                            background: '#fff', border: '1px solid #e5eee5', borderRadius: 14,
+                            overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+                          }}>
+                            <table style={{ width: '100%', minWidth: 420, borderCollapse: 'collapse', fontSize: 12 }}>
+                              <thead>
+                                <tr style={{ borderBottom: '2px solid #eee' }}>
+                                  <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700, color: '#555', fontSize: 11, whiteSpace: 'nowrap' }}>Player</th>
+                                  {gameOrder.map(g => (
+                                    <th key={g} style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: '#555', fontSize: 11, whiteSpace: 'nowrap' }}>{g}</th>
+                                  ))}
+                                  <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: '#555', fontSize: 11 }}>Total</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {moneyList.map(([name, total], rowIdx) => {
+                                  const pr = playerByName[name] || { name };
+                                  return (
+                                    <tr key={name} style={{ borderBottom: rowIdx < moneyList.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
+                                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                          {/* H-46: table cell has no overflow:hidden */}
+                                          <PlayerAvatar player={pr} size={24} starred={false} />
+                                          <span style={{ fontWeight: 700, fontSize: 12, color: '#222' }}>
+                                            {(name || '').split(' ')[0]}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      {gameOrder.map(g => {
+                                        const val = gameTotals[g]?.[name] || 0;
+                                        return (
+                                          <td key={g} style={{
+                                            padding: '10px 8px', textAlign: 'center',
+                                            color: val > 0 ? G : val < 0 ? '#A32D2D' : '#bbb',
+                                            fontWeight: 700,
+                                          }}>
+                                            {val === 0 ? '—' : fmtDollar(val)}
+                                          </td>
+                                        );
+                                      })}
+                                      <td style={{
+                                        padding: '10px 8px', textAlign: 'center', fontWeight: 800,
+                                        color: total >= 0 ? G : '#A32D2D',
+                                      }}>
+                                        {fmtDollar(total)}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
                 </div>
               )}
-
             </Card>
 
             {/* ── Insights ── */}
-            {(() => {
-              const tiles = [];
-
-              if (insights.heater && insights.heaterCount >= 2) {
-                const net = playerNetInPeriod[insights.heater] || 0;
-                tiles.push(
-                  <InsightTile
-                    key="heater"
-                    icon={<IconFlame />}
-                    label="Heater"
-                    name={insights.heater}
-                    stat={`+${fmtDollar(Math.abs(net))} over last ${insights.heaterCount} rounds`}
-                    statColor="#27500A"
-                  />
-                );
-              }
-
-              if (insights.coldest && insights.coldCount >= 2) {
-                const net = playerNetInPeriod[insights.coldest] || 0;
-                tiles.push(
-                  <InsightTile
-                    key="cold"
-                    icon={<IconSnowflake />}
-                    label="Cold Streak"
-                    name={insights.coldest}
-                    stat={`${insights.coldCount} losses in a row / ${fmtDollar(net)}`}
-                    statColor="#A32D2D"
-                  />
-                );
-              }
-
-              if (insights.strongestTeam && insights.strongestWins >= 1) {
-                const { names, net } = insights.strongestTeam;
-                tiles.push(
-                  <InsightTile
-                    key="team"
-                    icon={<IconTrophy />}
-                    label="Strongest Team"
-                    name={names.join(' & ')}
-                    stat={`${insights.strongestWins} wins together / +${fmtDollar(Math.abs(net))}`}
-                    statColor="#27500A"
-                  />
-                );
-              }
-
-              if (insights.nemesis) {
-                const { winner, loser, wWins, lWins, netLoser } = insights.nemesis;
-                tiles.push(
-                  <InsightTile
-                    key="nemesis"
-                    icon={<IconScissors />}
-                    label="Nemesis"
-                    name={loser}
-                    stat={`${lWins}-${wWins} vs ${winner} / ${fmtDollar(netLoser)}`}
-                    statColor="#A32D2D"
-                  />
-                );
-              }
-
-              if (tiles.length === 0) return null;
-
-              return (
-                <Card style={{ padding: '14px 14px' }}>
-                  <div style={{ fontWeight: 800, fontSize: 13, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
-                    Insights
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    {tiles}
-                  </div>
-                </Card>
-              );
-            })()}
+            {insightTiles.length > 0 && (
+              <Card style={{ padding: 16 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#1f3f24', marginBottom: 14 }}>Insights</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {insightTiles.map(({ icon, title, name, sub, subColor }) => (
+                    <div key={title} style={{
+                      background: '#fff', border: '1px solid #e8efe8', borderRadius: 14,
+                      padding: 14, display: 'flex', gap: 12, alignItems: 'center',
+                    }}>
+                      <div style={{ flexShrink: 0 }}>{icon}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: '#7d8a7d', fontWeight: 700 }}>{title}</div>
+                        <div style={{ fontWeight: 800, fontSize: 14, color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                        <div style={{ fontSize: 12, color: subColor || '#666' }}>{sub}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </>
         )}
 
@@ -835,25 +721,30 @@ export default function HomePage({ onNewRound, onResume, onHistory, inProgress }
 
       </div>
 
-      {/* ── Basic / Enhanced toggle — fixed bottom ── */}
+      {/* ── Basic / Enhanced toggle — fixed above nav, subtle ── */}
       <div style={{
-        position: 'fixed', bottom: 56, left: '50%', transform: 'translateX(-50%)',
-        zIndex: 20, background: 'rgba(255,255,255,0.95)',
-        borderRadius: 24, padding: '4px', boxShadow: '0 2px 12px rgba(0,0,0,.18)',
-        border: '1px solid #ddd', display: 'flex',
+        position: 'fixed', bottom: 60, left: '50%', transform: 'translateX(-50%)',
+        zIndex: 20,
+        background: 'rgba(240,244,240,0.92)',
+        borderRadius: 20, padding: 3,
+        boxShadow: '0 1px 6px rgba(0,0,0,.12)',
+        border: '1px solid #d4e0d4',
+        display: 'flex',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}>
         {['basic', 'enhanced'].map(mode => (
           <button
             key={mode}
             onClick={() => setView(mode)}
             style={{
-              padding: '6px 18px', borderRadius: 20, border: 'none',
+              padding: '5px 16px', borderRadius: 17, border: 'none',
               background: viewMode === mode ? G : 'transparent',
-              color: viewMode === mode ? '#fff' : '#666',
-              fontSize: 12, fontWeight: 700,
+              color: viewMode === mode ? '#fff' : '#888',
+              fontSize: 11, fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
               transition: 'background .15s, color .15s',
-              textTransform: 'capitalize',
+              letterSpacing: '.04em',
             }}
           >
             {mode === 'basic' ? 'Basic' : 'Enhanced'}
