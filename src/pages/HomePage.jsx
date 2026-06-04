@@ -1,12 +1,11 @@
 // ─── pages/HomePage.jsx ───────────────────────────────────────────────────────
 //
 // ✅ Self-checked: H-13 — starred/inMoneyLists enriched from playerLib by name.
-//    H-46 — no overflow:hidden on any ancestor of PlayerAvatar; slide clip uses
-//    clipPath only. H-29 — filterByRange applied before all stats/streaks.
-//    H-30 — ML_KEY ('moneyListRange') only. No emoji in rendered UI.
-//    Stat tiles match mockup icon set (flag/people/pin/dollar).
-//    Podium pennant ribbons as SVG. Ranked list starts at 4.
-//    Basic/Enhanced toggle persisted to localStorage.
+//    H-46 — no overflow:hidden on any ancestor of PlayerAvatar; slide removed,
+//    matrix is full-width toggle. H-29 — filterByRange before all stats/streaks.
+//    H-30 — ML_KEY only. No emoji. Individual stat tile cards. ++ bug fixed.
+//    Game names stripped of emoji/special chars, sorted alphabetically.
+//    Range pill centered. Left arrow on Standings back link.
 
 import { useMemo, useState, useCallback } from 'react';
 import { ls, SK } from '../services/storage.js';
@@ -23,11 +22,10 @@ const HOME_VIEW_KEY = 'homeViewMode';
 const ICON_BG = '#e8f5ec'; // light green circle bg for stat/insight icons
 
 // ── Stat tile icons — match nav icon style ────────────────────────────────────
-const IconFlag = () => (
+const IconRounds = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-    stroke={G} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="4" y1="2" x2="4" y2="22"/>
-    <path d="M4 4h12l-3 5 3 5H4"/>
+    stroke={G} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 22V2.8a.8.8 0 0 1 1.17-.71l11.38 5.69a.8.8 0 0 1 0 1.44L6 15.5"/>
   </svg>
 );
 
@@ -49,11 +47,12 @@ const IconPin = () => (
   </svg>
 );
 
-const IconDollar = () => (
+const IconWagered = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-    stroke={G} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    stroke={G} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"/>
-    <path d="M12 6v12M9 9.5c0-1 1.3-2 3-2s3 1 3 2.5c0 1.5-1.3 2-3 2.5s-3 1-3 2.5c0 1.5 1.3 2.5 3 2.5s3-1 3-2"/>
+    <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+    <path d="M12 18V6"/>
   </svg>
 );
 
@@ -98,25 +97,28 @@ const IconPlus = () => (
 
 // ── Insight icons in light green circles ─────────────────────────────────────
 const IconFireSvg = () => (
-  <svg width="22" height="22" viewBox="0 0 100 100" fill="none">
-    <path d="M50 10C50 10 30 35 30 55C30 70 39 82 50 82C61 82 70 70 70 55C70 35 50 10 50 10Z" fill="#E8612C"/>
-    <path d="M50 38C50 38 40 50 40 62C40 70 44 76 50 76C56 76 60 70 60 62C60 50 50 38 50 38Z" fill="#FFA040"/>
-    <path d="M50 58C47 58 45 61 45 64C45 67 47 69 50 69C53 69 55 67 55 64C55 61 53 58 50 58Z" fill="#FFD040"/>
+  <svg width="22" height="22" viewBox="0 0 128 128">
+    <radialGradient id="fireA" cx="68.884" cy="124.296" r="70.587" gradientTransform="matrix(-1 -.00434 -.00713 1.6408 131.986 -79.345)" gradientUnits="userSpaceOnUse">
+      <stop offset=".314" stopColor="#FF9800"/>
+      <stop offset=".662" stopColor="#FF6D00"/>
+      <stop offset=".972" stopColor="#F44336"/>
+    </radialGradient>
+    <path fill="url(#fireA)" d="M35.56 40.73c-.57 6.08-.97 16.84 2.62 21.42c0 0-1.69-11.82 13.46-26.65c6.1-5.97 7.51-14.09 5.38-20.18c-1.21-3.45-3.42-6.3-5.34-8.29c-1.12-1.17-.26-3.1 1.37-3.03c9.86.44 25.84 3.18 32.63 20.22c2.98 7.48 3.2 15.21 1.78 23.07c-.9 5.02-4.1 16.18 3.2 17.55c5.21.98 7.73-3.16 8.86-6.14c.47-1.24 2.1-1.55 2.98-.56c8.8 10.01 9.55 21.8 7.73 31.95c-3.52 19.62-23.39 33.9-43.13 33.9c-24.66 0-44.29-14.11-49.38-39.65c-2.05-10.31-1.01-30.71 14.89-45.11c1.18-1.08 3.11-.12 2.95 1.5"/>
+    <radialGradient id="fireB" cx="64.921" cy="54.062" r="73.86" gradientTransform="matrix(-.0101 .9999 .7525 .0076 26.154 -11.267)" gradientUnits="userSpaceOnUse">
+      <stop offset=".214" stopColor="#FFF176"/>
+      <stop offset=".793" stopColor="#FFF9C4"/>
+      <stop offset=".941" stopColor="#FFF176" stopOpacity="0"/>
+    </radialGradient>
+    <path fill="url(#fireB)" d="M76.11 77.42c-9.09-11.7-5.02-25.05-2.79-30.37c.3-.7-.5-1.36-1.13-.93c-3.91 2.66-11.92 8.92-15.65 17.73c-5.05 11.91-4.69 17.74-1.7 24.86c1.8 4.29-.29 5.2-1.34 5.36c-1.02.16-1.96-.52-2.71-1.23a16.1 16.1 0 0 1-4.44-7.6c-.16-.62-.97-.79-1.34-.28c-2.8 3.87-4.25 10.08-4.32 14.47C40.47 113 51.68 124 65.24 124c17.09 0 29.54-18.9 19.72-34.7c-2.85-4.6-5.53-7.61-8.85-11.88"/>
   </svg>
 );
 
 const IconSnowSvg = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-    stroke="#4A90D9" strokeWidth="1.8" strokeLinecap="round">
-    <line x1="12" y1="2" x2="12" y2="22"/>
-    <line x1="2" y1="12" x2="22" y2="12"/>
-    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-    <line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/>
-    <line x1="12" y1="2" x2="10" y2="5"/><line x1="12" y1="2" x2="14" y2="5"/>
-    <line x1="12" y1="22" x2="10" y2="19"/><line x1="12" y1="22" x2="14" y2="19"/>
-    <line x1="2" y1="12" x2="5" y2="10"/><line x1="2" y1="12" x2="5" y2="14"/>
-    <line x1="22" y1="12" x2="19" y2="10"/><line x1="22" y1="12" x2="19" y2="14"/>
-    <circle cx="12" cy="12" r="1.5" fill="#4A90D9" stroke="none"/>
+  <svg width="22" height="22" viewBox="0 0 80 80">
+    <g fill="none">
+      <path fill="#56ccf2" d="M33.609 15.016a2 2 0 0 0-2.728 2.926zm6.395 8.695l-1.364 1.463a2 2 0 0 0 2.727 0zM26.04 31.77l.585 1.913a2 2 0 0 0 1.364-2.362zm-.434-10.784a2 2 0 1 0-3.898.9zm23.517-3.043a2 2 0 0 0-2.728-2.926zm9.173 3.945a2 2 0 0 0-3.897-.899zm-4.331 9.883l-1.95-.45a2 2 0 0 0 1.364 2.362zm9.698 5.06a2 2 0 1 0 1.17-3.826zm1.17 9.828a2 2 0 0 0-1.17-3.825zm-10.868 1.234l-.586-1.913a2 2 0 0 0-1.363 2.362zm.502 11.079a2 2 0 1 0 3.898-.899zm-7.848 5.883a2 2 0 0 0 2.727-2.926zm-6.616-8.901l1.363-1.463a2 2 0 0 0-2.727 0zm-9.346 5.977a2 2 0 0 0 2.727 2.926zm-9.018-3.855a2 2 0 1 0 3.898.899zm4.401-10.183l1.95.45a2 2 0 0 0-1.364-2.363zm-9.704-5.061a2 2 0 1 0-1.17 3.825zm-1.17-9.825a2 2 0 1 0 1.17 3.825zM30.88 17.942l7.759 7.232l2.727-2.926l-7.758-7.232zm-2.89 13.38l-2.384-10.335l-3.898.9l2.383 10.334zm13.376-6.148l7.757-7.23l-2.728-2.926l-7.756 7.23zM54.4 20.99l-2.383 10.332l3.897.9l2.383-10.333zm-1.02 12.694l10.284 3.147l1.17-3.825l-10.283-3.147zm10.284 9.15L53.38 45.982l1.17 3.825l10.285-3.146zm-11.647 5.51l2.451 10.629l3.898-.899l-2.452-10.63zm-2.67 13.586l-7.98-7.438l-2.727 2.926l7.98 7.438zM38.64 54.492l-7.982 7.44l2.727 2.926l7.982-7.44zm-13.102 4.484l2.452-10.633l-3.898-.899l-2.451 10.633zm1.088-12.995l-10.289-3.148l-1.17 3.825l10.29 3.148zm-10.289-9.148l10.29-3.149l-1.17-3.825l-10.29 3.149z"/>
+      <path fill="#2f80ed" d="m40 12l2-.002a2 2 0 0 0-4 0zm24.249 14l1.001 1.731a2 2 0 0 0-2-3.464zm0 28l-.999 1.733a2 2 0 0 0 2-3.464zm-24.25 14l-2 .002a2 2 0 0 0 4 0zM15.752 54l-1.001-1.731a2 2 0 0 0 2 3.464zm0-28l.999-1.733a2 2 0 0 0-2 3.464zm18.231 10.501l-.998 1.733zm0 6.998l-.998-1.733zm12.035 0l-.998 1.733zm-5.996 3.462l-2-.002zm6.018-10.423l-1.002-1.731zm0 6.924l-1.002 1.731zM40.02 33.04l-2 .002zm5.996 3.462l.999 1.733zM38 12.002l.021 21.04l4-.005L42 11.998zm9.016 26.232l18.23-10.5l-1.996-3.467l-18.23 10.501zm16.23-13.965l-18.21 10.538l2.004 3.462l18.21-10.538zm-18.21 20.924l18.21 10.538l2.004-3.462l-18.21-10.538zm20.21 7.074l-18.23-10.501l-1.997 3.466L63.25 55.733zm-27.225-5.308L38 67.998l4 .004l.021-21.04zM42 67.998l-.021-21.04l-4 .005l.02 21.039zm-9.016-26.232l-18.231 10.5l1.997 3.467l18.23-10.501zM16.753 55.73l18.21-10.538l-2.004-3.462l-18.21 10.538zm18.21-20.924l-18.21-10.538l-2.004 3.462l18.21 10.538zm-20.21-7.074l18.231 10.501l1.997-3.466l-18.231-10.5zm27.226 5.308l.02-21.039l-4-.004l-.02 21.04zm-8.995 5.194c3.998 2.302 8.99-.58 8.995-5.194l-4-.004c-.002 1.538-1.666 2.499-2.998 1.731zm1.979 6.958c3.993-2.31 3.993-8.075 0-10.386l-2.004 3.462c1.331.77 1.331 2.692 0 3.462zm7.016 1.766c-.005-4.614-4.997-7.496-8.995-5.193l1.997 3.466c1.332-.768 2.996.193 2.998 1.73zm5.037-5.193c-3.998-2.303-8.99.58-8.995 5.193l4 .004c.002-1.538 1.666-2.499 2.998-1.731zm-1.98-6.96c-3.992 2.312-3.992 8.076 0 10.387l2.004-3.462c-1.33-.77-1.33-2.692 0-3.462zm-7.015-1.765c.005 4.614 4.997 7.496 8.995 5.194l-1.997-3.467c-1.332.768-2.996-.193-2.998-1.73z"/>
+    </g>
   </svg>
 );
 
@@ -142,19 +144,16 @@ const IconScissorsSvg = () => (
 
 // Inline fire/snow for streak labels (small)
 const FireSmall = () => (
-  <svg width="11" height="11" viewBox="0 0 100 100">
-    <path d="M50 10C50 10 30 35 30 55C30 70 39 82 50 82C61 82 70 70 70 55C70 35 50 10 50 10Z" fill="#E8612C"/>
-    <path d="M50 38C50 38 40 50 40 62C40 70 44 76 50 76C56 76 60 70 60 62C60 50 50 38 50 38Z" fill="#FFA040"/>
+  <svg width="11" height="11" viewBox="0 0 128 128">
+    <path fill="#FF9800" d="M35.56 40.73c-.57 6.08-.97 16.84 2.62 21.42c0 0-1.69-11.82 13.46-26.65c6.1-5.97 7.51-14.09 5.38-20.18c-1.21-3.45-3.42-6.3-5.34-8.29c-1.12-1.17-.26-3.1 1.37-3.03c9.86.44 25.84 3.18 32.63 20.22c2.98 7.48 3.2 15.21 1.78 23.07c-.9 5.02-4.1 16.18 3.2 17.55c5.21.98 7.73-3.16 8.86-6.14c.47-1.24 2.1-1.55 2.98-.56c8.8 10.01 9.55 21.8 7.73 31.95c-3.52 19.62-23.39 33.9-43.13 33.9c-24.66 0-44.29-14.11-49.38-39.65c-2.05-10.31-1.01-30.71 14.89-45.11c1.18-1.08 3.11-.12 2.95 1.5"/>
+    <path fill="#FFF176" fillOpacity=".7" d="M76.11 77.42c-9.09-11.7-5.02-25.05-2.79-30.37c.3-.7-.5-1.36-1.13-.93c-3.91 2.66-11.92 8.92-15.65 17.73c-5.05 11.91-4.69 17.74-1.7 24.86c1.8 4.29-.29 5.2-1.34 5.36c-1.02.16-1.96-.52-2.71-1.23a16.1 16.1 0 0 1-4.44-7.6c-.16-.62-.97-.79-1.34-.28c-2.8 3.87-4.25 10.08-4.32 14.47C40.47 113 51.68 124 65.24 124c17.09 0 29.54-18.9 19.72-34.7c-2.85-4.6-5.53-7.61-8.85-11.88"/>
   </svg>
 );
 
 const SnowSmall = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-    stroke="#4A90D9" strokeWidth="2" strokeLinecap="round">
-    <line x1="12" y1="2" x2="12" y2="22"/>
-    <line x1="2" y1="12" x2="22" y2="12"/>
-    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-    <line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/>
+  <svg width="11" height="11" viewBox="0 0 80 80">
+    <path fill="#56ccf2" d="M30.88 17.942l7.759 7.232l2.727-2.926l-7.758-7.232zm-2.89 13.38l-2.384-10.335l-3.898.9l2.383 10.334zm13.376-6.148l7.757-7.23l-2.728-2.926l-7.756 7.23zM54.4 20.99l-2.383 10.332l3.897.9l2.383-10.333zm-1.02 12.694l10.284 3.147l1.17-3.825l-10.283-3.147zm10.284 9.15L53.38 45.982l1.17 3.825l10.285-3.146zm-11.647 5.51l2.451 10.629l3.898-.899l-2.452-10.63zm-2.67 13.586l-7.98-7.438l-2.727 2.926l7.98 7.438zM38.64 54.492l-7.982 7.44l2.727 2.926l7.982-7.44zm-13.102 4.484l2.452-10.633l-3.898-.899l-2.451 10.633zm1.088-12.995l-10.289-3.148l-1.17 3.825l10.29 3.148zm-10.289-9.148l10.29-3.149l-1.17-3.825l-10.29 3.149z"/>
+    <path fill="#2f80ed" d="M38 12.002l.021 21.04l4-.005L42 11.998zm9.016 26.232l18.23-10.5l-1.996-3.467l-18.23 10.501zm16.23-13.965l-18.21 10.538l2.004 3.462l18.21-10.538zm-18.21 20.924l18.21 10.538l2.004-3.462l-18.21-10.538zm20.21 7.074l-18.23-10.501l-1.997 3.466L63.25 55.733zm-27.225-5.308L38 67.998l4 .004l.021-21.04zM42 67.998l-.021-21.04l-4 .005l.02 21.039zm-9.016-26.232l-18.231 10.5l1.997 3.467l18.23-10.501zM16.753 55.73l18.21-10.538l-2.004-3.462l-18.21 10.538zm18.21-20.924l-18.21-10.538l-2.004 3.462l18.21 10.538zm-20.21-7.074l18.231 10.501l1.997-3.466l-18.231-10.5zm27.226 5.308l.02-21.039l-4-.004l-.02 21.04z"/>
   </svg>
 );
 
@@ -175,7 +174,14 @@ function PennantRibbon({ rank }) {
 
 // ── Data helpers ──────────────────────────────────────────────────────────────
 function cleanGameName(raw) {
-  return raw.replace(/\s*[—–-].*$/, '').replace(/\s*\(.*$/, '').trim();
+  // Strip detail suffix, emoji, and special chars — keep base game name only
+  return raw
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+    .replace(/[\u{2600}-\u{27FF}]/gu, '')
+    .replace(/\s*[—–-].*$/, '')
+    .replace(/\s*\(.*$/, '')
+    .replace(/[^\w\s]/g, '')
+    .trim();
 }
 
 function computeStreaks(filteredRounds, names) {
@@ -209,7 +215,7 @@ function computeGameTotals(filteredRounds, rosterNames) {
       }
     }
   }
-  return { gameTotals: totals, gameOrder };
+  return { gameTotals: totals, gameOrder: gameOrder.sort((a, b) => a.localeCompare(b)) };
 }
 
 function computeInsights(filteredRounds, streaks, playerNetInPeriod) {
@@ -455,10 +461,10 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
     filteredRounds.forEach(r => { Object.values(r.bank || {}).forEach(v => { wagered += Math.abs(v); }); });
     wagered = wagered / 2;
     return [
-      { icon: <IconFlag />,   value: String(ytdRounds.length), label: 'ROUNDS',  sub: 'This year' },
+      { icon: <IconRounds />,  value: String(ytdRounds.length), label: 'ROUNDS',  sub: 'This year' },
       { icon: <IconPeople />, value: String(activePlayers),    label: 'PLAYERS', sub: 'Active'    },
       { icon: <IconPin />,    value: String(coursesPlayed),    label: 'COURSES', sub: 'Played'    },
-      { icon: <IconDollar />, value: fmtDollar(wagered),       label: 'WAGERED', sub: 'This year' },
+      { icon: <IconWagered />, value: fmtDollar(wagered),      label: 'WAGERED', sub: 'This year' },
     ];
   }, [rounds, players, filteredRounds]);
 
@@ -480,7 +486,7 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
     if (heater && heaterCount >= 2) {
       const net = playerNetInPeriod[heater] || 0;
       tiles.push({ icon: <IconFireSvg />, title: 'HEATER', name: heater,
-        stat: `+${fmtDollar(Math.abs(net))} over last ${heaterCount} rounds`, statColor: G });
+        stat: `${fmtDollar(net)} over last ${heaterCount} rounds`, statColor: G });
     }
     if (coldest && coldCount >= 2) {
       const net = playerNetInPeriod[coldest] || 0;
@@ -491,7 +497,7 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
       tiles.push({ icon: <IconTrophySvg />, title: 'STRONGEST TEAM',
         name: strongestTeam.names.join(' & '),
         stat: `${strongestWins} wins together`,
-        amount: `+${fmtDollar(Math.abs(strongestTeam.net))}`, amountColor: G });
+        amount: fmtDollar(strongestTeam.net), amountColor: G });
     }
     if (nemesis) {
       const { winner, loser, wWins, lWins, netLoser } = nemesis;
@@ -547,18 +553,14 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
           <IconPlus /> New Round
         </button>
 
-        {/* ── Stat tiles — single card, 4 columns ── */}
-        <div style={{
-          background: '#fff', borderRadius: 16,
-          boxShadow: '0 1px 6px rgba(0,0,0,.07)',
-          marginBottom: 14,
-          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr',
-        }}>
-          {statTiles.map(({ icon, value, label, sub }, i) => (
+        {/* ── Stat tiles — 4 individual cards ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
+          {statTiles.map(({ icon, value, label, sub }) => (
             <div key={label} style={{
-              padding: '14px 8px',
-              borderRight: i < 3 ? '1px solid #f0f4f0' : 'none',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+              background: '#fff', borderRadius: 14,
+              boxShadow: '0 1px 6px rgba(0,0,0,.07)',
+              padding: '12px 6px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
             }}>
               <div style={{
                 width: 34, height: 34, borderRadius: '50%',
@@ -567,9 +569,9 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
               }}>
                 {icon}
               </div>
-              <div style={{ fontSize: label === 'WAGERED' ? 13 : 20, fontWeight: 800, color: G, lineHeight: 1, textAlign: 'center' }}>{value}</div>
+              <div style={{ fontSize: label === 'WAGERED' ? 12 : 20, fontWeight: 800, color: G, lineHeight: 1, textAlign: 'center' }}>{value}</div>
               <div style={{ fontSize: 9, fontWeight: 700, color: '#888', textAlign: 'center', letterSpacing: '.04em' }}>{label}</div>
-              <div style={{ fontSize: 9, color: '#bbb', textAlign: 'center', marginTop: -4 }}>{sub}</div>
+              <div style={{ fontSize: 9, color: '#bbb', textAlign: 'center', marginTop: -3 }}>{sub}</div>
             </div>
           ))}
         </div>
@@ -626,21 +628,32 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
               {/* Standings header row */}
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: pickerOpen ? 10 : 16 }}>
                 <div style={{ fontWeight: 800, fontSize: 13, color: '#1f3f24', letterSpacing: '.06em', textTransform: 'uppercase' }}>Standings</div>
-                <button onClick={() => setPickerOpen(o => !o)} style={{
-                  display: 'flex', alignItems: 'center', gap: 4, marginLeft: 10,
-                  background: 'transparent', border: '1px solid #ccc', color: '#555',
-                  borderRadius: 20, padding: '4px 10px',
-                  fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                }}>
-                  {rangeLabel(rangePref)} <IconChevronDown color="#555" />
-                </button>
-                <div style={{ flex: 1 }} />
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                  <button onClick={() => setPickerOpen(o => !o)} style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    background: 'transparent', border: '1px solid #ccc', color: '#555',
+                    borderRadius: 20, padding: '4px 10px',
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                    {rangeLabel(rangePref)} <IconChevronDown color="#555" />
+                  </button>
+                </div>
                 <button onClick={() => { setShowMatrix(v => !v); setListExpanded(false); }} style={{
                   display: 'flex', alignItems: 'center', gap: 3,
                   background: 'transparent', border: 'none', color: G,
                   fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 0,
                 }}>
-                  {showMatrix ? 'Standings' : 'View Full List'} <IconChevronRight />
+                  {showMatrix ? (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke={G} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                      </svg>
+                      Standings
+                    </>
+                  ) : (
+                    <>View Full List <IconChevronRight /></>
+                  )}
                 </button>
               </div>
 
@@ -654,149 +667,129 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
                 <div style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '14px 0' }}>No rounds in this period</div>
               )}
 
-              {moneyList.length > 0 && (
-                // Slide container — clipPath instead of overflow:hidden (H-46)
-                <div style={{ position: 'relative' }}>
-                  <div style={{ clipPath: 'inset(0 0 0 0 round 12px)' }}>
-                    <div style={{
-                      display: 'flex', width: '200%',
-                      transform: showMatrix ? 'translateX(-50%)' : 'translateX(0)',
-                      transition: 'transform .35s ease',
-                    }}>
+              {moneyList.length > 0 && !showMatrix && (
+                <>
+                  {/* Podium */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'flex-start' }}>
+                    {podiumSlots.map((slot, i) => slot ? (
+                      <PodiumCard
+                        key={slot.name}
+                        name={slot.name}
+                        total={slot.total}
+                        rank={slot.rank}
+                        streak={streaks[slot.name]}
+                        playerRecord={playerByName[slot.name] || { name: slot.name }}
+                      />
+                    ) : (
+                      <div key={i} style={{ flex: 1 }} />
+                    ))}
+                  </div>
 
-                      {/* ── Standings panel ── */}
-                      <div style={{ width: '50%', boxSizing: 'border-box', paddingRight: 8 }}>
+                  {/* Ranked list 4+ */}
+                  {rest.length > 0 && (
+                    <>
+                      <div style={{ background: '#fafdfa', border: '1px solid #e8efe8', borderRadius: 12 }}>
+                        {(listExpanded ? rest : rest.slice(0, 3)).map(([name, total], i) => {
+                          const pr = playerByName[name] || { name };
+                          const streak = streaks[name];
+                          return (
+                            <div key={name} style={{
+                              display: 'flex', alignItems: 'center', padding: '10px 12px',
+                              borderBottom: '1px solid #edf3ed',
+                            }}>
+                              <div style={{ width: 20, fontSize: 12, fontWeight: 700, color: '#aaa', flexShrink: 0 }}>{i + 4}</div>
+                              <div style={{ marginRight: 8, flexShrink: 0 }}>
+                                <PlayerAvatar player={pr} size={28} starred={false} />
+                              </div>
+                              <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#222' }}>{name}</div>
+                              {streak && streak.count >= 2 && (
+                                <div style={{
+                                  display: 'flex', alignItems: 'center', gap: 2,
+                                  fontSize: 10, fontWeight: 700, marginRight: 8,
+                                  color: streak.type === 'hot' ? '#E8612C' : '#4A90D9',
+                                }}>
+                                  {streak.type === 'hot' ? <FireSmall /> : <SnowSmall />}
+                                  {streak.count}
+                                </div>
+                              )}
+                              <div style={{ fontWeight: 800, fontSize: 13, color: total >= 0 ? G : '#A32D2D' }}>
+                                {fmtDollar(total)}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {rest.length > 3 && (
+                        <button onClick={() => setListExpanded(e => !e)} style={{
+                          width: '100%', background: 'none', border: 'none',
+                          padding: '8px 0 0', cursor: 'pointer',
+                          display: 'flex', justifyContent: 'center',
+                        }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                            style={{ transform: listExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>
+                            <polyline points="6 9 12 15 18 9"/>
+                          </svg>
+                        </button>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
 
-                        {/* Podium */}
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'flex-start' }}>
-                          {podiumSlots.map((slot, i) => slot ? (
-                            <PodiumCard
-                              key={slot.name}
-                              name={slot.name}
-                              total={slot.total}
-                              rank={slot.rank}
-                              streak={streaks[slot.name]}
-                              playerRecord={playerByName[slot.name] || { name: slot.name }}
-                            />
-                          ) : (
-                            <div key={i} style={{ flex: 1 }} />
+              {/* ── Game breakdown matrix — full width, scrollable ── */}
+              {moneyList.length > 0 && showMatrix && (
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginTop: 4 }}>
+                  {gameOrder.length === 0 ? (
+                    <div style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '20px 0' }}>No breakdown data</div>
+                  ) : (
+                    <table style={{ width: '100%', minWidth: gameOrder.length * 72 + 100, borderCollapse: 'collapse', fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #eee' }}>
+                          <th style={{ padding: '9px 10px 9px 4px', textAlign: 'left', fontWeight: 700, color: '#666', fontSize: 11, whiteSpace: 'nowrap', position: 'sticky', left: 0, background: '#fff', zIndex: 1 }}>Player</th>
+                          {gameOrder.map(g => (
+                            <th key={g} style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 700, color: '#666', fontSize: 11, whiteSpace: 'nowrap', minWidth: 68 }}>{g}</th>
                           ))}
-                        </div>
-
-                        {/* Ranked list 4+ */}
-                        {rest.length > 0 && (
-                          <>
-                            <div style={{ background: '#fafdfa', border: '1px solid #e8efe8', borderRadius: 12 }}>
-                              {(listExpanded ? rest : rest.slice(0, 3)).map(([name, total], i) => {
-                                const pr = playerByName[name] || { name };
-                                const streak = streaks[name];
+                          <th style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 700, color: '#444', fontSize: 11, whiteSpace: 'nowrap' }}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {moneyList.map(([name, total], ri) => {
+                          const pr = playerByName[name] || { name };
+                          return (
+                            <tr key={name} style={{ borderBottom: ri < moneyList.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
+                              <td style={{ padding: '9px 10px 9px 4px', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: '#fff', zIndex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                  <PlayerAvatar player={pr} size={22} starred={false} />
+                                  <span style={{ fontWeight: 700, fontSize: 11, color: '#222' }}>
+                                    {(name || '').split(' ')[0]}
+                                  </span>
+                                </div>
+                              </td>
+                              {gameOrder.map(g => {
+                                const val = gameTotals[g]?.[name] || 0;
                                 return (
-                                  <div key={name} style={{
-                                    display: 'flex', alignItems: 'center', padding: '10px 12px',
-                                    borderBottom: '1px solid #edf3ed',
+                                  <td key={g} style={{
+                                    padding: '9px 8px', textAlign: 'center', minWidth: 68,
+                                    color: val > 0 ? G : val < 0 ? '#A32D2D' : '#bbb',
+                                    fontWeight: 700,
                                   }}>
-                                    <div style={{ width: 20, fontSize: 12, fontWeight: 700, color: '#aaa', flexShrink: 0 }}>{i + 4}</div>
-                                    {/* H-46: no overflow:hidden ancestor */}
-                                    <div style={{ marginRight: 8, flexShrink: 0 }}>
-                                      <PlayerAvatar player={pr} size={28} starred={false} />
-                                    </div>
-                                    <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#222' }}>{name}</div>
-                                    {streak && streak.count >= 2 && (
-                                      <div style={{
-                                        display: 'flex', alignItems: 'center', gap: 2,
-                                        fontSize: 10, fontWeight: 700, marginRight: 8,
-                                        color: streak.type === 'hot' ? '#E8612C' : '#4A90D9',
-                                      }}>
-                                        {streak.type === 'hot' ? <FireSmall /> : <SnowSmall />}
-                                        {streak.count}
-                                      </div>
-                                    )}
-                                    <div style={{ fontWeight: 800, fontSize: 13, color: total >= 0 ? G : '#A32D2D' }}>
-                                      {fmtDollar(total)}
-                                    </div>
-                                  </div>
+                                    {val === 0 ? '—' : fmtDollar(val)}
+                                  </td>
                                 );
                               })}
-                            </div>
-                            {/* Expand/collapse chevron */}
-                            {rest.length > 3 && (
-                              <button onClick={() => setListExpanded(e => !e)} style={{
-                                width: '100%', background: 'none', border: 'none',
-                                padding: '8px 0 0', cursor: 'pointer',
-                                display: 'flex', justifyContent: 'center',
+                              <td style={{
+                                padding: '9px 8px', textAlign: 'center', fontWeight: 800,
+                                color: total >= 0 ? G : '#A32D2D',
                               }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                  stroke="#bbb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                                  style={{ transform: listExpanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>
-                                  <polyline points="6 9 12 15 18 9"/>
-                                </svg>
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-
-                      {/* ── Matrix panel ── */}
-                      <div style={{ width: '50%', boxSizing: 'border-box', paddingLeft: 8 }}>
-                        {gameOrder.length === 0 ? (
-                          <div style={{ fontSize: 12, color: '#aaa', textAlign: 'center', padding: '20px 0' }}>No breakdown data</div>
-                        ) : (
-                          <div style={{
-                            background: '#fff', border: '1px solid #e5eee5', borderRadius: 12,
-                            overflowX: 'auto', WebkitOverflowScrolling: 'touch',
-                          }}>
-                            <table style={{ width: '100%', minWidth: 380, borderCollapse: 'collapse', fontSize: 12 }}>
-                              <thead>
-                                <tr style={{ borderBottom: '2px solid #eee' }}>
-                                  <th style={{ padding: '9px 10px', textAlign: 'left', fontWeight: 700, color: '#666', fontSize: 11, whiteSpace: 'nowrap' }}>Player</th>
-                                  {gameOrder.map(g => (
-                                    <th key={g} style={{ padding: '9px 6px', textAlign: 'center', fontWeight: 700, color: '#666', fontSize: 11, whiteSpace: 'nowrap' }}>{g}</th>
-                                  ))}
-                                  <th style={{ padding: '9px 6px', textAlign: 'center', fontWeight: 700, color: '#666', fontSize: 11 }}>Total</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {moneyList.map(([name, total], ri) => {
-                                  const pr = playerByName[name] || { name };
-                                  return (
-                                    <tr key={name} style={{ borderBottom: ri < moneyList.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
-                                      <td style={{ padding: '9px 10px', whiteSpace: 'nowrap' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                          {/* H-46: td has no overflow:hidden */}
-                                          <PlayerAvatar player={pr} size={22} starred={false} />
-                                          <span style={{ fontWeight: 700, fontSize: 11, color: '#222' }}>
-                                            {(name || '').split(' ')[0]}
-                                          </span>
-                                        </div>
-                                      </td>
-                                      {gameOrder.map(g => {
-                                        const val = gameTotals[g]?.[name] || 0;
-                                        return (
-                                          <td key={g} style={{
-                                            padding: '9px 6px', textAlign: 'center',
-                                            color: val > 0 ? G : val < 0 ? '#A32D2D' : '#bbb',
-                                            fontWeight: 700,
-                                          }}>
-                                            {val === 0 ? '—' : fmtDollar(val)}
-                                          </td>
-                                        );
-                                      })}
-                                      <td style={{
-                                        padding: '9px 6px', textAlign: 'center', fontWeight: 800,
-                                        color: total >= 0 ? G : '#A32D2D',
-                                      }}>
-                                        {fmtDollar(total)}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                                {fmtDollar(total)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               )}
             </Card>
