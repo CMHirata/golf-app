@@ -122,27 +122,30 @@ const IconSnowSvg = () => (
   </svg>
 );
 
-// Strongest Team: two overlapping person silhouettes with a star
 const IconTeamSvg = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-    stroke="#1a472a" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="9" cy="7" r="3.5" fill="#c8e6c9" stroke="#1a472a"/>
-    <path d="M2 21v-1a7 7 0 0 1 14 0v1" fill="none"/>
-    <circle cx="17" cy="7" r="3" fill="#a5d6a7" stroke="#1a472a"/>
-    <path d="M14 21a5 5 0 0 1 8 0" fill="none"/>
-    <polygon points="9,1 9.7,3 12,3 10.1,4.3 10.8,6.5 9,5.2 7.2,6.5 7.9,4.3 6,3 8.3,3"
-      fill="#FFD700" stroke="#B8860B" strokeWidth="0.5"/>
+  <svg viewBox="0 0 72 72" width="26" height="26" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#fcea2b" d="m41.5853,12.081l-21.3404-.1065c.072.333,2.1834,8.7995,3.9434,17.6035.112.562.239,1.1.373,1.616.04.154.084.3.126.451.1.365.207.721.32,1.064.051.154.1.3.156.453.1213.3413.249.6713.383.99.049.117.1.236.147.35.183.413.376.81.582,1.183l.01.019c.2198.3981.4604.7843.721,1.157l.025.034c.2309.3262.4792.6397.744.939.042.047.085.093.128.139.2358.258.4852.5034.747.735.042.037.084.076.127.112,2.0451,1.6637,4.6303,2.5178,7.264,2.4.9852.0032,1.968-.1,2.931-.308,4.4137-10.1309,4.3193-19.5704,2.613-28.831Z"/>
+    <path fill="#f1b31c" d="m41.5853,12.081c.6086,9.4384,1.8951,17.5-3.112,29.828,4.706-1.027,8.576-5.732,9.922-12.46,1.457-7.282,3.1185-16.6378,3.1935-16.9758,0,0-10.0035-.3922-10.0035-.3922Z"/>
+    <path fill="#fcea2b" d="m31.4213,51.333h-3.871v7.167h10.958v-7.167h-7.087Z"/>
+    <path fill="#f1b31c" d="m43.8833,51.333h-5.375v7.167h5.375v-7.167Z"/>
+    <circle cx="36.0373" cy="24.581" r="4" fill="#f1b31c"/>
+    <path fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m52.219,11.832c.1581,0,.275.1446.2389.2984-.2055.8767-.9426,4.2922-3.5876,17.5156-1.588,7.942-5.5,12.572-12.833,12.572s-11.245-4.5-12.833-12.443c-2.414-11.8492-3.667-17.943-3.667-17.943h32.6817Z"/>
+    <path fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m23.0443,31.479s.079-.261-5.421-3.928c-2.528-1.683-5.459-3.9-5.459-6.943s2.5-5.11,5.539-5.11h1.513"/>
+    <path fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m48.7113,31.766s.079-.261,5.579-3.928c2.528-1.683,5.541-3.9,5.541-6.943-.0146-2.842-2.3303-5.1341-5.1723-5.1196-.0963.0005-.1926.0037-.2887.0096h-2.154"/>
+    <rect x="26.5503" y="50.332" width="18.333" height="9.167" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+    <circle cx="36.0373" cy="24.581" r="5" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+    <line x1="36.0373" x2="36.0373" y1="50.332" y2="42.218" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
   </svg>
 );
 
-// The Lock: padlock icon
 const IconLockSvg = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-    stroke="#1a472a" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="5" y="11" width="14" height="10" rx="2" fill="#c8e6c9" stroke="#1a472a"/>
-    <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
-    <circle cx="12" cy="16" r="1.5" fill="#1a472a"/>
-    <line x1="12" y1="17.5" x2="12" y2="19" stroke="#1a472a"/>
+  <svg viewBox="0 0 72 72" width="26" height="26" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#D0CFCE" stroke="#D0CFCE" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10" strokeWidth="2" d="M21.3751,31.1747c-0.3501-8.7708,6.4491-18.5395,14.387-18.7794c8.0047-0.2419,16.5412,10.9698,14.333,19.052h-4.0394c0,0,1.5619-7.922-2.2164-11.2535c-1.8494-1.6307-5.2556-4.771-8.6396-4.2922c-2.2829,0.323-6.8677,3.4518-7.9271,5.4209c-2.0643,3.8367-1.7248,9.8169-1.7248,9.8169L21.3751,31.1747z"/>
+    <polygon fill="#FCEA2B" stroke="none" points="53,32.2969 54.875,32.2969 54.875,59.1719 16.875,59.1719 16.875,32.2969 18.75,32.2969"/>
+    <polygon fill="#F1B31C" stroke="none" points="54.4302,32.493 35.66,58.9944 54.9675,58.9944"/>
+    <polygon fill="none" stroke="#000000" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10" strokeWidth="2" points="53,32.25 54.875,32.25 54.875,59.125 16.875,59.125 16.875,32.25 18.75,32.25"/>
+    <path fill="none" stroke="#000000" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10" strokeWidth="2" d="M21.3751,28.9146c0-8.3786,6.4151-16.2744,14.3184-16.523c7.9697-0.2507,15.4098,7.2847,14.7416,16.523"/>
+    <path fill="none" stroke="#000000" strokeLinecap="round" strokeLinejoin="round" strokeMiterlimit="10" strokeWidth="2" d="M25.5478,28.9146c0-6.3352,4.5755-12.3054,10.2123-12.4934c5.6843-0.1896,10.9908,5.5081,10.5142,12.4934"/>
   </svg>
 );
 
@@ -186,7 +189,7 @@ function cleanGameName(raw) {
   if (/^match/i.test(s)) return 'Match';
   if (/^nines/i.test(s)) return 'Nines';
   if (/^sixes/i.test(s)) return 'Sixes';
-  if (/^dots/i.test(s)) return 'Dots';
+  if (/^dots/i.test(s) || /^specials/i.test(s)) return 'Dots';
   if (/^stableford/i.test(s)) return 'Stableford';
   if (/^stroke/i.test(s)) return 'Stroke Play';
   if (/^nassau/i.test(s)) return 'Nassau';
@@ -375,6 +378,32 @@ function PodiumCard({ name, total, rank, streak, playerRecord }) {
       {/* Amount */}
       <div style={{ fontWeight: 800, fontSize: isFirst ? 20 : 17, color: amtColor, textAlign: 'center' }}>
         {fmtDollar(total)}
+        {/* ── View mode toggle — matches History page Edit Locked pattern ── */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10, paddingBottom: 20 }}>
+          <button
+            onClick={() => setView(viewMode === 'basic' ? 'enhanced' : 'basic')}
+            style={{
+              border: 'none', background: 'none', cursor: 'pointer', padding: '4px 10px',
+              display: 'flex', alignItems: 'center', gap: 5,
+              color: '#bbb', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+            }}>
+            {viewMode === 'basic' ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+              </svg>
+            )}
+            {viewMode === 'basic' ? 'Enhanced' : 'Basic'}
+          </button>
+        </div>
+
       </div>
     </div>
   );
@@ -520,7 +549,7 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
   }, [insights, playerNetInPeriod]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#eef4ee', paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', background: '#eef4ee' }}>
 
       {/* ── Header ── */}
       <div style={{
@@ -664,7 +693,7 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
                       Standings
                     </>
                   ) : (
-                    <>View Full List <IconChevronRight /></>
+                    <>By Game <IconChevronRight /></>
                   )}
                 </button>
               </div>
@@ -831,33 +860,6 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
           </div>
         )}
 
-      </div>
-
-      {/* ── Basic / Enhanced toggle — subtle, fixed above nav ── */}
-      <div style={{
-        position: 'fixed', bottom: 62, left: '50%', transform: 'translateX(-50%)',
-        zIndex: 20,
-        background: 'rgba(235,242,235,0.94)',
-        borderRadius: 20, padding: 3,
-        boxShadow: '0 1px 8px rgba(0,0,0,.10)',
-        border: '1px solid #cdd8cd',
-        display: 'flex',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}>
-        {['basic', 'enhanced'].map(mode => (
-          <button key={mode} onClick={() => setView(mode)} style={{
-            padding: '5px 16px', borderRadius: 17, border: 'none',
-            background: viewMode === mode ? G : 'transparent',
-            color: viewMode === mode ? '#fff' : '#999',
-            fontSize: 11, fontWeight: 700,
-            cursor: 'pointer', fontFamily: 'inherit',
-            transition: 'background .15s, color .15s',
-            letterSpacing: '.03em',
-          }}>
-            {mode === 'basic' ? 'Basic' : 'Enhanced'}
-          </button>
-        ))}
       </div>
 
     </div>
