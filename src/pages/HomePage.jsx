@@ -498,26 +498,22 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
     const tiles = [];
     const { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, lockPlayer, lockWins, lockRounds } = insights;
     if (heater && heaterCount >= 2) {
-      const net = playerNetInPeriod[heater] || 0;
       tiles.push({ icon: <IconFireSvg />, title: 'HEATER', name: heater,
-        stat: `${fmtDollar(net)} over last ${heaterCount} rounds`, statColor: G });
+        stat: `${heaterCount} wins in a row` });
     }
     if (coldest && coldCount >= 2) {
-      const net = playerNetInPeriod[coldest] || 0;
       tiles.push({ icon: <IconSnowSvg />, title: 'COLD STREAK', name: coldest,
-        stat: `${coldCount} losses in a row`, amount: fmtDollar(net), amountColor: '#A32D2D' });
+        stat: `${coldCount} losses in a row`, statColor: '#A32D2D' });
     }
     if (strongestTeam && strongestWins >= 2) {
-      tiles.push({ icon: <IconTeamSvg />, title: 'STRONGEST TEAM',
+      tiles.push({ icon: <IconTeamSvg />, title: 'DYNAMIC DUO',
         name: strongestTeam.names.join(' & '),
-        stat: `${strongestWins} wins together`, amountColor: G });
+        stat: `${strongestWins} wins together` });
     }
     if (lockPlayer && lockRounds >= 3) {
       const pct = Math.round((lockWins / lockRounds) * 100);
-      const net = playerNetInPeriod[lockPlayer] || 0;
       tiles.push({ icon: <IconLockSvg />, title: 'THE LOCK', name: lockPlayer,
-        stat: `Won ${lockWins} of ${lockRounds} rounds (${pct}%)`,
-        amount: fmtDollar(net), amountColor: G });
+        stat: `Won ${lockWins} of ${lockRounds} rounds (${pct}%)` });
     }
     return tiles;
   }, [insights, playerNetInPeriod]);
@@ -805,7 +801,7 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
                   Insights
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {insightTiles.map(({ icon, title, name, stat, amount, statColor, amountColor }) => (
+                  {insightTiles.map(({ icon, title, name, stat, statColor }) => (
                     <div key={title} style={{
                       background: '#fff', border: '1px solid #e8efe8', borderRadius: 14,
                       padding: 14, display: 'flex', gap: 10, alignItems: 'flex-start',
@@ -814,8 +810,7 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase', color: '#9aaa9a', fontWeight: 700, marginBottom: 2 }}>{title}</div>
                         <div style={{ fontWeight: 800, fontSize: 14, color: '#111', marginBottom: 2 }}>{name}</div>
-                        <div style={{ fontSize: 11, color: '#666' }}>{stat}</div>
-                        {amount && <div style={{ fontSize: 12, fontWeight: 700, color: amountColor }}>{amount}</div>}
+                        <div style={{ fontSize: 11, color: statColor || '#666' }}>{stat}</div>
                       </div>
                     </div>
                   ))}
@@ -840,14 +835,8 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
             onClick={() => setView(viewMode === 'basic' ? 'enhanced' : 'basic')}
             style={{
               border: 'none', background: 'none', cursor: 'pointer', padding: '4px 10px',
-              display: 'flex', alignItems: 'center', gap: 5,
               color: '#bbb', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
             }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-              stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
             {viewMode === 'basic' ? 'Enhanced' : 'Basic'}
           </button>
         </div>
