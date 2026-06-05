@@ -378,32 +378,6 @@ function PodiumCard({ name, total, rank, streak, playerRecord }) {
       {/* Amount */}
       <div style={{ fontWeight: 800, fontSize: isFirst ? 20 : 17, color: amtColor, textAlign: 'center' }}>
         {fmtDollar(total)}
-        {/* ── View mode toggle — matches History page Edit Locked pattern ── */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10, paddingBottom: 20 }}>
-          <button
-            onClick={() => setView(viewMode === 'basic' ? 'enhanced' : 'basic')}
-            style={{
-              border: 'none', background: 'none', cursor: 'pointer', padding: '4px 10px',
-              display: 'flex', alignItems: 'center', gap: 5,
-              color: '#bbb', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-            }}>
-            {viewMode === 'basic' ? (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-            ) : (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
-              </svg>
-            )}
-            {viewMode === 'basic' ? 'Enhanced' : 'Basic'}
-          </button>
-        </div>
-
       </div>
     </div>
   );
@@ -860,8 +834,25 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
           </div>
         )}
 
-      </div>
+        {/* ── View mode toggle — bottom of page, scroll to see ── */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16, paddingBottom: 24 }}>
+          <button
+            onClick={() => setView(viewMode === 'basic' ? 'enhanced' : 'basic')}
+            style={{
+              border: 'none', background: 'none', cursor: 'pointer', padding: '4px 10px',
+              display: 'flex', alignItems: 'center', gap: 5,
+              color: '#bbb', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+            }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            {viewMode === 'basic' ? 'Enhanced' : 'Basic'}
+          </button>
+        </div>
 
+      </div>
     </div>
   );
 }
