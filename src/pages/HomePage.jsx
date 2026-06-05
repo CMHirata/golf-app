@@ -122,23 +122,27 @@ const IconSnowSvg = () => (
   </svg>
 );
 
-const IconTrophySvg = () => (
+// Strongest Team: two overlapping person silhouettes with a star
+const IconTeamSvg = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-    stroke="#B8860B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 21h8M12 17v4M7 4H4a2 2 0 0 0-2 2v1c0 3.3 2.7 6 6 6"/>
-    <path d="M17 4h3a2 2 0 0 1 2 2v1c0 3.3-2.7 6-6 6"/>
-    <path d="M6 2h12v10a6 6 0 0 1-12 0V2z"/>
+    stroke="#1a472a" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="7" r="3.5" fill="#c8e6c9" stroke="#1a472a"/>
+    <path d="M2 21v-1a7 7 0 0 1 14 0v1" fill="none"/>
+    <circle cx="17" cy="7" r="3" fill="#a5d6a7" stroke="#1a472a"/>
+    <path d="M14 21a5 5 0 0 1 8 0" fill="none"/>
+    <polygon points="9,1 9.7,3 12,3 10.1,4.3 10.8,6.5 9,5.2 7.2,6.5 7.9,4.3 6,3 8.3,3"
+      fill="#FFD700" stroke="#B8860B" strokeWidth="0.5"/>
   </svg>
 );
 
-const IconScissorsSvg = () => (
+// The Lock: padlock icon
+const IconLockSvg = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-    stroke="#777" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="6" cy="6" r="3"/>
-    <circle cx="6" cy="18" r="3"/>
-    <line x1="20" y1="4" x2="8.12" y2="15.88"/>
-    <line x1="14.47" y1="14.48" x2="20" y2="20"/>
-    <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+    stroke="#1a472a" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="5" y="11" width="14" height="10" rx="2" fill="#c8e6c9" stroke="#1a472a"/>
+    <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+    <circle cx="12" cy="16" r="1.5" fill="#1a472a"/>
+    <line x1="12" y1="17.5" x2="12" y2="19" stroke="#1a472a"/>
   </svg>
 );
 
@@ -174,14 +178,19 @@ function PennantRibbon({ rank }) {
 
 // ── Data helpers ──────────────────────────────────────────────────────────────
 function cleanGameName(raw) {
-  // Strip detail suffix, emoji, and special chars — keep base game name only
-  return raw
-    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
-    .replace(/[\u{2600}-\u{27FF}]/gu, '')
-    .replace(/\s*[—–-].*$/, '')
-    .replace(/\s*\(.*$/, '')
-    .replace(/[^\w\s]/g, '')
-    .trim();
+  // Strip all non-ASCII (emoji, special chars) then clean suffix details
+  let s = raw.replace(/[^\x00-\x7F]/g, '').trim();
+  // Remove detail suffixes after — - / (
+  s = s.replace(/\s*[—–\/].*$/, '').replace(/\s*\(.*$/, '').trim();
+  // Normalize known variants
+  if (/^match/i.test(s)) return 'Match';
+  if (/^nines/i.test(s)) return 'Nines';
+  if (/^sixes/i.test(s)) return 'Sixes';
+  if (/^dots/i.test(s)) return 'Dots';
+  if (/^stableford/i.test(s)) return 'Stableford';
+  if (/^stroke/i.test(s)) return 'Stroke Play';
+  if (/^nassau/i.test(s)) return 'Nassau';
+  return s || 'Other';
 }
 
 function computeStreaks(filteredRounds, names) {
@@ -218,7 +227,7 @@ function computeGameTotals(filteredRounds, rosterNames) {
   return { gameTotals: totals, gameOrder: gameOrder.sort((a, b) => a.localeCompare(b)) };
 }
 
-function computeInsights(filteredRounds, streaks, playerNetInPeriod) {
+function computeInsights(filteredRounds, streaks, playerNetInPeriod, moneyList) {
   let heater = null, heaterCount = 0;
   let coldest = null, coldCount = 0;
   for (const [name, s] of Object.entries(streaks)) {
@@ -226,46 +235,51 @@ function computeInsights(filteredRounds, streaks, playerNetInPeriod) {
     if (s.type === 'cold' && s.count > coldCount) { coldCount = s.count; coldest = name; }
   }
 
-  const pairRec = {};
+  // Strongest Team: same-side pairs across ALL team-format rounds (Match teams, Sixes teams, etc.)
+  // Uses r.matches for explicit team sides; also scan r.breakdown for Sixes/Dots team data
   const teamRec = {};
 
   for (const r of filteredRounds) {
     const pl = r.players || [];
+
+    // Explicit match team sides
     for (const m of (r.matches || [])) {
-      let sideA = [], sideB = [];
-      if (m.format === 'individual') {
-        const p1 = pl[m.p1]?.name, p2 = pl[m.p2]?.name;
-        if (!p1 || !p2) continue;
-        sideA = [p1]; sideB = [p2];
-      } else if (m.format === 'team') {
-        sideA = (m.teamA || []).map(i => pl[i]?.name).filter(Boolean);
-        sideB = (m.teamB || []).map(i => pl[i]?.name).filter(Boolean);
-        // Same-side pairs for Strongest Team
-        for (const side of [sideA, sideB]) {
-          const sideNet = side.reduce((s, n) => s + (r.bank?.[n] || 0), 0);
+      if (m.format !== 'team') continue;
+      const sides = [m.teamA || [], m.teamB || []];
+      for (const side of sides) {
+        const names = side.map(i => pl[i]?.name).filter(Boolean);
+        const sideNet = names.reduce((s, n) => s + (r.bank?.[n] || 0), 0);
+        const won = sideNet > 0;
+        for (let i = 0; i < names.length; i++) {
+          for (let j = i + 1; j < names.length; j++) {
+            const key = [names[i], names[j]].sort().join('|');
+            if (!teamRec[key]) teamRec[key] = { names: [names[i], names[j]], wins: 0, losses: 0 };
+            if (won) teamRec[key].wins++;
+            else teamRec[key].losses++;
+          }
+        }
+      }
+    }
+
+    // Sixes/Dots/other team games via breakdown rows — infer teams from same-sign net
+    // Only use when no explicit match structure exists for this round
+    if (!(r.matches || []).length) {
+      for (const entry of (r.breakdown || [])) {
+        const game = cleanGameName(entry.game);
+        if (!['Sixes', 'Dots', 'Stableford', 'Nines'].includes(game)) continue;
+        const rows = (entry.rows || []).filter(row => row.net !== 0);
+        const winners = rows.filter(row => row.net > 0).map(row => row.name);
+        const losers  = rows.filter(row => row.net < 0).map(row => row.name);
+        for (const side of [winners, losers]) {
+          const won = side === winners;
           for (let i = 0; i < side.length; i++) {
             for (let j = i + 1; j < side.length; j++) {
               const key = [side[i], side[j]].sort().join('|');
-              if (!teamRec[key]) teamRec[key] = { names: [side[i], side[j]], wins: 0, net: 0 };
-              if (sideNet > 0) teamRec[key].wins++;
-              teamRec[key].net += sideNet;
+              if (!teamRec[key]) teamRec[key] = { names: [side[i], side[j]], wins: 0, losses: 0 };
+              if (won) teamRec[key].wins++;
+              else teamRec[key].losses++;
             }
           }
-        }
-      } else continue;
-
-      if (!sideA.length || !sideB.length) continue;
-      const netA = sideA.reduce((s, n) => s + (r.bank?.[n] || 0), 0);
-      const netB = sideB.reduce((s, n) => s + (r.bank?.[n] || 0), 0);
-      if (netA === 0 && netB === 0) continue;
-      const aWon = netA > netB;
-      for (const a of sideA) {
-        for (const b of sideB) {
-          const key = [a, b].sort().join('|');
-          if (!pairRec[key]) pairRec[key] = { names: [a, b], winsA: 0, winsB: 0, netA: 0, netB: 0 };
-          if (aWon) pairRec[key].winsA++; else pairRec[key].winsB++;
-          pairRec[key].netA += r.bank?.[a] || 0;
-          pairRec[key].netB += r.bank?.[b] || 0;
         }
       }
     }
@@ -276,25 +290,30 @@ function computeInsights(filteredRounds, streaks, playerNetInPeriod) {
     if (rec.wins > strongestWins) { strongestWins = rec.wins; strongestTeam = rec; }
   }
 
-  let nemesis = null, nemesisImbalance = 0;
-  for (const rec of Object.values(pairRec)) {
-    const total = rec.winsA + rec.winsB;
-    if (total < 2) continue;
-    const imbalance = Math.abs(rec.winsA - rec.winsB);
-    if (imbalance > nemesisImbalance) {
-      nemesisImbalance = imbalance;
-      const aLeads = rec.winsA >= rec.winsB;
-      nemesis = {
-        winner: aLeads ? rec.names[0] : rec.names[1],
-        loser: aLeads ? rec.names[1] : rec.names[0],
-        wWins: Math.max(rec.winsA, rec.winsB),
-        lWins: Math.min(rec.winsA, rec.winsB),
-        netLoser: aLeads ? rec.netB : rec.netA,
-      };
+  // The Lock: player with highest win rate (net > 0) across filteredRounds, min 3 rounds
+  let lockPlayer = null, lockWins = 0, lockRounds = 0;
+  const playerRoundCount = {};
+  const playerWinCount = {};
+  for (const r of filteredRounds) {
+    for (const [name, net] of Object.entries(r.bank || {})) {
+      playerRoundCount[name] = (playerRoundCount[name] || 0) + 1;
+      if (net > 0) playerWinCount[name] = (playerWinCount[name] || 0) + 1;
+    }
+  }
+  let bestRate = 0;
+  for (const [name, rounds] of Object.entries(playerRoundCount)) {
+    if (rounds < 3) continue;
+    const wins = playerWinCount[name] || 0;
+    const rate = wins / rounds;
+    if (rate > bestRate || (rate === bestRate && wins > lockWins)) {
+      bestRate = rate;
+      lockPlayer = name;
+      lockWins = wins;
+      lockRounds = rounds;
     }
   }
 
-  return { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, nemesis };
+  return { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, lockPlayer, lockWins, lockRounds };
 }
 
 // ── Icon circle wrapper for insights ─────────────────────────────────────────
@@ -323,6 +342,7 @@ function PodiumCard({ name, total, rank, streak, playerRecord }) {
   return (
     <div style={{
       flex: 1,
+      minWidth: 0,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -347,27 +367,15 @@ function PodiumCard({ name, total, rank, streak, playerRecord }) {
         <PlayerAvatar player={playerRecord} size={isFirst ? 52 : 44} starred={!!playerRecord?.starred} />
       </div>
 
-      {/* Name stacked */}
-      <div style={{ fontWeight: 700, fontSize: isFirst ? 14 : 13, color: '#111', textAlign: 'center', lineHeight: 1.2 }}>{first}</div>
-      {last && <div style={{ fontWeight: 600, fontSize: isFirst ? 13 : 12, color: '#555', textAlign: 'center', marginBottom: 6, lineHeight: 1.2 }}>{last}</div>}
+      {/* Name stacked — truncate to keep equal widths */}
+      <div style={{ fontWeight: 700, fontSize: isFirst ? 14 : 13, color: '#111', textAlign: 'center', lineHeight: 1.2, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{first}</div>
+      {last && <div style={{ fontWeight: 600, fontSize: 11, color: '#555', textAlign: 'center', marginBottom: 6, lineHeight: 1.2, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{last}</div>}
       {!last && <div style={{ marginBottom: 6 }} />}
 
       {/* Amount */}
       <div style={{ fontWeight: 800, fontSize: isFirst ? 20 : 17, color: amtColor, textAlign: 'center' }}>
         {fmtDollar(total)}
       </div>
-
-      {/* Streak label */}
-      {streak && streak.count >= 2 && (
-        <div style={{
-          marginTop: 5, fontSize: 11, fontWeight: 600,
-          color: streak.type === 'hot' ? '#E8612C' : '#4A90D9',
-          display: 'flex', alignItems: 'center', gap: 3,
-        }}>
-          {streak.type === 'hot' ? <FireSmall /> : <SnowSmall />}
-          {streak.type === 'hot' ? 'Heater' : 'Cold'} {streak.count} wins
-        </div>
-      )}
     </div>
   );
 }
@@ -448,25 +456,28 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
   }, [filteredRounds]);
 
   const insights = useMemo(() =>
-    computeInsights(filteredRounds, streaks, playerNetInPeriod),
-    [filteredRounds, streaks, playerNetInPeriod]);
+    computeInsights(filteredRounds, streaks, playerNetInPeriod, moneyList),
+    [filteredRounds, streaks, playerNetInPeriod, moneyList]);
 
   // Stat tiles
   const statTiles = useMemo(() => {
     const thisYear = new Date().getFullYear();
     const ytdRounds = rounds.filter(r => new Date(r.date).getFullYear() === thisYear);
-    const activePlayers = players.filter(p => p.inMoneyLists !== false).length;
-    const coursesPlayed = new Set(filteredRounds.map(r => r.course_name).filter(Boolean)).size;
+    const totalPlayers = players.length; // all players, not filtered
+    const coursesPlayed = new Set(ytdRounds.map(r => r.course_name).filter(Boolean)).size;
     let wagered = 0;
-    filteredRounds.forEach(r => { Object.values(r.bank || {}).forEach(v => { wagered += Math.abs(v); }); });
-    wagered = wagered / 2;
+    ytdRounds.forEach(r => { Object.values(r.bank || {}).forEach(v => { wagered += Math.abs(v); }); });
+    wagered = Math.round(wagered / 2);
+    const wageredStr = wagered >= 1000
+      ? `$${(wagered / 1000).toFixed(1).replace(/\.0$/, '')}k`
+      : `$${wagered}`;
     return [
       { icon: <IconRounds />,  value: String(ytdRounds.length), label: 'ROUNDS',  sub: 'This year' },
-      { icon: <IconPeople />, value: String(activePlayers),    label: 'PLAYERS', sub: 'Active'    },
-      { icon: <IconPin />,    value: String(coursesPlayed),    label: 'COURSES', sub: 'Played'    },
-      { icon: <IconWagered />, value: fmtDollar(wagered),      label: 'WAGERED', sub: 'This year' },
+      { icon: <IconPeople />,  value: String(totalPlayers),     label: 'PLAYERS', sub: 'Total'     },
+      { icon: <IconPin />,     value: String(coursesPlayed),    label: 'COURSES', sub: 'This year' },
+      { icon: <IconWagered />, value: wageredStr,               label: 'WAGERED', sub: 'This year' },
     ];
-  }, [rounds, players, filteredRounds]);
+  }, [rounds, players]);
 
   const top3  = moneyList.slice(0, 3);
   const rest  = moneyList.slice(3);
@@ -482,7 +493,7 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
   // Insight tiles
   const insightTiles = useMemo(() => {
     const tiles = [];
-    const { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, nemesis } = insights;
+    const { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, lockPlayer, lockWins, lockRounds } = insights;
     if (heater && heaterCount >= 2) {
       const net = playerNetInPeriod[heater] || 0;
       tiles.push({ icon: <IconFireSvg />, title: 'HEATER', name: heater,
@@ -493,16 +504,17 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
       tiles.push({ icon: <IconSnowSvg />, title: 'COLD STREAK', name: coldest,
         stat: `${coldCount} losses in a row`, amount: fmtDollar(net), amountColor: '#A32D2D' });
     }
-    if (strongestTeam && strongestWins >= 1) {
-      tiles.push({ icon: <IconTrophySvg />, title: 'STRONGEST TEAM',
+    if (strongestTeam && strongestWins >= 2) {
+      tiles.push({ icon: <IconTeamSvg />, title: 'STRONGEST TEAM',
         name: strongestTeam.names.join(' & '),
-        stat: `${strongestWins} wins together`,
-        amount: fmtDollar(strongestTeam.net), amountColor: G });
+        stat: `${strongestWins} wins together`, amountColor: G });
     }
-    if (nemesis) {
-      const { winner, loser, wWins, lWins, netLoser } = nemesis;
-      tiles.push({ icon: <IconScissorsSvg />, title: 'NEMESIS', name: loser,
-        stat: `${lWins}-${wWins} vs ${winner}`, amount: fmtDollar(netLoser), amountColor: '#A32D2D' });
+    if (lockPlayer && lockRounds >= 3) {
+      const pct = Math.round((lockWins / lockRounds) * 100);
+      const net = playerNetInPeriod[lockPlayer] || 0;
+      tiles.push({ icon: <IconLockSvg />, title: 'THE LOCK', name: lockPlayer,
+        stat: `Won ${lockWins} of ${lockRounds} rounds (${pct}%)`,
+        amount: fmtDollar(net), amountColor: G });
     }
     return tiles;
   }, [insights, playerNetInPeriod]);
@@ -569,7 +581,7 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
               }}>
                 {icon}
               </div>
-              <div style={{ fontSize: label === 'WAGERED' ? 12 : 20, fontWeight: 800, color: G, lineHeight: 1, textAlign: 'center' }}>{value}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: G, lineHeight: 1, textAlign: 'center' }}>{value}</div>
               <div style={{ fontSize: 9, fontWeight: 700, color: '#888', textAlign: 'center', letterSpacing: '.04em' }}>{label}</div>
               <div style={{ fontSize: 9, color: '#bbb', textAlign: 'center', marginTop: -3 }}>{sub}</div>
             </div>
@@ -691,7 +703,6 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
                       <div style={{ background: '#fafdfa', border: '1px solid #e8efe8', borderRadius: 12 }}>
                         {(listExpanded ? rest : rest.slice(0, 3)).map(([name, total], i) => {
                           const pr = playerByName[name] || { name };
-                          const streak = streaks[name];
                           return (
                             <div key={name} style={{
                               display: 'flex', alignItems: 'center', padding: '10px 12px',
@@ -702,16 +713,6 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
                                 <PlayerAvatar player={pr} size={28} starred={false} />
                               </div>
                               <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#222' }}>{name}</div>
-                              {streak && streak.count >= 2 && (
-                                <div style={{
-                                  display: 'flex', alignItems: 'center', gap: 2,
-                                  fontSize: 10, fontWeight: 700, marginRight: 8,
-                                  color: streak.type === 'hot' ? '#E8612C' : '#4A90D9',
-                                }}>
-                                  {streak.type === 'hot' ? <FireSmall /> : <SnowSmall />}
-                                  {streak.count}
-                                </div>
-                              )}
                               <div style={{ fontWeight: 800, fontSize: 13, color: total >= 0 ? G : '#A32D2D' }}>
                                 {fmtDollar(total)}
                               </div>
