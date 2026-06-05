@@ -696,12 +696,14 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
                   {rest.length > 0 && (
                     <>
                       <div style={{ background: '#fafdfa', border: '1px solid #e8efe8', borderRadius: 12 }}>
-                        {(listExpanded ? rest : rest.slice(0, 3)).map(([name, total], i) => {
+                        {(listExpanded ? rest : rest.slice(0, 7)).map(([name, total], i) => {
                           const pr = playerByName[name] || { name };
+                          const visibleCount = listExpanded ? rest.length : Math.min(rest.length, 7);
+                          const isLast = i === visibleCount - 1;
                           return (
                             <div key={name} style={{
                               display: 'flex', alignItems: 'center', padding: '10px 12px',
-                              borderBottom: '1px solid #edf3ed',
+                              borderBottom: isLast ? 'none' : '1px solid #edf3ed',
                             }}>
                               <div style={{ width: 20, fontSize: 12, fontWeight: 700, color: '#aaa', flexShrink: 0 }}>{i + 4}</div>
                               <div style={{ marginRight: 8, flexShrink: 0 }}>
@@ -715,7 +717,7 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
                           );
                         })}
                       </div>
-                      {rest.length > 3 && (
+                      {rest.length > 7 && (
                         <button onClick={() => setListExpanded(e => !e)} style={{
                           width: '100%', background: 'none', border: 'none',
                           padding: '8px 0 0', cursor: 'pointer',
