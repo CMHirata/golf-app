@@ -511,9 +511,8 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
         stat: `${strongestWins} wins together` });
     }
     if (lockPlayer && lockRounds >= 3) {
-      const pct = Math.round((lockWins / lockRounds) * 100);
       tiles.push({ icon: <IconLockSvg />, title: 'THE LOCK', name: lockPlayer,
-        stat: `Won ${lockWins} of ${lockRounds} rounds (${pct}%)` });
+        stat: `Won ${lockWins} of ${lockRounds}` });
     }
     return tiles;
   }, [insights, playerNetInPeriod]);
