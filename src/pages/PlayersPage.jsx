@@ -132,8 +132,7 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
   onActivate, activeFieldId }) {
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initial });
   const [errors, setErrors] = useState({});
-  const ghinRef = useRef(null);
-  const btnRowRef = useRef(null);
+  const scrollRef = useRef(null);
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })); };
 
@@ -167,12 +166,13 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
       },
       () => {},
     );
-    setTimeout(() => btnRowRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }), 50);
+    setTimeout(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }, 50);
   } : null;
 
   const ghinField = (
     <input
-      ref={ghinRef}
       type="text"
       inputMode={onActivate ? 'none' : 'text'}
       readOnly={!!onActivate}
@@ -195,7 +195,7 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:1000 }}>
-      <div style={{ background:'#fff', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:520, padding:'24px 20px 32px', boxShadow:'0 -4px 24px rgba(0,0,0,0.18)', maxHeight:'92vh', overflowY:'auto' }}>
+      <div ref={scrollRef} style={{ background:'#fff', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:520, padding:'24px 20px 32px', boxShadow:'0 -4px 24px rgba(0,0,0,0.18)', maxHeight:'92vh', overflowY:'auto' }}>
         <div style={{ display:'flex', alignItems:'center', marginBottom:20 }}>
           <div style={{ fontWeight:800, fontSize:17, color:G, flex:1 }}>{title}</div>
           <button type="button" onClick={onCancel} style={{ border:'none', background:'#f0f0f0', borderRadius:'50%', width:30, height:30, fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>✕</button>
@@ -217,7 +217,7 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
           {ghinField}
           <div style={{ fontSize:11, color:'#999', marginTop:3 }}>Enter plus handicaps as +5.4. Used to calculate course handicap.</div>
         </Field>
-        <div ref={btnRowRef} style={{ display:'flex', gap:10, marginTop:8 }}>
+        <div style={{ display:'flex', gap:10, marginTop:8 }}>
           <Btn variant="outline" onClick={onCancel} style={{ flex:1 }}>Cancel</Btn>
           <Btn onClick={handleSave} style={{ flex:2 }}>
             {title === 'Add Player' ? '+ Add Player' : 'Save Changes'}
