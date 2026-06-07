@@ -132,6 +132,23 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
   onActivate, activeFieldId }) {
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initial });
   const [errors, setErrors] = useState({});
+  const [sheetBottom, setSheetBottom] = useState(0);
+  const sheetRef = useRef(null);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      const kb = window.innerHeight - vv.height - vv.offsetTop;
+      setSheetBottom(kb > 0 ? kb : 0);
+    };
+    vv.addEventListener('resize', onResize);
+    vv.addEventListener('scroll', onResize);
+    return () => {
+      vv.removeEventListener('resize', onResize);
+      vv.removeEventListener('scroll', onResize);
+    };
+  }, []);
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })); };
 
@@ -174,7 +191,7 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
       readOnly={!!onActivate}
       value={form.ghin}
       placeholder="e.g. 8.2  or  +5.4 for plus"
-      onFocus={handleGhinFocus || undefined}
+      onFocus={handleGhinFocus || ((e) => { const t = e.target; setTimeout(() => t.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 50); })}
       onChange={onActivate ? undefined : e => set('ghin', e.target.value)}
       style={{
         border: activeFieldId === 'ghin' ? `2px solid ${G}` : `1px solid ${errors.ghin ? RED : '#ddd'}`,
@@ -191,7 +208,7 @@ function PlayerModal({ initial = EMPTY_FORM, onSave, onCancel, title, existingNa
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'flex-end', justifyContent:'center', zIndex:1000 }}>
-      <div style={{ background:'#fff', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:520, padding:'24px 20px 32px', boxShadow:'0 -4px 24px rgba(0,0,0,0.18)', maxHeight:'92vh', overflowY:'auto' }}>
+      <div ref={sheetRef} style={{ background:'#fff', borderRadius:'20px 20px 0 0', width:'100%', maxWidth:520, padding:'24px 20px 32px', boxShadow:'0 -4px 24px rgba(0,0,0,0.18)', maxHeight:'92vh', overflowY:'auto', marginBottom: sheetBottom, transition:'margin-bottom 0.2s ease' }}>
         <div style={{ display:'flex', alignItems:'center', marginBottom:20 }}>
           <div style={{ fontWeight:800, fontSize:17, color:G, flex:1 }}>{title}</div>
           <button type="button" onClick={onCancel} style={{ border:'none', background:'#f0f0f0', borderRadius:'50%', width:30, height:30, fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', color:'#555' }}>✕</button>
