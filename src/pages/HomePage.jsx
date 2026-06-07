@@ -313,7 +313,29 @@ function computeInsights(filteredRounds, streaks, playerNetInPeriod, moneyList) 
     }
   }
 
-  return { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, lockPlayer, lockWins, lockRounds };
+  // Fallback: best/worst record in last 5 rounds when no streak >= 2
+  const last5 = filteredRounds.slice(0, 5);
+  const last5wins = {}, last5losses = {}, last5played = {};
+  for (const r of last5) {
+    for (const [name, net] of Object.entries(r.bank || {})) {
+      last5played[name] = (last5played[name] || 0) + 1;
+      if (net > 0) last5wins[name] = (last5wins[name] || 0) + 1;
+      if (net < 0) last5losses[name] = (last5losses[name] || 0) + 1;
+    }
+  }
+  let fallbackHeater = null, fallbackHeaterWins = 0, fallbackHeaterPlayed = 0;
+  let fallbackCold = null, fallbackColdLosses = 0, fallbackColdPlayed = 0;
+  for (const [name, played] of Object.entries(last5played)) {
+    if (played < 2) continue;
+    const wins = last5wins[name] || 0;
+    const losses = last5losses[name] || 0;
+    if (wins > fallbackHeaterWins) { fallbackHeaterWins = wins; fallbackHeater = name; fallbackHeaterPlayed = played; }
+    if (losses > fallbackColdLosses) { fallbackColdLosses = losses; fallbackCold = name; fallbackColdPlayed = played; }
+  }
+
+  return { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, lockPlayer, lockWins, lockRounds,
+    fallbackHeater, fallbackHeaterWins, fallbackHeaterPlayed,
+    fallbackCold, fallbackColdLosses, fallbackColdPlayed, last5count: last5.length };
 }
 
 // ── Icon circle wrapper for insights ─────────────────────────────────────────
@@ -493,14 +515,26 @@ export default function HomePage({ onNewRound, onResume, inProgress }) {
   // Insight tiles
   const insightTiles = useMemo(() => {
     const tiles = [];
-    const { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, lockPlayer, lockWins, lockRounds } = insights;
+    const { heater, heaterCount, coldest, coldCount, strongestTeam, strongestWins, lockPlayer, lockWins, lockRounds,
+      fallbackHeater, fallbackHeaterWins, fallbackHeaterPlayed,
+      fallbackCold, fallbackColdLosses, fallbackColdPlayed, last5count } = insights;
+
+    // Heater: streak >= 2, else fallback to best win rate in last 5
     if (heater && heaterCount >= 2) {
       tiles.push({ icon: <IconFireSvg />, title: 'HEATER', name: heater,
         stat: `${heaterCount} wins in a row` });
+    } else if (fallbackHeater && fallbackHeaterWins >= 1) {
+      tiles.push({ icon: <IconFireSvg />, title: 'HEATER', name: fallbackHeater,
+        stat: `${fallbackHeaterWins} of last ${fallbackHeaterPlayed}` });
     }
+
+    // Cold Streak: streak >= 2, else fallback to most losses in last 5
     if (coldest && coldCount >= 2) {
       tiles.push({ icon: <IconSnowSvg />, title: 'COLD STREAK', name: coldest,
         stat: `${coldCount} losses in a row`, statColor: '#A32D2D' });
+    } else if (fallbackCold && fallbackColdLosses >= 1) {
+      tiles.push({ icon: <IconSnowSvg />, title: 'COLD STREAK', name: fallbackCold,
+        stat: `${fallbackColdLosses} losses in last ${fallbackColdPlayed}`, statColor: '#A32D2D' });
     }
     if (strongestTeam && strongestWins >= 2) {
       tiles.push({ icon: <IconTeamSvg />, title: 'DYNAMIC DUO',
