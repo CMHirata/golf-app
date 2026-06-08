@@ -33,9 +33,9 @@ import { G, RED } from '../../components/ui.jsx';
 const TMA_BG  = '#dbeeff';
 const TMA_CLR = '#0c447c';
 const TMA_LED = '#185fa5';
-const TMB_BG  = '#fde8e8';
-const TMB_CLR = '#791f1f';
-const TMB_LED = '#a32d2d';
+const TMB_BG  = '#fdfacd';
+const TMB_CLR = '#7a4f00';
+const TMB_LED = '#a06800';
 
 // ── §13.2 Individual format: first + last initial, concatenated ───────────────
 const initials = name => {
@@ -189,13 +189,13 @@ export function MatchNassauTable({
             {betsForHalf.map((bet, bi) => {
               const isOverall = bet.isOverall;
               const isPress   = bet.isPress;
-              const rowBg     = isOverall ? '#fffef5' : isPress ? '#f0f8ff' : '#f5fbf5';
-              const labelClr  = isOverall ? MP.clr : isPress ? '#1a6b9a' : '#888';
-              const tBg       = isOverall ? MP.totBg : isPress ? '#cce8f8' : M.totBg;
+              const rowBg     = isOverall ? '#f5fbf5' : '#f5fbf5';
+              const labelClr  = isOverall ? MP.clr : '#888';
+              const tBg       = isOverall ? MP.totBg : M.totBg;
               const lastH     = [...hs].reverse().find(h => bet.leadState?.[h] !== undefined);
               const leadInfo  = lastH != null ? fmtLead(bet.leadState[lastH].lead, bet.leadState[lastH].matchOver, bet.leadState[lastH].holesLeft) : null;
               const statusClr = leadInfo
-                ? (bet.leadState[lastH].lead > 0 ? TMA_LED : bet.leadState[lastH].lead < 0 ? TMB_LED : '#3a3abd')
+                ? (bet.leadState[lastH].lead > 0 ? TMA_LED : bet.leadState[lastH].lead < 0 ? TMB_LED : M.hdrClr)
                 : '#aaa';
               return (
                 <tr key={bi} style={{ background: rowBg }}>
@@ -260,13 +260,13 @@ export function MatchNassauTable({
               {allRows.map((bet, bi) => {
                 const isOverall = bet.isOverall;
                 const isPress   = bet.isPress;
-                const rowBg     = isOverall ? '#fffef5' : isPress ? '#f0f8ff' : '#f5fbf5';
-                const labelClr  = isOverall ? MP.clr : isPress ? '#1a6b9a' : '#888';
-                const tBg       = isOverall ? MP.totBg : isPress ? '#cce8f8' : M.totBg;
+                const rowBg     = isOverall ? '#f5fbf5' : '#f5fbf5';
+                const labelClr  = isOverall ? MP.clr : '#888';
+                const tBg       = isOverall ? MP.totBg : M.totBg;
                 const lastAll   = [...allH].reverse().find(h => bet.leadState?.[h] !== undefined);
                 const allLead   = lastAll != null ? bet.leadState[lastAll] : null;
                 const allInfo   = allLead ? fmtLead(allLead.lead, allLead.matchOver, allLead.holesLeft) : null;
-                const allClr    = allLead ? (allLead.lead > 0 ? TMA_LED : allLead.lead < 0 ? TMB_LED : '#3a3abd') : '#aaa';
+                const allClr    = allLead ? (allLead.lead > 0 ? TMA_LED : allLead.lead < 0 ? TMB_LED : M.hdrClr) : '#aaa';
                 const holeTd = (h) => {
                   if (h < (bet.startHole ?? 0)) return <td key={h} style={{ textAlign: 'center', color: '#e8e8e8', fontSize: 11 }}>·</td>;
                   const w = holeWinFn(h);
@@ -324,24 +324,24 @@ export function MatchNassauTable({
             {allRows.map((bet, bi) => {
               const isOverall = bet.isOverall;
               const isPress   = bet.isPress;
-              const rowBg     = isOverall ? '#fffef5' : isPress ? '#f0f8ff' : '#f5fbf5';
-              const labelClr  = isOverall ? MP.clr : isPress ? '#1a6b9a' : '#888';
-              const tBg       = isOverall ? MP.totBg : isPress ? '#cce8f8' : M.totBg;
+              const rowBg     = isOverall ? '#f5fbf5' : '#f5fbf5';
+              const labelClr  = isOverall ? MP.clr : '#888';
+              const tBg       = isOverall ? MP.totBg : M.totBg;
 
               const lastF  = [...frontH].reverse().find(h => bet.leadStateFront?.[h] !== undefined);
               const f9Lead = lastF != null ? bet.leadStateFront[lastF] : null;
               const f9Info = f9Lead ? fmtLead(f9Lead.lead, f9Lead.matchOver, f9Lead.holesLeft) : null;
-              const f9Clr  = f9Lead ? (f9Lead.lead > 0 ? TMA_LED : f9Lead.lead < 0 ? TMB_LED : '#3a3abd') : '#aaa';
+              const f9Clr  = f9Lead ? (f9Lead.lead > 0 ? TMA_LED : f9Lead.lead < 0 ? TMB_LED : M.hdrClr) : '#aaa';
 
               const lastB  = [...backH].reverse().find(h => bet.leadStateBack?.[h] !== undefined);
               const b9Lead = lastB != null ? bet.leadStateBack[lastB] : null;
               const b9Info = b9Lead ? fmtLead(b9Lead.lead, b9Lead.matchOver, b9Lead.holesLeft) : null;
-              const b9Clr  = b9Lead ? (b9Lead.lead > 0 ? TMA_LED : b9Lead.lead < 0 ? TMB_LED : '#3a3abd') : '#aaa';
+              const b9Clr  = b9Lead ? (b9Lead.lead > 0 ? TMA_LED : b9Lead.lead < 0 ? TMB_LED : M.hdrClr) : '#aaa';
 
               const lastAll  = [...allH].reverse().find(h => bet.leadState?.[h] !== undefined);
               const allLead  = lastAll != null ? bet.leadState[lastAll] : null;
               const allInfo  = allLead ? fmtLead(allLead.lead, allLead.matchOver, allLead.holesLeft) : null;
-              const allClr   = allLead ? (allLead.lead > 0 ? TMA_LED : allLead.lead < 0 ? TMB_LED : '#3a3abd') : '#aaa';
+              const allClr   = allLead ? (allLead.lead > 0 ? TMA_LED : allLead.lead < 0 ? TMB_LED : M.hdrClr) : '#aaa';
 
               const holeTd = (h) => {
                 if (h < (bet.startHole ?? 0)) return <td key={h} style={{ textAlign: 'center', color: '#e8e8e8', fontSize: 11 }}>·</td>;
@@ -558,15 +558,13 @@ export function MatchNassauTable({
           const info      = lastH != null ? fmtLead(leadState[lastH].lead, leadState[lastH].matchOver, leadState[lastH].holesLeft) : null;
           const winnerName = info ? (leadState[lastH].lead > 0 ? nm1 : leadState[lastH].lead < 0 ? nm2 : 'All Square') : '—';
 
-          const pressDepthBg  = depth === 0 ? null : depth === 1 ? '#e8f4fb' : '#dceef8';
-          const pressDepthLbl = depth === 0 ? M.hdrClr : '#1a6b9a';
           const chipBg = info
             ? (leadState[lastH].lead > 0
-                ? (depth > 0 ? '#c0d8f0' : TMA_BG)
+                ? TMA_BG
                 : leadState[lastH].lead < 0
-                  ? (depth > 0 ? '#f8dede' : TMB_BG)
-                  : (depth > 0 ? '#e0e0f8' : '#eaeaff'))
-            : (pressDepthBg || M.hdrBg);
+                  ? TMB_BG
+                  : '#f5fbf5')
+            : M.hdrBg;
           const chipColor = info
             ? (leadState[lastH].lead > 0 ? TMA_LED : leadState[lastH].lead < 0 ? TMB_LED : '#aaa')
             : '#aaa';
@@ -583,7 +581,7 @@ export function MatchNassauTable({
           return {
             label, winnerName, value: info ? info.text : '—',
             color: chipColor,
-            bg: chipBg, labelColor: pressDepthLbl,
+            bg: chipBg, labelColor: M.hdrClr,
             pressable, hasChildPress, isPress: depth > 0,
             onLongPress: () => setPressModal({
               matchId, segment: segLabel, betHoles, mpKey, mpArr, depth,

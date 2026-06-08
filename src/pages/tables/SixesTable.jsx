@@ -31,10 +31,10 @@ import { PressModal, SegmentChipColumns } from '../scorecard/PressModal.jsx';
 // ── Sixes-specific color tokens (blue/red, colorblind-safe) ──────────────────
 const SXA_BG  = '#dbeeff';
 const SXA_CLR = '#0c447c';
-const SXB_BG  = '#fde8e8';
-const SXB_CLR = '#791f1f';
+const SXB_BG  = '#fdfacd';
+const SXB_CLR = '#7a4f00';
 const SXA_LED = '#185fa5';
-const SXB_LED = '#a32d2d';
+const SXB_LED = '#a06800';
 
 // ── Player-anchored color resolution ─────────────────────────────────────────
 // Players at index 0 and 1 are always "blue side"; 2 and 3 are always "red side."
@@ -193,16 +193,13 @@ export function SixesTable({
     const isTeamBLeading = info && leadState[lastH]?.lead < 0;
     const winnerName = isTeamALeading ? nmA : isTeamBLeading ? nmB : 'All Square';
 
-    const pressDepthBg  = depth === 0 ? null : depth === 1 ? '#e8f4fb' : '#dceef8';
-    const pressDepthLbl = depth === 0 ? M.hdrClr : '#1a6b9a';
-    const aIsBlue = anchorAIsBlue;
     const chipBg = info
       ? (isTeamALeading
-          ? (depth > 0 ? (aIsBlue ? '#c0d8f0' : '#f8dede') : (aIsBlue ? SXA_BG : SXB_BG))
+          ? (aIsBlue ? SXA_BG : SXB_BG)
           : isTeamBLeading
-            ? (depth > 0 ? (aIsBlue ? '#f8dede' : '#c0d8f0') : (aIsBlue ? SXB_BG : SXA_BG))
-            : (depth > 0 ? '#e0e0f8' : '#eaeaff'))
-      : (pressDepthBg || M.hdrBg);
+            ? (aIsBlue ? SXB_BG : SXA_BG)
+            : '#f5fbf5')
+      : M.hdrBg;
 
     const existingPressHole = mpArr[depth] ?? null;
     const minHole           = bet.startHole ?? segHoles[0];
@@ -222,7 +219,7 @@ export function SixesTable({
       label, winnerName,
       value: info ? info.text : '—',
       color: chipColor,
-      bg: chipBg, labelColor: pressDepthLbl,
+      bg: chipBg, labelColor: M.hdrClr,
       pressable, hasChildPress, isPress: depth > 0,
       onLongPress: () => setPressModal({
         mpKey, betHoles, depth, minHole, existingPressHole,
@@ -403,8 +400,8 @@ export function SixesTable({
                         : '#888')
                   : '#aaa';
                 return (
-                  <tr key={`press_${pi}`} style={{ background: '#f0f8ff' }}>
-                    <td style={{ padding: '2px 6px', fontSize: 10, color: '#1a6b9a', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <tr key={`press_${pi}`} style={{ background: '#f5fbf5' }}>
+                    <td style={{ padding: '2px 6px', fontSize: 10, color: '#888', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {pr.label}
                     </td>
                     {seg.holes.map(h => {
@@ -426,7 +423,7 @@ export function SixesTable({
                           <span style={{
                             display: 'inline-block', width: 22, height: 18, lineHeight: '18px',
                             fontSize: 10, fontWeight: 500, borderRadius: 3,
-                            background: isBlue ? '#c0d8f0' : '#f8dede',
+                            background: isBlue ? SXA_BG : SXB_BG,
                             color:      isBlue ? SXA_CLR   : SXB_CLR,
                             textAlign: 'center',
                           }}>
@@ -435,7 +432,7 @@ export function SixesTable({
                         </td>
                       );
                     })}
-                    <td style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, background: '#cce8f8', color: prStatusColor, padding: '2px 4px' }}>
+                    <td style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, background: M.totBg, color: prStatusColor, padding: '2px 4px' }}>
                       {prStatusInfo ? prStatusInfo.text : '—'}
                     </td>
                   </tr>
