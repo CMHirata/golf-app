@@ -21,7 +21,7 @@ import { useState } from 'react';
 import { scoreForMode } from '../../engine/handicap.js';
 import { getSixesTeam, runSixesSegment } from '../../engine/games.js';
 import {
-  M, COL_W, TOT_W, NAME_MIN,
+  M, SX, COL_W, TOT_W, NAME_MIN,
   scoringLabel, fmtLead, buildLeadState, lastScoredInHoles,
   applyDepartureGuardrailToScores,
 } from '../scorecard/scorecardUtils.js';
