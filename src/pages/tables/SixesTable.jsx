@@ -32,9 +32,9 @@ import { PressModal, SegmentChipColumns } from '../scorecard/PressModal.jsx';
 const SXA_BG  = '#dbeeff';
 const SXA_CLR = '#0c447c';
 const SXB_BG  = '#fffbe8';
-const SXB_CLR = '#7a4f00';
+const SXB_CLR = '#c0392b';
 const SXA_LED = '#185fa5';
-const SXB_LED = '#a06800';
+const SXB_LED = '#c0392b';
 
 // ── Player-anchored color resolution ─────────────────────────────────────────
 // Players at index 0 and 1 are always "blue side"; 2 and 3 are always "red side."
@@ -302,13 +302,15 @@ export function SixesTable({
       ? fmtLead(leadState[lastH].lead, leadState[lastH].matchOver, leadState[lastH].holesLeft)
       : null;
     const statusInfo  = rawInfo ? { ...rawInfo, text: stripThru(rawInfo.text) } : null;
+    const segLead     = lastH != null ? leadState[lastH].lead : 0;
+    const aIsBlueRow  = isBluePlayer(a);
+    const leaderIsBlue = segLead > 0 ? aIsBlueRow : !aIsBlueRow;
+    const statusBg    = statusInfo
+      ? (segLead !== 0 ? (leaderIsBlue ? SXA_BG : SXB_BG) : '#f5fbf5')
+      : '#f5fbf5';
     const statusColor = statusInfo
-      ? (leadState[lastH].lead > 0
-          ? (isBluePlayer(a) ? SXA_LED : SXB_LED)
-          : leadState[lastH].lead < 0
-            ? (isBluePlayer(c) ? SXA_LED : SXB_LED)
-            : '#888')
-      : '#aaa';
+      ? (segLead !== 0 ? (leaderIsBlue ? SXA_CLR : SXB_CLR) : SX.hdrClr)
+      : SX.hdrClr;
 
     // Engine output for press rows
     const mpArr      = (manualPresses || {})[seg.key] || [];
@@ -379,7 +381,7 @@ export function SixesTable({
                     </td>
                   );
                 })}
-                <td style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, background: M.totBg, color: statusColor, padding: '2px 4px' }}>
+                <td style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, background: statusBg, color: statusColor, padding: '2px 4px' }}>
                   {statusInfo ? statusInfo.text : '—'}
                 </td>
               </tr>
@@ -393,13 +395,14 @@ export function SixesTable({
                   ? fmtLead(prLeadState[prLastH].lead, prLeadState[prLastH].matchOver, prLeadState[prLastH].holesLeft)
                   : null;
                 const prStatusInfo  = prRawInfo ? { ...prRawInfo, text: stripThru(prRawInfo.text) } : null;
+                const prLead        = prLastH != null ? prLeadState[prLastH].lead : 0;
+                const prLeaderIsBlue = prLead > 0 ? aIsBlueRow : !aIsBlueRow;
+                const prStatusBg    = prStatusInfo
+                  ? (prLead !== 0 ? (prLeaderIsBlue ? SXA_BG : SXB_BG) : '#f5fbf5')
+                  : '#f5fbf5';
                 const prStatusColor = prStatusInfo
-                  ? (prLeadState[prLastH].lead > 0
-                      ? (isBluePlayer(a) ? SXA_LED : SXB_LED)
-                      : prLeadState[prLastH].lead < 0
-                        ? (isBluePlayer(c) ? SXA_LED : SXB_LED)
-                        : '#888')
-                  : '#aaa';
+                  ? (prLead !== 0 ? (prLeaderIsBlue ? SXA_CLR : SXB_CLR) : SX.hdrClr)
+                  : SX.hdrClr;
                 return (
                   <tr key={`press_${pi}`} style={{ background: '#f5fbf5' }}>
                     <td style={{ padding: '2px 6px', fontSize: 10, color: '#888', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -433,7 +436,7 @@ export function SixesTable({
                         </td>
                       );
                     })}
-                    <td style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, background: M.totBg, color: prStatusColor, padding: '2px 4px' }}>
+                    <td style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, background: prStatusBg, color: prStatusColor, padding: '2px 4px' }}>
                       {prStatusInfo ? prStatusInfo.text : '—'}
                     </td>
                   </tr>

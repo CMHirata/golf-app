@@ -34,8 +34,8 @@ const TMA_BG  = '#dbeeff';
 const TMA_CLR = '#0c447c';
 const TMA_LED = '#185fa5';
 const TMB_BG  = '#fffbe8';
-const TMB_CLR = '#7a4f00';
-const TMB_LED = '#a06800';
+const TMB_CLR = '#c0392b';
+const TMB_LED = '#c0392b';
 
 // ── §13.2 Individual format: first + last initial, concatenated ───────────────
 const initials = name => {
@@ -189,17 +189,18 @@ export function MatchNassauTable({
             {betsForHalf.map((bet, bi) => {
               const isOverall = bet.isOverall;
               const isPress   = bet.isPress;
-              const rowBg     = isOverall ? '#f5fbf5' : '#f5fbf5';
+              const rowBg     = '#f5fbf5';
               const labelClr  = isOverall ? MP.clr : '#888';
-              const tBg       = isOverall ? MP.totBg : M.totBg;
               const lastH     = [...hs].reverse().find(h => bet.leadState?.[h] !== undefined);
               const leadInfo  = lastH != null ? fmtLead(bet.leadState[lastH].lead, bet.leadState[lastH].matchOver, bet.leadState[lastH].holesLeft) : null;
-              const statusClr = leadInfo
-                ? (bet.leadState[lastH].lead > 0 ? TMA_LED : bet.leadState[lastH].lead < 0 ? TMB_LED : M.hdrClr)
-                : '#aaa';
+              const lead      = lastH != null ? bet.leadState[lastH].lead : 0;
+              const tBg       = isOverall ? MP.totBg : lead > 0 ? TMA_BG : lead < 0 ? TMB_BG : '#f5fbf5';
+              const statusClr = isOverall
+                ? (lead > 0 ? TMA_LED : lead < 0 ? TMB_LED : M.hdrClr)
+                : lead > 0 ? TMA_CLR : lead < 0 ? TMB_CLR : M.hdrClr;
               return (
                 <tr key={bi} style={{ background: rowBg }}>
-                  <td style={{ padding: '2px 6px', fontSize: 10, color: labelClr, fontWeight: (isOverall || isPress) ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bet.label}</td>
+                  <td style={{ padding: '2px 6px', fontSize: 10, color: labelClr, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bet.label}</td>
                   {fullHs.map(h => {
                     // Out-of-range hole — muted green tint, harmonises with Match table palette
                     if (!inRange.has(h)) return <td key={h} style={{ background: '#dceadc' }}/>;
@@ -260,13 +261,16 @@ export function MatchNassauTable({
               {allRows.map((bet, bi) => {
                 const isOverall = bet.isOverall;
                 const isPress   = bet.isPress;
-                const rowBg     = isOverall ? '#f5fbf5' : '#f5fbf5';
+                const rowBg     = '#f5fbf5';
                 const labelClr  = isOverall ? MP.clr : '#888';
-                const tBg       = isOverall ? MP.totBg : M.totBg;
                 const lastAll   = [...allH].reverse().find(h => bet.leadState?.[h] !== undefined);
                 const allLead   = lastAll != null ? bet.leadState[lastAll] : null;
                 const allInfo   = allLead ? fmtLead(allLead.lead, allLead.matchOver, allLead.holesLeft) : null;
-                const allClr    = allLead ? (allLead.lead > 0 ? TMA_LED : allLead.lead < 0 ? TMB_LED : M.hdrClr) : '#aaa';
+                const allLd     = allLead ? allLead.lead : 0;
+                const tBg       = isOverall ? MP.totBg : allLd > 0 ? TMA_BG : allLd < 0 ? TMB_BG : '#f5fbf5';
+                const allClr    = isOverall
+                  ? (allLd > 0 ? TMA_LED : allLd < 0 ? TMB_LED : M.hdrClr)
+                  : allLd > 0 ? TMA_CLR : allLd < 0 ? TMB_CLR : M.hdrClr;
                 const holeTd = (h) => {
                   if (h < (bet.startHole ?? 0)) return <td key={h} style={{ textAlign: 'center', color: '#e8e8e8', fontSize: 11 }}>·</td>;
                   const w = holeWinFn(h);
@@ -285,7 +289,7 @@ export function MatchNassauTable({
                 };
                 return (
                   <tr key={bi} style={{ background: rowBg }}>
-                    <td style={{ padding: '2px 6px', fontSize: 10, color: labelClr, fontWeight: (isOverall || isPress) ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bet.label}</td>
+                    <td style={{ padding: '2px 6px', fontSize: 10, color: labelClr, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bet.label}</td>
                     {allH.map(h => holeTd(h))}
                     <td style={{ textAlign: 'center', fontSize: 11, fontWeight: 800, background: tBg, color: allClr, padding: '2px 4px' }}>{allInfo ? allInfo.text : '—'}</td>
                   </tr>
@@ -324,24 +328,29 @@ export function MatchNassauTable({
             {allRows.map((bet, bi) => {
               const isOverall = bet.isOverall;
               const isPress   = bet.isPress;
-              const rowBg     = isOverall ? '#f5fbf5' : '#f5fbf5';
+              const rowBg     = '#f5fbf5';
               const labelClr  = isOverall ? MP.clr : '#888';
-              const tBg       = isOverall ? MP.totBg : M.totBg;
 
               const lastF  = [...frontH].reverse().find(h => bet.leadStateFront?.[h] !== undefined);
               const f9Lead = lastF != null ? bet.leadStateFront[lastF] : null;
               const f9Info = f9Lead ? fmtLead(f9Lead.lead, f9Lead.matchOver, f9Lead.holesLeft) : null;
-              const f9Clr  = f9Lead ? (f9Lead.lead > 0 ? TMA_LED : f9Lead.lead < 0 ? TMB_LED : M.hdrClr) : '#aaa';
+              const f9Ld   = f9Lead ? f9Lead.lead : 0;
+              const f9Bg   = isOverall ? MP.totBg : f9Ld > 0 ? TMA_BG : f9Ld < 0 ? TMB_BG : '#f5fbf5';
+              const f9Clr  = isOverall ? (f9Ld > 0 ? TMA_LED : f9Ld < 0 ? TMB_LED : M.hdrClr) : f9Ld > 0 ? TMA_CLR : f9Ld < 0 ? TMB_CLR : M.hdrClr;
 
               const lastB  = [...backH].reverse().find(h => bet.leadStateBack?.[h] !== undefined);
               const b9Lead = lastB != null ? bet.leadStateBack[lastB] : null;
               const b9Info = b9Lead ? fmtLead(b9Lead.lead, b9Lead.matchOver, b9Lead.holesLeft) : null;
-              const b9Clr  = b9Lead ? (b9Lead.lead > 0 ? TMA_LED : b9Lead.lead < 0 ? TMB_LED : M.hdrClr) : '#aaa';
+              const b9Ld   = b9Lead ? b9Lead.lead : 0;
+              const b9Bg   = isOverall ? MP.totBg : b9Ld > 0 ? TMA_BG : b9Ld < 0 ? TMB_BG : '#f5fbf5';
+              const b9Clr  = isOverall ? (b9Ld > 0 ? TMA_LED : b9Ld < 0 ? TMB_LED : M.hdrClr) : b9Ld > 0 ? TMA_CLR : b9Ld < 0 ? TMB_CLR : M.hdrClr;
 
               const lastAll  = [...allH].reverse().find(h => bet.leadState?.[h] !== undefined);
               const allLead  = lastAll != null ? bet.leadState[lastAll] : null;
               const allInfo  = allLead ? fmtLead(allLead.lead, allLead.matchOver, allLead.holesLeft) : null;
-              const allClr   = allLead ? (allLead.lead > 0 ? TMA_LED : allLead.lead < 0 ? TMB_LED : M.hdrClr) : '#aaa';
+              const allLd    = allLead ? allLead.lead : 0;
+              const allBg    = isOverall ? MP.totBg : allLd > 0 ? TMA_BG : allLd < 0 ? TMB_BG : '#f5fbf5';
+              const allClr   = isOverall ? (allLd > 0 ? TMA_LED : allLd < 0 ? TMB_LED : M.hdrClr) : allLd > 0 ? TMA_CLR : allLd < 0 ? TMB_CLR : M.hdrClr;
 
               const holeTd = (h) => {
                 if (h < (bet.startHole ?? 0)) return <td key={h} style={{ textAlign: 'center', color: '#e8e8e8', fontSize: 11 }}>·</td>;
@@ -362,12 +371,12 @@ export function MatchNassauTable({
 
               return (
                 <tr key={bi} style={{ background: rowBg }}>
-                  <td style={{ padding: '2px 6px', fontSize: 10, color: labelClr, fontWeight: (isOverall || isPress) ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bet.label}</td>
+                  <td style={{ padding: '2px 6px', fontSize: 10, color: labelClr, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bet.label}</td>
                   {frontH.map(h => holeTd(h))}
-                  <td style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, background: tBg, color: f9Clr, padding: '2px 3px' }}>{f9Info ? f9Info.text : '—'}</td>
+                  <td style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, background: f9Bg, color: f9Clr, padding: '2px 3px' }}>{f9Info ? f9Info.text : '—'}</td>
                   {backH.map(h => holeTd(h))}
-                  <td style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, background: tBg, color: b9Clr, padding: '2px 3px' }}>{b9Info ? b9Info.text : '—'}</td>
-                  <td style={{ textAlign: 'center', fontSize: 11, fontWeight: 800, background: tBg, color: allClr, padding: '2px 4px' }}>{allInfo ? allInfo.text : '—'}</td>
+                  <td style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, background: b9Bg, color: b9Clr, padding: '2px 3px' }}>{b9Info ? b9Info.text : '—'}</td>
+                  <td style={{ textAlign: 'center', fontSize: 11, fontWeight: 800, background: allBg, color: allClr, padding: '2px 4px' }}>{allInfo ? allInfo.text : '—'}</td>
                 </tr>
               );
             })}
