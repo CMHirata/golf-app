@@ -33,7 +33,7 @@ import { G, RED } from '../../components/ui.jsx';
 const TMA_BG  = '#dbeeff';
 const TMA_CLR = '#0c447c';
 const TMA_LED = '#185fa5';
-const TMB_BG  = '#fdfacd';
+const TMB_BG  = '#fffbe8';
 const TMB_CLR = '#7a4f00';
 const TMB_LED = '#a06800';
 

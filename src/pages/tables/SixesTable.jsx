@@ -31,7 +31,7 @@ import { PressModal, SegmentChipColumns } from '../scorecard/PressModal.jsx';
 // ── Sixes-specific color tokens (blue/red, colorblind-safe) ──────────────────
 const SXA_BG  = '#dbeeff';
 const SXA_CLR = '#0c447c';
-const SXB_BG  = '#fdfacd';
+const SXB_BG  = '#fffbe8';
 const SXB_CLR = '#7a4f00';
 const SXA_LED = '#185fa5';
 const SXB_LED = '#a06800';
@@ -193,6 +193,7 @@ export function SixesTable({
     const isTeamBLeading = info && leadState[lastH]?.lead < 0;
     const winnerName = isTeamALeading ? nmA : isTeamBLeading ? nmB : 'All Square';
 
+    const aIsBlue = anchorAIsBlue;
     const chipBg = info
       ? (isTeamALeading
           ? (aIsBlue ? SXA_BG : SXB_BG)
