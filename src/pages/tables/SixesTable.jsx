@@ -37,9 +37,13 @@ const SXA_LED = '#185fa5';
 const SXB_LED = '#c0392b';
 
 // ── Player-anchored color resolution ─────────────────────────────────────────
-// Players at index 0 and 1 are always "blue side"; 2 and 3 are always "red side."
+// The two players in sixesTeams[0].a and sixesTeams[0].b are "blue side".
+// All others are "red/yellow side". Computed once per render from sixesTeams[0].
 // winnerPi is the global player index of the hole winner.
-const isBluePlayer = (winnerPi) => winnerPi <= 1;
+const makeIsBluePlayer = (seg0team) => {
+  const blueSet = new Set([seg0team.a, seg0team.b]);
+  return (pi) => blueSet.has(pi);
+};
 
 // ── Name resolution (§7.5) ────────────────────────────────────────────────────
 function resolveSegmentNames(foursome) {
@@ -134,6 +138,9 @@ export function SixesTable({
 
   // Resolve team assignments for all 3 segments
   const segTeams = segs.map((_, si) => getSixesTeam(si, sixesTeams, players));
+
+  // Segment-0 anchored color helper — blue side = the two players in sixesTeams[0]
+  const isBluePlayer = makeIsBluePlayer(sixesTeams[0]);
 
   // ── Best-ball hole winner for a given segment ─────────────────────────────
   const holeWinFn = (h, teamA, teamB) => {
