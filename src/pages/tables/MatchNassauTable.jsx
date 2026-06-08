@@ -194,9 +194,9 @@ export function MatchNassauTable({
               const tBg       = isOverall ? MP.totBg : isPress ? '#cce8f8' : M.totBg;
               const lastH     = [...hs].reverse().find(h => bet.leadState?.[h] !== undefined);
               const leadInfo  = lastH != null ? fmtLead(bet.leadState[lastH].lead, bet.leadState[lastH].matchOver, bet.leadState[lastH].holesLeft) : null;
-              const statusClr = isTeam && leadInfo
+              const statusClr = leadInfo
                 ? (bet.leadState[lastH].lead > 0 ? TMA_LED : bet.leadState[lastH].lead < 0 ? TMB_LED : '#3a3abd')
-                : (leadInfo ? leadInfo.color : '#aaa');
+                : '#aaa';
               return (
                 <tr key={bi} style={{ background: rowBg }}>
                   <td style={{ padding: '2px 6px', fontSize: 10, color: labelClr, fontWeight: (isOverall || isPress) ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bet.label}</td>
@@ -208,8 +208,8 @@ export function MatchNassauTable({
                     if (w === null) return <td key={h} style={{ textAlign: 'center', color: '#ddd', fontSize: 11 }}>·</td>;
                     if (w === 0 || w === 'half') return <td key={h} style={{ textAlign: 'center', color: '#bbb', fontSize: 12 }}>–</td>;
                     const side1 = (w === 1 || w === 'a');
-                    const chipBg  = isTeam ? (side1 ? TMA_BG  : TMB_BG)  : (side1 ? '#d8f0d8' : '#fde8e8');
-                    const chipClr = isTeam ? (side1 ? TMA_CLR : TMB_CLR) : (side1 ? G : RED);
+                    const chipBg  = side1 ? TMA_BG  : TMB_BG;
+                    const chipClr = side1 ? TMA_CLR : TMB_CLR;
                     return (
                       <td key={h} style={{ textAlign: 'center', padding: '1px' }}>
                         <span style={{
@@ -266,15 +266,15 @@ export function MatchNassauTable({
                 const lastAll   = [...allH].reverse().find(h => bet.leadState?.[h] !== undefined);
                 const allLead   = lastAll != null ? bet.leadState[lastAll] : null;
                 const allInfo   = allLead ? fmtLead(allLead.lead, allLead.matchOver, allLead.holesLeft) : null;
-                const allClr    = isTeam && allLead ? (allLead.lead > 0 ? TMA_LED : allLead.lead < 0 ? TMB_LED : '#3a3abd') : (allInfo ? allInfo.color : '#aaa');
+                const allClr    = allLead ? (allLead.lead > 0 ? TMA_LED : allLead.lead < 0 ? TMB_LED : '#3a3abd') : '#aaa';
                 const holeTd = (h) => {
                   if (h < (bet.startHole ?? 0)) return <td key={h} style={{ textAlign: 'center', color: '#e8e8e8', fontSize: 11 }}>·</td>;
                   const w = holeWinFn(h);
                   if (w === null) return <td key={h} style={{ textAlign: 'center', color: '#ddd', fontSize: 11 }}>·</td>;
                   if (w === 0 || w === 'half') return <td key={h} style={{ textAlign: 'center', color: '#bbb', fontSize: 12 }}>–</td>;
                   const side1   = (w === 1 || w === 'a');
-                  const chipBg  = isTeam ? (side1 ? TMA_BG  : TMB_BG)  : (side1 ? '#d8f0d8' : '#fde8e8');
-                  const chipClr = isTeam ? (side1 ? TMA_CLR : TMB_CLR) : (side1 ? G : RED);
+                  const chipBg  = side1 ? TMA_BG  : TMB_BG;
+                  const chipClr = side1 ? TMA_CLR : TMB_CLR;
                   return (
                     <td key={h} style={{ textAlign: 'center', padding: '1px' }}>
                       <span style={{ display: 'inline-block', width: 22, height: 18, lineHeight: '18px', fontSize: 10, fontWeight: 500, borderRadius: 3, background: chipBg, color: chipClr }}>
@@ -331,17 +331,17 @@ export function MatchNassauTable({
               const lastF  = [...frontH].reverse().find(h => bet.leadStateFront?.[h] !== undefined);
               const f9Lead = lastF != null ? bet.leadStateFront[lastF] : null;
               const f9Info = f9Lead ? fmtLead(f9Lead.lead, f9Lead.matchOver, f9Lead.holesLeft) : null;
-              const f9Clr  = isTeam && f9Lead ? (f9Lead.lead > 0 ? TMA_LED : f9Lead.lead < 0 ? TMB_LED : '#3a3abd') : (f9Info ? f9Info.color : '#aaa');
+              const f9Clr  = f9Lead ? (f9Lead.lead > 0 ? TMA_LED : f9Lead.lead < 0 ? TMB_LED : '#3a3abd') : '#aaa';
 
               const lastB  = [...backH].reverse().find(h => bet.leadStateBack?.[h] !== undefined);
               const b9Lead = lastB != null ? bet.leadStateBack[lastB] : null;
               const b9Info = b9Lead ? fmtLead(b9Lead.lead, b9Lead.matchOver, b9Lead.holesLeft) : null;
-              const b9Clr  = isTeam && b9Lead ? (b9Lead.lead > 0 ? TMA_LED : b9Lead.lead < 0 ? TMB_LED : '#3a3abd') : (b9Info ? b9Info.color : '#aaa');
+              const b9Clr  = b9Lead ? (b9Lead.lead > 0 ? TMA_LED : b9Lead.lead < 0 ? TMB_LED : '#3a3abd') : '#aaa';
 
               const lastAll  = [...allH].reverse().find(h => bet.leadState?.[h] !== undefined);
               const allLead  = lastAll != null ? bet.leadState[lastAll] : null;
               const allInfo  = allLead ? fmtLead(allLead.lead, allLead.matchOver, allLead.holesLeft) : null;
-              const allClr   = isTeam && allLead ? (allLead.lead > 0 ? TMA_LED : allLead.lead < 0 ? TMB_LED : '#3a3abd') : (allInfo ? allInfo.color : '#aaa');
+              const allClr   = allLead ? (allLead.lead > 0 ? TMA_LED : allLead.lead < 0 ? TMB_LED : '#3a3abd') : '#aaa';
 
               const holeTd = (h) => {
                 if (h < (bet.startHole ?? 0)) return <td key={h} style={{ textAlign: 'center', color: '#e8e8e8', fontSize: 11 }}>·</td>;
@@ -349,8 +349,8 @@ export function MatchNassauTable({
                 if (w === null) return <td key={h} style={{ textAlign: 'center', color: '#ddd', fontSize: 11 }}>·</td>;
                 if (w === 0 || w === 'half') return <td key={h} style={{ textAlign: 'center', color: '#bbb', fontSize: 12 }}>–</td>;
                 const side1   = (w === 1 || w === 'a');
-                const chipBg  = isTeam ? (side1 ? TMA_BG  : TMB_BG)  : (side1 ? '#d8f0d8' : '#fde8e8');
-                const chipClr = isTeam ? (side1 ? TMA_CLR : TMB_CLR) : (side1 ? G : RED);
+                const chipBg  = side1 ? TMA_BG  : TMB_BG;
+                const chipClr = side1 ? TMA_CLR : TMB_CLR;
                 return (
                   <td key={h} style={{ textAlign: 'center', padding: '1px' }}>
                     <span style={{ display: 'inline-block', width: 22, height: 18, lineHeight: '18px', fontSize: 10, fontWeight: 500, borderRadius: 3, background: chipBg, color: chipClr }}>

@@ -36,6 +36,11 @@ const SXB_CLR = '#791f1f';
 const SXA_LED = '#185fa5';
 const SXB_LED = '#a32d2d';
 
+// ── Player-anchored color resolution ─────────────────────────────────────────
+// Players at index 0 and 1 are always "blue side"; 2 and 3 are always "red side."
+// winnerPi is the global player index of the hole winner.
+const isBluePlayer = (winnerPi) => winnerPi <= 1;
+
 // ── Name resolution (§7.5) ────────────────────────────────────────────────────
 function resolveSegmentNames(foursome) {
   const firstNames = foursome.map(p => (p?.name || '?').trim().split(/\s+/)[0]);
@@ -175,7 +180,7 @@ export function SixesTable({
   };
 
   // ── Press chip builder ────────────────────────────────────────────────────
-  const makeSegChip = (bet, segHoles, segLabel, depth, totalDepths, mpKey, mpArr, winFn, nmA, nmB) => {
+  const makeSegChip = (bet, segHoles, segLabel, depth, totalDepths, mpKey, mpArr, winFn, nmA, nmB, anchorAIsBlue) => {
     const betHoles  = segHoles.filter(h => h >= (bet.startHole ?? segHoles[0]));
     const leadState = buildLeadState(winFn, betHoles);
     const lastH     = [...betHoles].reverse().find(h => leadState[h] !== undefined);
@@ -190,11 +195,12 @@ export function SixesTable({
 
     const pressDepthBg  = depth === 0 ? null : depth === 1 ? '#e8f4fb' : '#dceef8';
     const pressDepthLbl = depth === 0 ? M.hdrClr : '#1a6b9a';
+    const aIsBlue = anchorAIsBlue;
     const chipBg = info
       ? (isTeamALeading
-          ? (depth > 0 ? '#c0d8f0' : SXA_BG)
+          ? (depth > 0 ? (aIsBlue ? '#c0d8f0' : '#f8dede') : (aIsBlue ? SXA_BG : SXB_BG))
           : isTeamBLeading
-            ? (depth > 0 ? '#f8dede' : SXB_BG)
+            ? (depth > 0 ? (aIsBlue ? '#f8dede' : '#c0d8f0') : (aIsBlue ? SXB_BG : SXA_BG))
             : (depth > 0 ? '#e0e0f8' : '#eaeaff'))
       : (pressDepthBg || M.hdrBg);
 
@@ -206,7 +212,11 @@ export function SixesTable({
     const lastScored        = lastScoredInHoles(winFn, betHoles);
     const canAddPress       = isLastInChain && lastScored !== null && lastScored < betHoles[betHoles.length - 1];
     const pressable         = hasChildPress || canAddPress;
-    const chipColor         = isTeamALeading ? SXA_LED : isTeamBLeading ? SXB_LED : '#aaa';
+    const chipColor = isTeamALeading
+      ? (aIsBlue ? SXA_LED : SXB_LED)
+      : isTeamBLeading
+        ? (aIsBlue ? SXB_LED : SXA_LED)
+        : '#aaa';
 
     return {
       label, winnerName,
@@ -229,11 +239,12 @@ export function SixesTable({
     const mpKey  = seg.key;
     const mpArr  = (manualPresses || {})[mpKey] || [];
     const team   = segTeams[si];
+    const anchorAIsBlue = team ? isBluePlayer(team.a) : true;
     if (!team) {
       return {
         mainChip: makeSegChip(
           { startHole: seg.holes[0], label: seg.label },
-          seg.holes, seg.label, 0, 1, mpKey, mpArr, winFn, nmA, nmB
+          seg.holes, seg.label, 0, 1, mpKey, mpArr, winFn, nmA, nmB, anchorAIsBlue
         ),
         pressChips: [],
       };
@@ -250,7 +261,7 @@ export function SixesTable({
       return {
         mainChip: makeSegChip(
           { startHole: seg.holes[0], label: seg.label },
-          seg.holes, seg.label, 0, 1, mpKey, mpArr, winFn, nmA, nmB
+          seg.holes, seg.label, 0, 1, mpKey, mpArr, winFn, nmA, nmB, anchorAIsBlue
         ),
         pressChips: [],
       };
@@ -259,9 +270,9 @@ export function SixesTable({
     const total = engineBets.length || 1;
     const [main, ...presses] = engineBets;
     return {
-      mainChip:   makeSegChip(main,   seg.holes, seg.label, 0,      total, mpKey, mpArr, winFn, nmA, nmB),
+      mainChip:   makeSegChip(main,   seg.holes, seg.label, 0,      total, mpKey, mpArr, winFn, nmA, nmB, anchorAIsBlue),
       pressChips: presses.map((pb, pi) =>
-        makeSegChip(pb, seg.holes, seg.label, pi + 1, total, mpKey, mpArr, winFn, nmA, nmB)
+        makeSegChip(pb, seg.holes, seg.label, pi + 1, total, mpKey, mpArr, winFn, nmA, nmB, anchorAIsBlue)
       ),
     };
   };
@@ -294,7 +305,11 @@ export function SixesTable({
       : null;
     const statusInfo  = rawInfo ? { ...rawInfo, text: stripThru(rawInfo.text) } : null;
     const statusColor = statusInfo
-      ? (leadState[lastH].lead > 0 ? SXA_LED : leadState[lastH].lead < 0 ? SXB_LED : '#888')
+      ? (leadState[lastH].lead > 0
+          ? (isBluePlayer(a) ? SXA_LED : SXB_LED)
+          : leadState[lastH].lead < 0
+            ? (isBluePlayer(c) ? SXA_LED : SXB_LED)
+            : '#888')
       : '#aaa';
 
     // Engine output for press rows
@@ -315,9 +330,9 @@ export function SixesTable({
         <div style={{ padding: '5px 10px 2px', fontSize: 10, color: '#888' }}>
           <span style={{ fontWeight: 600 }}>{seg.label}</span>
           <span style={{ margin: '0 4px' }}>·</span>
-          <span style={{ color: SXA_LED, fontWeight: 500 }}>{nmA}</span>
+          <span style={{ color: isBluePlayer(a) ? SXA_LED : SXB_LED, fontWeight: 500 }}>{nmA}</span>
           <span style={{ color: '#aaa', margin: '0 4px' }}>vs</span>
-          <span style={{ color: SXB_LED, fontWeight: 500 }}>{nmB}</span>
+          <span style={{ color: isBluePlayer(c) ? SXA_LED : SXB_LED, fontWeight: 500 }}>{nmB}</span>
         </div>
 
         {/* Hole table */}
@@ -350,13 +365,15 @@ export function SixesTable({
                     <td key={h} style={{ textAlign: 'center', color: '#bbb', fontSize: 12 }}>–</td>
                   );
                   const isA = w === 'a';
+                  const winnerPi = isA ? a : c;
+                  const isBlue = isBluePlayer(winnerPi);
                   return (
                     <td key={h} style={{ textAlign: 'center', padding: '1px' }}>
                       <span style={{
                         display: 'inline-block', width: 22, height: 18, lineHeight: '18px',
                         fontSize: 10, fontWeight: 500, borderRadius: 3,
-                        background: isA ? SXA_BG : SXB_BG,
-                        color:      isA ? SXA_CLR : SXB_CLR,
+                        background: isBlue ? SXA_BG : SXB_BG,
+                        color:      isBlue ? SXA_CLR : SXB_CLR,
                         textAlign: 'center',
                       }}>
                         {isA ? initA : initB}
@@ -379,7 +396,11 @@ export function SixesTable({
                   : null;
                 const prStatusInfo  = prRawInfo ? { ...prRawInfo, text: stripThru(prRawInfo.text) } : null;
                 const prStatusColor = prStatusInfo
-                  ? (prLeadState[prLastH].lead > 0 ? SXA_LED : prLeadState[prLastH].lead < 0 ? SXB_LED : '#888')
+                  ? (prLeadState[prLastH].lead > 0
+                      ? (isBluePlayer(a) ? SXA_LED : SXB_LED)
+                      : prLeadState[prLastH].lead < 0
+                        ? (isBluePlayer(c) ? SXA_LED : SXB_LED)
+                        : '#888')
                   : '#aaa';
                 return (
                   <tr key={`press_${pi}`} style={{ background: '#f0f8ff' }}>
@@ -398,13 +419,15 @@ export function SixesTable({
                         <td key={h} style={{ textAlign: 'center', color: '#bbb', fontSize: 12 }}>–</td>
                       );
                       const isA = w === 'a';
+                      const winnerPi = isA ? a : c;
+                      const isBlue = isBluePlayer(winnerPi);
                       return (
                         <td key={h} style={{ textAlign: 'center', padding: '1px' }}>
                           <span style={{
                             display: 'inline-block', width: 22, height: 18, lineHeight: '18px',
                             fontSize: 10, fontWeight: 500, borderRadius: 3,
-                            background: isA ? '#c0d8f0' : '#f8dede',
-                            color:      isA ? SXA_CLR   : SXB_CLR,
+                            background: isBlue ? '#c0d8f0' : '#f8dede',
+                            color:      isBlue ? SXA_CLR   : SXB_CLR,
                             textAlign: 'center',
                           }}>
                             {isA ? initA : initB}
