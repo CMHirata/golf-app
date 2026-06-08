@@ -326,13 +326,11 @@ export function SixesTable({
       <div key={si}>
         {si > 0 && <TableDivider/>}
 
-        {/* Segment header: "Holes a–b · TeamA vs TeamB" */}
+        {/* Segment header: team names only */}
         <div style={{ padding: '5px 10px 2px', fontSize: 10, color: '#888' }}>
-          <span style={{ fontWeight: 600 }}>{seg.label}</span>
-          <span style={{ margin: '0 4px' }}>·</span>
-          <span style={{ color: isBluePlayer(a) ? SXA_LED : SXB_LED, fontWeight: 500 }}>{nmA}</span>
+          <span style={{ color: isBluePlayer(a) ? SXA_LED : SXB_LED, fontWeight: 600 }}>{nmA}</span>
           <span style={{ color: '#aaa', margin: '0 4px' }}>vs</span>
-          <span style={{ color: isBluePlayer(c) ? SXA_LED : SXB_LED, fontWeight: 500 }}>{nmB}</span>
+          <span style={{ color: isBluePlayer(c) ? SXA_LED : SXB_LED, fontWeight: 600 }}>{nmB}</span>
         </div>
 
         {/* Hole table */}
@@ -355,7 +353,7 @@ export function SixesTable({
             <tbody>
               {/* Base segment row */}
               <tr style={{ background: '#f5fbf5' }}>
-                <td style={{ padding: '2px 6px', fontSize: 10, color: '#888', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}></td>
+                <td style={{ padding: '2px 6px', fontSize: 10, color: SX.hdrClr, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{seg.label}</td>
                 {seg.holes.map(h => {
                   const w = winFn(h);
                   if (w === null) return (
@@ -405,7 +403,7 @@ export function SixesTable({
                   : SX.hdrClr;
                 return (
                   <tr key={`press_${pi}`} style={{ background: '#f5fbf5' }}>
-                    <td style={{ padding: '2px 6px', fontSize: 10, color: '#888', fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '2px 6px', fontSize: 10, color: SX.hdrClr, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {pr.label}
                     </td>
                     {seg.holes.map(h => {
