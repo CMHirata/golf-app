@@ -121,10 +121,12 @@ function CoursePickerPopup({ allCourses, snapshotCourse, selectedId, onConfirm, 
               const sel = picked === c.id;
               return (
                 <div key={c.id} onClick={() => { setPicked(c.id); }}
-                  style={{ padding:'11px 14px',borderRadius:12,border:`1.5px solid ${sel?G:'#eee'}`,background:sel?GA:'#fff',cursor:'pointer' }}>
-                  <div style={{ fontWeight:700,fontSize:14,color:sel?G:'#222' }}>{c.name}{c._fromHistory ? <span style={{ fontSize:11,fontWeight:400,color:'#aaa',marginLeft:6 }}>(from history)</span> : ''}</div>
-                  {c.location && <div style={{ fontSize:11,color:'#888',marginTop:1 }}>{c.location}</div>}
-                  {c.tees?.length > 0 && <div style={{ fontSize:11,color:'#aaa',marginTop:1 }}>{c.tees.map(t=>t.name).join(' · ')}</div>}
+                  style={{ padding:'11px 14px',borderRadius:12,border:`1.5px solid ${sel?G:'#eee'}`,background:sel?GA:'#fff',cursor:'pointer',display:'flex',alignItems:'center',gap:8 }}>
+                  <div style={{ flex:1,minWidth:0 }}>
+                    <div style={{ fontWeight:700,fontSize:14,color:sel?G:'#222' }}>{c.name}{c._fromHistory ? <span style={{ fontSize:11,fontWeight:400,color:'#aaa',marginLeft:6 }}>(from history)</span> : ''}</div>
+                    {c.location && <div style={{ fontSize:11,color:'#888',marginTop:1 }}>{c.location}</div>}
+                  </div>
+                  {c.starred && <span style={{ fontSize:17,color:'#fff9c4',textShadow:'0 0 2px rgba(0,0,0,0.35)',flexShrink:0 }}>★</span>}
                 </div>
               );
             })}
