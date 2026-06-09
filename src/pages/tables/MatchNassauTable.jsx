@@ -554,8 +554,7 @@ export function MatchNassauTable({
 
         // makeBetChip: builds a chip descriptor for the bottom chip bar
         const makeBetChip = (bet, segHoles, segLabel, depth, totalDepths, mpKey, mpArr) => {
-          const pressStart = depth === 0 ? (bet.startHole ?? segHoles[0]) : bet.startHole;
-          const betHoles  = pressStart != null ? segHoles.filter(h => h >= pressStart) : segHoles;
+          const betHoles  = segHoles.filter(h => h >= (bet.startHole ?? segHoles[0]));
           const leadState = buildLeadState(holeWinFn, betHoles);
           const lastH     = [...betHoles].reverse().find(h => leadState[h] !== undefined);
           const info      = lastH != null ? fmtLead(leadState[lastH].lead, leadState[lastH].matchOver, leadState[lastH].holesLeft) : null;
