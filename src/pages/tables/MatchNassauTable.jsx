@@ -554,7 +554,8 @@ export function MatchNassauTable({
 
         // makeBetChip: builds a chip descriptor for the bottom chip bar
         const makeBetChip = (bet, segHoles, segLabel, depth, totalDepths, mpKey, mpArr) => {
-          const betHoles  = segHoles.filter(h => h >= (bet.startHole ?? segHoles[0]));
+          const pressStart = depth === 0 ? (bet.startHole ?? segHoles[0]) : bet.startHole;
+          const betHoles  = pressStart != null ? segHoles.filter(h => h >= pressStart) : segHoles;
           const leadState = buildLeadState(holeWinFn, betHoles);
           const lastH     = [...betHoles].reverse().find(h => leadState[h] !== undefined);
           const info      = lastH != null ? fmtLead(leadState[lastH].lead, leadState[lastH].matchOver, leadState[lastH].holesLeft) : null;
@@ -643,15 +644,9 @@ export function MatchNassauTable({
         return (
           <GameSection key={matchId} title={title} badge={badge} color={M.hdrClr} borderColor={M.border}>
             <div style={{ fontSize: 11, fontWeight: 700, color: M.hdrClr, padding: '5px 10px 2px' }}>
-              {isTeam ? (
-                <>
-                  <span style={{ color: TMA_LED }}>{nm1}</span>
-                  <span style={{ color: '#aaa', fontWeight: 400, margin: '0 4px' }}>vs</span>
-                  <span style={{ color: TMB_LED }}>{nm2}</span>
-                </>
-              ) : (
-                `${nm1} vs ${nm2}`
-              )}
+              <span style={{ color: TMA_LED }}>{nm1}</span>
+              <span style={{ color: '#aaa', fontWeight: 400, margin: '0 4px' }}>vs</span>
+              <span style={{ color: TMB_LED }}>{nm2}</span>
             </div>
             {isLandscape ? (
               renderAll(allRows, holeWinFn, frontH, backH, allH, nm1, nm2, lbl1, lbl2, isTeam, rangeSingleHalf)
