@@ -105,7 +105,11 @@ function CoursePickerPopup({ allCourses, snapshotCourse, selectedId, onConfirm, 
     ...(snapshotCourse && !allCourses.find(c => c.id === snapshotCourse.id)
       ? [{ ...snapshotCourse, _fromHistory: true }] : []),
     ...allCourses,
-  ];
+  ].sort((a, b) => {
+    const sa = a.starred ? 0 : 1, sb = b.starred ? 0 : 1;
+    if (sa !== sb) return sa - sb;
+    return (a.name || '').localeCompare(b.name || '');
+  });
   return (
     <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:300,display:'flex',alignItems:'flex-end',justifyContent:'center' }} onClick={onClose}>
       <div style={{ background:'#fff',borderRadius:'20px 20px 0 0',width:'100%',maxWidth:520,maxHeight:'80vh',display:'flex',flexDirection:'column' }} onClick={e=>e.stopPropagation()}>

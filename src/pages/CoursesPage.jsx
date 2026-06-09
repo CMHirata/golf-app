@@ -35,6 +35,11 @@ export default function CoursesPage() {
 
   const refresh = useCallback(() => setCourses(courseLib.list()), []);
 
+  const handleToggleStar = useCallback((c) => {
+    courseLib.update(c.id, { starred: !c.starred });
+    refresh();
+  }, [refresh]);
+
   /** Called when any add-flow returns a course data object */
   const handleIncomingCourse = useCallback((data) => {
     const all = courseLib.list();
@@ -181,6 +186,14 @@ export default function CoursesPage() {
                           <span>{c.tees?.length||0} tee(s)</span>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={e => { e.stopPropagation(); handleToggleStar(c); }}
+                        style={{ border:'none', background:'none', cursor:'pointer', padding:'6px', display:'flex', alignItems:'center', fontSize:19, color: c.starred ? '#fff9c4' : '#ddd', textShadow: c.starred ? '0 0 2px rgba(0,0,0,0.35)' : 'none', flexShrink:0 }}
+                      >
+                        ★
+                      </button>
                     </div>
                     {expanded && <CourseCard course={c} />}
                   </div>

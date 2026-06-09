@@ -137,7 +137,11 @@ export const courseLib = {
   },
 
   list() {
-    return this._load();
+    return [...this._load()].sort((a, b) => {
+      const sa = a.starred ? 0 : 1, sb = b.starred ? 0 : 1;
+      if (sa !== sb) return sa - sb;
+      return (a.name || '').localeCompare(b.name || '');
+    });
   },
 
   save(data) {
