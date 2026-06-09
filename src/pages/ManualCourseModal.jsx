@@ -429,8 +429,11 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
     };
   }, []); // register once, never re-register
 
+  const kpWasOpenRef = useRef(false);
   useEffect(() => {
-    if (!setupKp) return;
+    const wasOpen = kpWasOpenRef.current;
+    kpWasOpenRef.current = !!setupKp;
+    if (!setupKp || wasOpen) return;   // only fire on closed→open transition
     const t = setTimeout(() => {
       if (modalCardRef.current) {
         modalCardRef.current.scrollTop = modalCardRef.current.scrollHeight;
