@@ -1,9 +1,9 @@
 // ─── components/RangePicker.jsx ───────────────────────────────────────────────
 //
-// ✅ Self-checked: all range logic extracted from HomePage; RANGE_OPTS, helpers,
-//    WheelDatePicker, and RangePickerRow all exported; scroll-wheel picker uses
-//    scroll-snap for iOS drum-roll feel; no overflow issues; G imported from
-//    ui.jsx; no page-specific logic present.
+// ✅ Self-checked: added '30days' and '365days' rolling-window branches to
+//    filterByRange; RANGE_OPTS expanded to 6 options with word-based labels
+//    (Week/Month/Year/YTD/All/Custom); pill grid updated to repeat(6,1fr);
+//    existing '7days'/'all' values unchanged so stored prefs remain valid.
 //
 // Shared by HomePage (Money List) and HistoryPage (round filter).
 
@@ -23,11 +23,12 @@ export const ML_KEY = 'moneyListRange';
 export const HISTORY_KEY = 'historyRange';
 
 export const RANGE_OPTS = [
-  { v: '7days',  l: '7 Days'   },
-  { v: 'mtd',    l: 'MTD'      },
-  { v: 'ytd',    l: 'YTD'      },
-  { v: 'all',    l: 'All Time' },
-  { v: 'custom', l: 'Custom'   },
+  { v: '7days',   l: 'Week'   },
+  { v: '30days',  l: 'Month'  },
+  { v: '365days', l: 'Year'   },
+  { v: 'ytd',     l: 'YTD'    },
+  { v: 'all',     l: 'All'    },
+  { v: 'custom',  l: 'Custom' },
 ];
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -57,6 +58,14 @@ export function filterByRange(items, pref) {
   if (pref.range === 'all') return items;
   if (pref.range === '7days') {
     const cutoff = new Date(now); cutoff.setDate(now.getDate() - 7);
+    return items.filter(r => new Date(r.date) >= cutoff);
+  }
+  if (pref.range === '30days') {
+    const cutoff = new Date(now); cutoff.setDate(now.getDate() - 30);
+    return items.filter(r => new Date(r.date) >= cutoff);
+  }
+  if (pref.range === '365days') {
+    const cutoff = new Date(now); cutoff.setDate(now.getDate() - 365);
     return items.filter(r => new Date(r.date) >= cutoff);
   }
   if (pref.range === 'mtd') {
@@ -307,7 +316,7 @@ export function RangePickerRow({ rangePref, onRangePrefChange }) {
   return (
     <div>
       {/* Pill grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: isCustomActive ? 12 : 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: isCustomActive ? 12 : 0 }}>
         {RANGE_OPTS.map(opt => (
           <button
             key={opt.v}
