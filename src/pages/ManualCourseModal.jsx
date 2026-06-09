@@ -429,6 +429,16 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
     };
   }, []); // register once, never re-register
 
+  useEffect(() => {
+    if (!setupKp) return;
+    const t = setTimeout(() => {
+      if (modalCardRef.current) {
+        modalCardRef.current.scrollTop = modalCardRef.current.scrollHeight;
+      }
+    }, 50);
+    return () => clearTimeout(t);
+  }, [setupKp?.fieldId]);
+
   const activateSetupKp = (fieldId, _seedValue, kpPlus, mode, onChange, onCommit) => {
     setupKpCbsRef.current = { onChange, onCommit };
     setSetupKp({ fieldId, kpValue: '', kpPlus: kpPlus || false, mode });
@@ -528,7 +538,8 @@ export default function ManualCourseModal({ initialData, onSave, onClose }) {
       `}</style>
       <div ref={modalCardRef} style={{ background:'#fff', borderRadius:20, padding:20, width:'100%', maxWidth:500, marginTop:4, position:'relative',
         maxHeight: setupKp ? `calc(100vh - ${KP_HEIGHT + 24}px)` : 'calc(100vh - 24px)',
-        overflowY:'auto', transition:'max-height .2s' }} onClick={e=>e.stopPropagation()}>
+        overflowY:'auto', transition:'max-height .2s',
+        paddingBottom: setupKp ? 300 : 20 }} onClick={e=>e.stopPropagation()}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
           <div style={{ fontWeight:800, fontSize:17, color:G }}>{initialData ? 'Edit Course' : 'Enter Manually'}</div>
           <button onClick={() => setConfirmDiscard(true)} style={{ border:'none', background:'none', fontSize:24, cursor:'pointer', color:'#aaa' }}>×</button>
