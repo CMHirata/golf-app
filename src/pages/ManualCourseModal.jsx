@@ -19,9 +19,9 @@ const SEL = {
   WebkitAppearance:'none', MozAppearance:'none', appearance:'none',
 };
 
-function siValidSet(nineCount, nineIdx) {
+function siValidSet(nineCount) {
   if (nineCount === 2) {
-    return nineIdx === 0 ? [1,3,5,7,9,11,13,15,17] : [2,4,6,8,10,12,14,16,18];
+    return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18];
   }
   return [1,2,3,4,5,6,7,8,9];
 }
@@ -135,7 +135,7 @@ function NineEditor({ nine, idx, nineCount, onChange, onRemove, showWomens }) {
 
   const parTotM  = nine.pars?.reduce((a,b) => a+b, 0) || 0;
   const parTotW  = nine.parsWomen?.reduce((a,b) => a+b, 0) || 0;
-  const validSI  = siValidSet(nineCount, idx);
+  const validSI  = siValidSet(nineCount);
   const dups     = dupIndices(nine.handicaps || []);
   const dupsW    = dupIndices(nine.handicapsWomen || nine.handicaps || []);
   const hasSIErr = dups.size > 0 || (showWomens && dupsW.size > 0);
