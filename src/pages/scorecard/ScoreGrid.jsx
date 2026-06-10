@@ -598,11 +598,22 @@ export function ScoreGrid({
   }, []);
 
   // Open keypad on a specific cell — always seeds kpValue='' (H-16)
+  // Wolf intercept: when pi===0 and Wolf is active, show pick popup first.
+  // Popup dismisses and calls openKeypadOnCell(h, 0) to resume — keypad
+  // stays open throughout. If pick already exists, popup shows it highlighted.
   const openKeypadOnCell = useCallback((h, pi) => {
     cancelKpAdvance();
+    if (pi === 0 && activeGames?.includes('Wolf') && setWolfPicks) {
+      const wolfOrder = gameOpts?.Wolf?.wolfOrder || [0, 1, 2, 3];
+      const wolfIdx = wolfOrder[h % 4];
+      // Store target cell so popup can restore keypad after dismissal
+      setWolfPickPrompt({ holeIdx: h, wolfIdx, resumeCell: { h, pi: 0 } });
+      // Do NOT open keypad yet — popup will call resumeKeypad after pick
+      return;
+    }
     setActiveKpCell({ h, pi });
     setKpValue('');
-  }, [cancelKpAdvance]);
+  }, [cancelKpAdvance, activeGames, gameOpts, setWolfPicks]);
 
   // iOS click-suppression: track when touchend handled a tap so the
   // synthetic click that follows ~300ms later is ignored. preventDefault()
@@ -619,19 +630,11 @@ export function ScoreGrid({
       setKpValue('');
       return;
     }
-    // Wolf pick popup: fire after the FIRST player on a hole is scored
-    // (pi === 0 advancing to pi === 1, same hole). Wolf picks before seeing
-    // all scores. Only fires if Wolf is active and no pick yet recorded for h.
-    if (nh === h && pi === 0 && activeGames?.includes('Wolf') && setWolfPicks && !wolfPicks[h]) {
-      const wolfOrder = gameOpts?.Wolf?.wolfOrder || [0, 1, 2, 3];
-      const wolfIdx = wolfOrder[h % 4];
-      setWolfPickPrompt({ holeIdx: h, wolfIdx });
-    }
     // Keep ZoomModal centred on the active hole when crossing a hole boundary
     if (nh !== h) setZoomHole(nh);
     setActiveKpCell({ h: nh, pi: npi });
     setKpValue('');
-  }, [players.length, setZoomHole, roundEndHole, activeGames, wolfPicks, setWolfPicks, gameOpts]);
+  }, [players.length, setZoomHole, roundEndHole]);
 
   // Retreat to prior cell
   const kpRetreatCell = useCallback((h, pi) => {
@@ -1506,60 +1509,94 @@ export function ScoreGrid({
         />
       )}
 
-      {/* Wolf pick popup — fires after first player scored on a hole with no pick.
-          H-40: each button uses onTouchEnd to fire the action and record a
-          timestamp; onClick no-ops within 600ms of that timestamp to suppress
-          the synthetic iOS click that follows ~300ms after touchEnd. */}
+      {/* Wolf pick popup — fires when player 0's cell is activated on any hole.
+          Shows current pick highlighted if one exists (re-tap to change).
+          After any selection, keypad resumes on cell {h, pi:0} — stays open.
+          H-40: onTouchEnd fires action + records timestamp; onClick no-ops within 600ms. */}
       {wolfPickPrompt && (() => {
-        const { holeIdx, wolfIdx } = wolfPickPrompt;
-        const wolfName = players[wolfIdx]?.name?.split(' ')[0] || '?';
-        const nonWolf  = players.map((_, i) => i).filter(i => i !== wolfIdx);
+        const { holeIdx, wolfIdx, resumeCell } = wolfPickPrompt;
+        const wolfName   = players[wolfIdx]?.name?.split(' ')[0] || '?';
+        const nonWolf    = players.map((_, i) => i).filter(i => i !== wolfIdx);
+        const existingPick = wolfPicks?.[holeIdx] ?? null;
         const wolfTouchRef = { current: 0 };
-        const dismiss  = (pick) => {
-          if (pick && setWolfPicks) setWolfPicks(prev => ({ ...prev, [holeIdx]: pick }));
+
+        const resumeKeypad = () => {
           setWolfPickPrompt(null);
+          if (resumeCell) {
+            setActiveKpCell(resumeCell);
+            setKpValue('');
+          }
         };
-        const makePick = (partnerIdx, loneWolf, blindWolf, pointValue) =>
-          dismiss({ wolfIdx, partnerIdx: partnerIdx ?? null, loneWolf: !!loneWolf, blindWolf: !!blindWolf, pointValue });
-        const guardedBtn = (action, style, children) => (
+
+        const makePick = (partnerIdx, loneWolf, blindWolf, pointValue) => {
+          if (setWolfPicks) {
+            setWolfPicks(prev => ({ ...prev, [holeIdx]: {
+              wolfIdx, partnerIdx: partnerIdx ?? null,
+              loneWolf: !!loneWolf, blindWolf: !!blindWolf, pointValue,
+            }}));
+          }
+          resumeKeypad();
+        };
+
+        const isSelected = (partnerIdx, loneWolf, blindWolf) => {
+          if (!existingPick) return false;
+          if (blindWolf)  return existingPick.blindWolf;
+          if (loneWolf)   return existingPick.loneWolf && !existingPick.blindWolf;
+          return existingPick.partnerIdx === partnerIdx;
+        };
+
+        const guardedBtn = (action, style, selectedStyle, isActive, children) => (
           <button
             onTouchEnd={(e) => { e.preventDefault(); wolfTouchRef.current = Date.now(); action(); }}
             onClick={() => { if (Date.now() - wolfTouchRef.current < 600) return; action(); }}
-            style={{ padding:'10px 14px', borderRadius:10, fontSize:13, fontWeight:700,
-                     cursor:'pointer', fontFamily:'inherit', textAlign:'left', ...style }}>
+            style={{
+              padding: '10px 14px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+              border: '1.5px solid transparent',
+              ...(isActive ? selectedStyle : style),
+            }}>
+            {isActive && <span style={{ marginRight: 6, fontSize: 12 }}>✓</span>}
             {children}
           </button>
         );
 
         return (
-          <div style={{ position:'fixed', inset:0, zIndex:450, background:'rgba(0,0,0,0.45)',
-                        display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{ background:'#fff', borderRadius:14, padding:'18px 16px 16px',
-                       width:'100%', maxWidth:320, boxShadow:'0 8px 32px rgba(0,0,0,0.2)' }}>
-              <div style={{ fontWeight:800, fontSize:15, color:'#4a1580', marginBottom:4 }}>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 450, background: 'rgba(0,0,0,0.45)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div onClick={e => e.stopPropagation()}
+              style={{ background: '#fff', borderRadius: 14, padding: '18px 16px 16px',
+                       width: '100%', maxWidth: 320, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#4a1580', marginBottom: 4 }}>
                 Hole {holeIdx + 1} — {wolfName} is Wolf
               </div>
-              <div style={{ fontSize:11, color:'#888', marginBottom:14 }}>Select partner or go alone</div>
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ fontSize: 11, color: '#888', marginBottom: 14 }}>
+                {existingPick ? 'Current pick shown — tap to change' : 'Select partner or go alone'}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {nonWolf.map(pi => {
                   const name = players[pi]?.name?.split(' ')[0] || '?';
+                  const active = isSelected(pi, false, false);
                   return guardedBtn(
                     () => makePick(pi, false, false, 1),
-                    { border:'1.5px solid #dac8f5', background:'#f0e8f8', color:'#4a1580' },
-                    <span>Partner: {name} <span style={{ fontSize:11, fontWeight:400, color:'#888' }}>(1 pt)</span></span>
+                    { border: '1.5px solid #dac8f5', background: '#f0e8f8', color: '#4a1580' },
+                    { border: '2px solid #4a1580',   background: '#dac8f5', color: '#4a1580' },
+                    active,
+                    <span>Partner: {name} <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(1 pt)</span></span>
                   );
                 })}
                 {guardedBtn(
                   () => makePick(null, true, false, 2),
-                  { border:'1.5px solid #fce4c4', background:'#fef3e8', color:'#7b3f00' },
-                  <span>Go Lone Wolf <span style={{ fontSize:11, fontWeight:400, color:'#888' }}>(2 pts)</span></span>
+                  { border: '1.5px solid #fce4c4', background: '#fef3e8', color: '#7b3f00' },
+                  { border: '2px solid #7b3f00',   background: '#fce4c4', color: '#7b3f00' },
+                  isSelected(null, true, false),
+                  <span>Go Lone Wolf <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(2 pts)</span></span>
                 )}
                 {guardedBtn(
                   () => makePick(null, false, true, 3),
-                  { border:'1.5px solid #c8d8f8', background:'#e8f0fc', color:'#1a3a5c' },
-                  <span>Go Blind Wolf <span style={{ fontSize:11, fontWeight:400, color:'#888' }}>(3 pts)</span></span>
+                  { border: '1.5px solid #c8d8f8', background: '#e8f0fc', color: '#1a3a5c' },
+                  { border: '2px solid #1a3a5c',   background: '#c8d8f8', color: '#1a3a5c' },
+                  isSelected(null, false, true),
+                  <span>Go Blind Wolf <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(3 pts)</span></span>
                 )}
               </div>
             </div>
