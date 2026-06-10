@@ -127,7 +127,14 @@ export default function App() {
   }, []);
 
   const handleStartRound = useCallback((roundState) => {
-    saveActiveRound(roundState);
+    // Preserve wolfPicks when the user returns from setup mid-round —
+    // NewRoundPage only assembles setup fields; scoring-session fields
+    // (wolfPicks) must be carried forward from the existing active round.
+    const existing = ls.get(SK.activeRound);
+    const merged = existing?.wolfPicks && Object.keys(existing.wolfPicks).length > 0
+      ? { ...roundState, wolfPicks: existing.wolfPicks }
+      : roundState;
+    saveActiveRound(merged);
     setTab('scorecard');
   }, [saveActiveRound]);
 
