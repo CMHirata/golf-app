@@ -15,6 +15,7 @@
 // TEST: if changing engine rules would change a function's output → move to engine.
 
 import { DOTS_DEF } from '../../engine/games.js';
+import { runWolf } from '../../engine/games.js';
 import { strokesForMode } from '../../engine/handicap.js';
 import { G, RED } from '../../components/ui.jsx';
 
@@ -467,4 +468,18 @@ export function parRelative(score, par) {
   if (diff === 0)  return 'par';
   if (diff === 1)  return 'bogey';
   return 'double_bogey';
+}
+
+// ── buildWolfState — Category 2 derived state builder ─────────────────────────
+// Calls runWolf and returns a WolfResult-shaped object for WolfTable.
+// Wolf_Contract.md §8.3 / ARCHITECTURE_FOUNDATIONS §2.
+// ScorecardPage calls this and passes the result to WolfTable as a prop.
+//
+// Returns null when Wolf is not active, player count !== 4, or opts absent.
+
+export function buildWolfState({ scores, players, gameOpts, wolfPicks, courseHcps, minCourseHcp }) {
+  if (!players || players.length !== 4) return null;
+  const opts = gameOpts?.Wolf;
+  if (!opts) return null;
+  return runWolf(scores, players, opts, wolfPicks || {}, courseHcps, minCourseHcp);
 }

@@ -71,6 +71,7 @@ import {
   calcStablefordTotal, calcTeamStablefordTotal,
   calcStrokePlay,
   getDotsPartner, getMatchTeamPartner, sixesSegForHole,
+  runWolf,
 } from './games.js';
 
 function initBank(players) {
@@ -425,6 +426,8 @@ export function computePayouts({
   // 13-C.8: Group-stop (Scenario B) metadata.
   earlyEndOpts       = {},
   lastCompletedHole,
+  // Wolf
+  wolfPicks          = {},
 }) {
   const bank      = initBank(players);
   const breakdown = [];
@@ -1710,6 +1713,46 @@ export function computePayouts({
             })).sort((a, b) => b.net - a.net),
           });
         }
+      }
+    }
+  }
+
+  // ── Wolf ─────────────────────────────────────────────────────────────────────
+  if (activeGames.includes('Wolf')) {
+    const wolfOpts = gameOpts?.Wolf;
+    if (wolfOpts && players.length === 4) {
+      const agg = aggregateResolutionForGame(earlyDepartureOpts, earlyEndOpts, lastCompletedHole, 'Wolf');
+      if (!agg.abandoned) {
+        let ws = scores;
+        if (agg.hasAnyResolution) ws = applyResolutionToScores(ws, agg, players);
+
+        const wolfMin = subsetMin(cHcps, [0,1,2,3], minCHcp, wolfOpts.grossNetNOL);
+        const result = runWolf(ws, players, wolfOpts, wolfPicks, cHcps, wolfMin);
+
+        const bet = wolfOpts.bet || 0;
+        const gb  = initBank(players);
+
+        result.holes.forEach(hole => {
+          if (!hole.resolved || hole.tied || !hole.winningTeam) return;
+          hole.losingTeam.forEach(li => {
+            hole.winningTeam.forEach(wi => {
+              const amt = hole.totalPoints * bet;
+              gb[players[li].name] -= amt;
+              gb[players[wi].name] += amt;
+            });
+          });
+        });
+
+        Object.entries(gb).forEach(([n, v]) => (bank[n] += v));
+
+        breakdown.push({
+          game: decorateHeader('Wolf', agg, players),
+          rows: players.map((p, pi) => ({
+            name:   p.name,
+            detail: `${result.cumulative[pi] >= 0 ? '+' : ''}${result.cumulative[pi]} pts`,
+            net:    gb[p.name] || 0,
+          })).sort((a, b) => b.net - a.net),
+        });
       }
     }
   }

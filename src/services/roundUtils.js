@@ -73,6 +73,7 @@ export function buildPayoutArgs(ar) {
     // group-stop on lastCompletedHole < roundEndHole AND non-empty earlyEndOpts.
     earlyEndOpts:        ar.earlyEndOpts        ?? {},
     lastCompletedHole:   ar.lastCompletedHole,
+    wolfPicks:           ar.wolfPicks           ?? {},
   };
 }
 

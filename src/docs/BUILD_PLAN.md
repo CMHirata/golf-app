@@ -1,6 +1,6 @@
 # The Card — Master Build Plan
 
-_Last updated: May 2026 — 15-K complete and confirmed on device. Randomize Teams button added to Sixes config. Next session: **16-A — Wolf**._
+_Last updated: June 2026 — 15-Bugs.6 complete and confirmed on device. ScoreKeypad overlap fix in ManualCourseModal. Next session: **16-A — Wolf (contract first)**._
 _Maintained in this chat as the authoritative sequence and history of all build sessions._
 _The APP_STATE_SUMMARY.md in the project knowledge base is the authoritative record of_
 _what is implemented. This file is the authoritative record of what was planned, why,_
@@ -31,6 +31,11 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 - **15-J** scope significantly exceeded original plan — original spec was payStyle toggle + file move + condor default. Expanded to include: `dotsMode` contract gap discovered and filled, Dots `'total'` engine branch implemented, `MatchCard.jsx` renamed `GameConfigMatch.jsx`, multiple engine bugs found and fixed during testing (Stroke Play Pay Up tie check; Stableford and Nines perpoint missing payStyle fork), payout sort by game added.
 - **15-Bugs.1** non-sequential designation per owner. Bug-fix session for female course handicap on 3-nine courses.
 - **15-Bugs.3** → corrected to **15-I** at owner direction. Non-sequential designation; logged here for traceability. Nines 'total' bet mode: contract amendment + engine + config UI. Payout logic corrected mid-session from pool to pairwise flat-bet.
+- **15-L** scope significantly exceeded original plan — original spec was player photo upload/crop + `PlayerAvatar` shared component rollout. Extensive iOS Safari debugging required: `overflow:hidden` on ancestor elements kills `<img>` rendering; `background-image` with large data URIs fails on circular elements; foreignObject canvas render does not wait for image decode. Multiple approaches tested via Safari Web Inspector console before root causes identified.
+- **15-Bugs.3** non-sequential designation per owner (note: an earlier entry using this label was corrected to 15-I at owner direction; this is a separate later use of the same designation). Bug-fix session for iOS ScoreKeypad overlap on Players page Edit Player modal.
+- **15-Bugs.4** non-sequential designation per owner. Bug-fix + color scheme overhaul session for `MatchNassauTable.jsx` and `SixesTable.jsx`.
+- **15-Bugs.5** non-sequential designation per owner. Bug-fix session for SI dropdown options in `ManualCourseModal.jsx` — even-front 2-nine courses.
+- **15-Bugs.6** non-sequential designation per owner. Bug-fix session for ScoreKeypad overlap in `ManualCourseModal.jsx` — Rating/Slope & Yardage tab.
 
 ---
 
@@ -100,112 +105,19 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 | 15-B | Game table display consistency pass. Removed all per-game legend/help text (`ColNote` lines) from `NinesTable`, `SkinsTable`, `StablefordTable`, `StrokePlayTable`, and the scorecard-level dots hint from `ScoreGrid`. Stripped extra info from game tile upper-right badges — Gross/Net only across all tables; added missing Gross/Net badge to `DotsTable`. Column header standardization: "Skins"→"Total" (`SkinsTable`), "F"/"B"→"Total" (`StablefordTable`), "Status"→"Total" (`SixesTable`, `MatchNassauTable`). "Front 9"/"Back 9"→"Front"/"Back" in `MatchNassauTable`, `DotsTable`, and `ScoreGrid` half labels. Removed Dots pivot winner highlight. Removed dead `frontLabel`/`backLabel` prop from `ScoreGrid` (variables retained in `ScorecardPage` for toolbar display). | — | Confirmed on device |
 | 15-Bugs.1 | Female course handicap fix on 3-nine courses. `groupCourseHandicaps` and `computePlayerCH` in `NewRoundPage.jsx` were summing `parsWomen` across all nines in `course.nines` instead of only the two active nines, producing a wildly wrong `womensPar` (e.g. 108 instead of 72 at Sahalee). Fixed by filtering to `activeNines` (front + back only) at both call sites. Two surgical `str_replace` edits to `NewRoundPage.jsx` only. H-43 added. | — | Confirmed on device |
 | 15-Bugs.2 | Save-gate exempts post-departure holes for departed players (`ResultsPage.jsx`). Nines Nassau decoration string fixes: unresolved segments default to `'abandon'`, zero-bet segments excluded from label, capitalize "Ended"/"Paid", period separator, trailing period. Changes to `payouts.js`, `roundUtils.js`, `ResultsPage.jsx`. | — | Confirmed on device |
-| 15-I | Nines `'total'` bet mode. `Nines_Contract.md` v1.7 + `App_Data_Model_Contract.md` §5.5 amended. `payouts.js` new `'total'` branch (pairwise flat-bet: each lower-ranked player pays each higher-ranked player `bet`). `GameConfigNines.jsx` "Total" pill added between "Per Point" and "F/B/T". Initial pool implementation corrected mid-session to pairwise flat-bet to match owner-specified semantics. | — | Confirmed on device |
-| 15-J | Pay Up / Pay Winner toggle + Point Spread rename + GameConfig file move + Dots total mode + condor default fix + payout sort. `payStyle: 'payup' | 'paywinner'` added to Nines (default payup), Stableford (default paywinner), Stroke Play (default paywinner), Dots (default payup). `dotsMode: 'spread' | 'total'` contracted and Dots `'total'` engine branch implemented. `'perpoint'`/`'spread'` UI labels renamed "Point Spread" for consistency. `PayStylePill` shared component added to `GameConfigShared.jsx`. All `GameConfig*.jsx` files moved from `src/pages/tables/` to `src/pages/new-round/`. `MatchCard.jsx` renamed to `GameConfigMatch.jsx` and moved to `new-round/`. Condor default changed to `enabled:true` in `DOTS_DEF`; runtime migration shim in `App.jsx` `getActiveRound`. By Game payout sections sorted alphabetically in `PayoutDisplay.jsx`. Five contracts amended: Nines v1.8, Stableford v1.8, Stroke Play v1.8, Dots v2.6, App_Data_Model v3.9. Multiple engine bugs found and fixed during testing (Stroke Play Pay Up tie check; Stableford and Nines perpoint branches missing payStyle fork). Scope significantly exceeded plan. | Nines v1.8, Stableford v1.8, Stroke Play v1.8, Dots v2.6, App_Data_Model v3.9 | Confirmed on device |
+| 15-I | Nines `'total'` bet mode. `Nines_Contract.md` v1.7 + `App_Data_Model_Contract.md` §5.3 amended. `payouts.js` new `'total'` branch (pairwise flat-bet: each lower-ranked player pays each higher-ranked player `bet`). `GameConfigNines.jsx` "Total" pill added between "Per Point" and "F/B/T". Initial pool implementation corrected mid-session to pairwise flat-bet to match owner-specified semantics. | — | Confirmed on device |
+| 15-J | Pay Up / Pay Winner toggle + Point Spread rename + GameConfig file move + Dots total mode + condor default fix + payout sort. `payStyle: 'payup' \| 'paywinner'` added to Nines (default payup), Stableford (default paywinner), Stroke Play (default paywinner), Dots (default payup). `dotsMode: 'spread' \| 'total'` contracted and Dots `'total'` engine branch implemented. `'perpoint'`/`'spread'` UI labels renamed "Point Spread" for consistency. `PayStylePill` shared component added to `GameConfigShared.jsx`. All `GameConfig*.jsx` files moved from `src/pages/tables/` to `src/pages/new-round/`. `MatchCard.jsx` renamed to `GameConfigMatch.jsx` and moved to `new-round/`. Condor default changed to `enabled:true` in `DOTS_DEF`; runtime migration shim in `App.jsx` `getActiveRound`. By Game payout sections sorted alphabetically in `PayoutDisplay.jsx`. Five contracts amended: Nines v1.8, Stableford v1.8, Stroke Play v1.8, Dots v2.6, App_Data_Model v3.9. Multiple engine bugs found and fixed during testing (Stroke Play Pay Up tie check; Stableford and Nines perpoint branches missing payStyle fork). Scope significantly exceeded plan. | Nines v1.8, Stableford v1.8, Stroke Play v1.8, Dots v2.6, App_Data_Model v3.9 | Confirmed on device |
 | 15-H | Export filename fix. `makeExportFilename()` in `exportUtils.js`: time separator changed from `-` to `.` (e.g. `The Card 2026-05-27 14.35.json`). Colon rejected — iOS converts `:` to `_` in filenames. Single `str_replace` edit. | — | Confirmed on device |
 | 15-A | Display polish pass. Player chips moved out of dark green header into `#ddeedd` band beneath it, matching share image style (white card chips, first/last name stacked, HI/CH). Course name smart line-break on ` - ` in `RoundSummaryModal` header. `ReadOnlyScorecard` half-row labels simplified to `'Front'`/`'Back'` (nine names removed). `shareUtils` half-table labels same; `ninesLabel` gated to 27-hole courses only (was firing for all multi-nine courses). History game pills: `'Match / Nassau'` displays as `'Match'` in `SwipeableRoundRow`. No contract changes. | — | Confirmed on device |
-| 15-K | Randomize Teams button in Sixes config. `footerSlot` render prop added to `PlayerDropdown` — optional `(close: () => void) => ReactNode`; rendered below player grid in open panel; absent on all other call sites. Button wired to Match 1 / Player 1 dropdown only (`seg === 0` spread). Randomize logic enumerates all 3 valid pairings from real player indices, picks one for Match 1, picks a different one for Match 2; Match 3 auto-derives as before. Button style matches unselected player cell (`#ddd` border, `#f9fdf9` bg, `#333` text, `borderRadius:10`). Two files changed: `PlayerDropdown.jsx`, `GameConfigSixes.jsx`. No contract changes. | — | Confirmed on device |
-
----
-
-### 14-A Detailed Session Notes
-
-**Originally planned:** Simple swap of `aiParseScorecard()` from Anthropic to Gemini 2.0 Flash + localStorage key flow. Single session.
-
-**What actually happened:** Full multi-month OCR infrastructure build. Six architectural approaches attempted. Documented exhaustively so 14-A.2 does not repeat old ground.
-
-#### Infrastructure
-
-- **Cloudflare Pages** — app at `https://the-card-1qm.pages.dev` (**canonical URL — always use this, never hash URLs**)
-- **Cloudflare Worker** — `scorecard-parser` at `https://scorecard-parser.thecard.workers.dev`
-- **Worker secrets:** `GEMINI_API_KEY` and `MISTRAL_API_KEY` (prefix `llx-p8`) set via `wrangler secret put`
-- **Deploy commands:**
-  ```bash
-  git add . && git commit -m "message" && git push
-  ```
-- **Key files in `/home/claude/work/`:**
-  - `worker_clean.js` — Gemini coordinate + HTML table version (last deployed Auto Scan state)
-  - `worker_mistral.js` — Mistral OCR version (partially working, **untested on real WiFi**)
-
-#### OCR approaches tried (do not re-attempt without reading this)
-
-| Approach | Result | Why abandoned |
-|---|---|---|
-| Anthropic/Claude vision | Rejected pre-session | Unreliable on dense grids |
-| Gemini inline base64 + JSON schema | Failed | JSON schema causes null values + hallucination; Netlify 10s timeout |
-| Gemini Files API + JSON schema | Failed | Schema enforcement still causes nulls |
-| **Gemini Files API + transcription CSV (BREAKTHROUGH)** | Best Gemini result | No JSON schema — model transcribes, JS structures. Got "all numbers correct" on Waiehu |
-| Gemini coordinate panel attention | Partial improvement | Pass 1 returns `[ymin,xmin,ymax,xmax]` bounding boxes; Pass 2 focuses per panel. Helped structure, didn't eliminate all errors |
-| Gemini HTML table output | Mixed | Fixed some HCP swaps, introduced new par errors |
-| **Mistral OCR** | Untested on real WiFi | Native HTML table output, $0.002/page. Tables returned as `[tbl-0.html](tbl-0.html)` placeholders — fix is to iterate `page.tables[]` array of `{id, content}` objects. Code written, airplane WiFi too slow to test. **14-A.2 picks up here.** |
-
-#### Current Gemini Auto Scan limitations (known, not worth fixing before Mistral test)
-
-- **Par/HCP value swaps undetectable** — adjacent values (e.g. holes 8/9 women's HCP 15↔9) have same sum and same unique set; math validator cannot detect
-- **Fircrest timeout** — 6 tees × per-panel calls exceeds 120s client timeout
-- **Course name** — sometimes reads city/venue name instead of full course name
-
-#### What the math validator catches
-
-- Par sum mismatch vs printed OUT/IN totals → fires Pass 3 par re-read
-- HCP non-uniqueness → fires Pass 3 HCP re-read
-
-#### AI Assistant import path (CONFIRMED ON DEVICE — primary reliable path)
-
-1. User taps "AI Assistant" tab → import prompt auto-copied to clipboard silently
-2. Step 1: "Open Gemini" button → `https://gemini.google.com`
-3. Step 2: Long-press textarea → iOS "Paste" → JSON populates → "Import JSON" button appears → taps it
-4. Uses existing conflict/merge review flow (14-E)
-
-Import prompt (`IMPORT_PROMPT` constant in `PhotoImportModal.jsx`) supports:
-- 18-hole (2 nines) and 27-hole (3 nines) courses
-- `parsWomen` for holes where women's par differs (card notation `5/4` = women 5, men 4)
-- `handicapsWomen` if separate women's HCP row exists
-- Combo tees (e.g. `Blue/White`) with or without women's ratings
-- `nineComboNames` for 27-hole courses — the three 18-hole combination labels in card order
-
-#### Schema changes (14-A)
-
-- `courseLib.js` schema comment: `nineComboNames?: string[]` — optional, 27-hole courses only. Three 18-hole combo labels in card order (e.g. `['South/North','North/East','East/South']`). Used by `CourseCard.jsx` for yardage display.
-- `CourseCard.jsx`: hole numbers now 1-9 per nine (not 1-27). 27-hole tee table shows three 18-hole combo yardages (e.g. `7007 / 6973 / 6976`) with labels from `nineComboNames` when present, falling back to first-letter abbreviations.
-
-#### Client-side image preprocessing (`PhotoImportModal.jsx`)
-
-Grayscale conversion + contrast boost (factor 1.5) + sharpening kernel applied via canvas before upload. All client-side.
-
-#### 14-A.2 pickup instructions
-
-**Goal:** Test Mistral OCR table parsing and evaluate vs Gemini approach.
-
-**Starting point:** `worker/worker_mistral.js`. The critical fix already in place:
-```js
-let markdown = (data.pages || []).map(p => {
-  let text = p.markdown || '';
-  const tables = p.tables || [];  // array of {id, content} — NOT a dict
-  for (const table of tables) {
-    const placeholder = `[${table.id}](${table.id})`;
-    text = text.replace(placeholder, table.content || '');
-  }
-  return text;
-}).join('\n\n');
-```
-
-**Test sequence:**
-1. Copy `worker_mistral.js` to `worker/worker.js`
-2. `wrangler secret put MISTRAL_API_KEY` (key prefix `llx-p8` — Christopher has it)
-3. `cd worker && wrangler deploy && cd ..`
-4. Test Waiehu first — check Worker logs for `Page 0 keys`, `Page 0 tables type`, `First table content preview`
-5. If tables parse: test Fircrest (the timeout card for Gemini — Mistral should be faster)
-6. If Mistral works well: make it primary, keep Gemini for metadata (course name, location, ratings)
-7. If Mistral fails: accept current Gemini + AI Assistant state; build 14-B and move on
-
-**Known Mistral behavior:**
-- Model: `mistral-ocr-latest`
-- Endpoint: `POST https://api.mistral.ai/v1/ocr`
-- Auth: `Bearer ${MISTRAL_API_KEY}`
-- Request: `{ model, document: { type: 'image_url', image_url: 'data:mediaType;base64,b64' }, table_format: 'html' }`
-- Response: `{ pages: [{ markdown, tables: [{id, content}], ... }] }`
-- Tables are NOT inline in markdown — they are placeholders that must be replaced with `table.content`
+| 15-K | Randomize Teams button in Sixes config. `footerSlot` render prop added to `PlayerDropdown` — optional `(close: () => void) => ReactNode` rendered below the player grid in the open panel. `GameConfigSixes.jsx` passes Randomize Teams button as `footerSlot` to Match 1 / Player 1 dropdown only. Randomize logic enumerates all 3 valid pairings from real player indices and picks two distinct ones; Match 3 auto-derives as before. H-45 added. | — | Confirmed on device |
+| 15-L | Player photos. New `src/components/PlayerAvatar.jsx` shared component (photo or initial circle, starred badge, `onPress`). New `src/components/ImageCropOverlay.jsx` (pan + pinch-zoom crop UI; touch-only gesture system; direct DOM transform for 60fps; lazy pinch baseline on first touchmove). Photo upload/crop on Players page; avatar tap → full-screen expand with Change/Delete/Cancel. `App_Data_Model_Contract.md` v4.0: `photo?` added to player library record schema. Avatar circles rolled out to all surfaces: Players page, PlayerPickerPopup, HomePage Money List, PlayersCard (New Round), Payouts page, Round Summary modal, TotalsCard (avatars removed in favour of name+scores only). Share image: photos drawn directly onto canvas after foreignObject render (bypasses iOS Safari `<img>`-in-foreignObject limitation). Photos enriched from `playerLib` by name-fallback in `ResultsPage` and `RoundSummaryModal` since `activePlayers` snapshot carries no `photo`. Email/phone fields removed from player edit modal and player schema. Gender kept (handicap) but icon removed from player row. `HistoryPage.applyImport` `f` array updated at both sites (H-42). H-46, H-47 added. Scope significantly exceeded plan — extensive iOS Safari debugging required. | App_Data_Model v4.0 | Confirmed on device |
+| 15-M | HomePage Enhanced view. Basic/Enhanced toggle (localStorage-persisted, scroll-to-see text link at bottom). Enhanced view: Standings card with podium (2nd left / 1st center / 3rd right, SVG pennant ribbons, photo avatars, stacked first/last name, equal-width flex cards), ranked list 4+ with collapse chevron, "By Game" slide-in breakdown table (all games normalized/deduplicated, alphabetical columns, sticky avatar+name column, horizontal scroll). 4-tile stat row (individual cards, icon circles matching nav icon style). Insights 2×2 grid: Heater (hot streak count), Cold Streak (loss streak count), Dynamic Duo (team pair win count from all formats), The Lock (win rate, min 3 rounds). Range picker centered in Standings header. No contract changes. Scope significantly exceeded plan. | — | Confirmed on device |
+| 15-Bugs.3 | iOS keyboard overlap fix on Players page. ScoreKeypad (position:fixed, bottom:0) physically covered the bottom of the Edit Player modal sheet. Fixed by applying `paddingBottom:300` to the sheet div when `activeFieldId==='ghin'`, pushing the Handicap Index field and Cancel/Save buttons above the keypad. Single `str_replace` edit to `PlayersPage.jsx`. H-48 added. | — | Confirmed on device |
+| 15-Bugs.4 | Scorecard table color scheme overhaul. `MatchNassauTable.jsx` and `SixesTable.jsx`: replaced legacy red/pink hole-chip and Total-cell colors with identity-stable two-color scheme — navy/pale-blue (Team A, player 1) and red/pale-yellow (Team B, player 2). Removed `isTeam &&` guards so individual matches use same colors as team matches. Total cells now show leader's full bg+font color (or neutral green for All Square) across all three render paths. Row backgrounds flattened (no press-depth tinting). All bet/press row labels unified to dark green `M.hdrClr` / `fontWeight:600`. Redundant "Front"/"Back" `<HalfLabel>` headers removed — first bet row label is sufficient. Sixes: `isBluePlayer` helper anchored to `sixesTeams[0]` (segment-0 team composition) rather than raw player index, ensuring consistent color identity across all three segments. Segment header now shows team names only; "Holes 1–6" etc. moved into first bet row label cell. H-49 added. | — | Confirmed on device |
+| 15-N | RangePicker 6-pill expansion. Added `'30days'` (Month, rolling 30-day) and `'365days'` (Year, rolling 365-day) range options to `RangePicker.jsx`. All pill labels changed to word-based: Week / Month / Year / YTD / All / Custom. MTD removed. Grid updated from `repeat(5,1fr)` to `repeat(6,1fr)`. `UI_Component_Contract.md` §10 amended. | UI_Component_Contract.md §10 | Confirmed on device |
+| 15-Bugs.5 | SI dropdown options fix for 2-nine courses with even-front layout. `siValidSet()` in `ManualCourseModal.jsx` previously enforced USGA odd/even per nine index — nine 0 odd-only, nine 1 even-only. Courses with even SI values on the front nine (e.g. Snohomish GC) caused all selects to snap to the first valid option, displaying all 1s and 2s. Fix: 2-nine courses now offer all 18 values in both nines' dropdowns; duplicate detection via `dupIndices` remains the sole correctness gate. Single `str_replace` to `siValidSet` + call site. H-50 added. | — | Confirmed on device |
+| 15-O | CoursesPage sort + starred courses. `courseLib.list()` now returns courses sorted starred-first then A→Z within each tier (mirrors `playerLib.list()`). Star toggle button added to each course row in `CoursesPage.jsx` (gold filled ★ when starred, grey outline when not — identical style to Players page). `CoursePickerPopup` in `NewRoundPage.jsx`: sorted same way; tiles simplified to name + location only (tees line removed); gold star shown on right of starred tiles. History-course prepend participates in sort. `App_Data_Model_Contract.md` §5.2 amended — course library record schema added with `starred?: boolean` (library-only, absent = false). | App_Data_Model v4.1 | Confirmed on device |
+| 15-Bugs.6 | ScoreKeypad overlap fix in `ManualCourseModal.jsx` — Rating/Slope & Yardage tab. Applied `paddingBottom:300` to the modal card when `setupKp` is active (reverts to 20 when null). Added `useEffect` on `setupKp?.fieldId` to scroll `modalCardRef` to `scrollHeight` on keypad open. `kpWasOpenRef` guards the scroll to fire only on closed→open transition — not on field-to-field switches while keypad is already up (which caused double-scroll / extra whitespace). H-51 added. | — | Confirmed on device |
 
 ---
 
@@ -219,7 +131,7 @@ let markdown = (data.pages || []).map(p => {
 
 ## Open Session Plan
 
-> **Next session: 16-A — Wolf.** Sprint 15 fully closed. Sprint 16 is next. All Sprint 16 sessions are contract-first.
+> **Next session: 16-A — Wolf (contract first).** Sprint 15 complete. Sprint 16 (new game formats) is next; all sessions are contract-first.
 
 ---
 
@@ -245,7 +157,7 @@ _14-A complete. 14-B complete. 14-bugs.1 complete. AI Assistant + Review & Save 
 
 ### Sprint 15 — Display Polish + Features
 
-_15-A, 15-B, 15-Bugs.1, 15-C, 15-E, 15-E.1, 15-F, 15-G, 15-H, 15-I, 15-J, 15-K complete and confirmed on device — see Completed Sessions table above. 15-D deferred (owner unsure about implementing). Next session: 16-A._
+_15-A, 15-B, 15-Bugs.1, 15-Bugs.2, 15-Bugs.3, 15-Bugs.4, 15-Bugs.5, 15-Bugs.6, 15-C, 15-E, 15-E.1, 15-F, 15-G, 15-H, 15-I, 15-J, 15-K, 15-L, 15-M, 15-N, 15-O complete and confirmed on device — see Completed Sessions table above. 15-D deferred. **Next session: 16-A — Wolf (contract first).**_
 
 ---
 
@@ -295,13 +207,6 @@ _None._
 | GPT-4o for scorecard photo OCR (superseded) | 13-D | Claude vision unreliable. Superseded by Gemini decision. |
 | Codebase extraction before feature work | 13-D | 13-E refactor pass before Sprint 14+ |
 | Dispatcher + Shared file pattern for multi-game UI splits | 13-E | Canonical pattern for splitting files with shared sub-components |
-| `PayoutDisplay.jsx` is the single source of truth for payout display | 13-E.5 | `DotsColTable`, `SubHeader`, `PayRow`, `splitGameHeader`, `fmtMoney`, `PayoutsSection` |
-| Shared `NewRoundHelpers.jsx` for module-scope form helpers | 13-E.7 | Single source imported by `NewRoundPage`, `CourseCard`, `PlayersCard` |
-| `readOnly`+`onFocus`+`e.target.blur()` for iOS keyboard suppression | 13-F | More reliable than `<div>` tap targets |
-| Empty kpValue seed for select-to-overwrite | 13-F | Parent seeds `kpValue: ''`; simpler than `isSeeded`/`freshRef` |
-| Plus-CH indicator uses USGA rule: `hcps[h] > 18 - Math.abs(ch)` | 13-F | Strokes given back on EASIEST holes |
-| `groupCourseHandicaps` gains optional `nines` arg for gender-aware par | 13-G | Female players use women's tee data when present |
-| Per-player `siArray: number[18]` attached at round-start | 13-G.2 | Engines gender-blind — read `players[pi].siArray[h]`. `hcps` dropped from all 9 engine functions. |
 | Gemini 2.0 Flash for scorecard photo OCR | Sprint 14 planning | Tied with GPT-4o at 100% accuracy on app fields; chosen on cost (~25× cheaper) and latency. |
 | API key storage = Option B (localStorage prompt) for build phase | Sprint 14 planning | Zero infrastructure; key never in bundle. Option C proxy deferred to production hardening. |
 | On-device OCR (Tesseract.js) rejected | Sprint 14 planning | Not an offline use case; character recognizer not a table parser; WASM too heavy. |
@@ -309,8 +214,12 @@ _None._
 | All `GameConfig*.jsx` files live in `src/pages/new-round/` | 15-J | Moved from `src/pages/tables/` — config panels belong with new-round setup, not with display tables |
 | `MatchCard.jsx` renamed `GameConfigMatch.jsx` and moved to `new-round/` | 15-J | Consistent naming with all other GameConfig panel files |
 | Pay Up / Pay Winner semantics: flat `bet` per rank-position pair (not per-pot) | 15-J | Pay Up: j pays i `bet` for every pair where i ranked above j. Pay Winner: all losers pay only top scorer `bet`. Applies uniformly across flat-bet and differential modes. |
-| iOS double-cell-advance fix: `touchHandledRef` timestamp guard | 13-G | React 18 passive touch listeners; synthetic click suppressed within 600ms of touchend. |
+| iOS double-cell-advance fix: `touchHandledRef` timestamp guard | 13-G | React 18 passive listeners; synthetic click suppressed within 600ms of touchend. |
 | `footerSlot` on `PlayerDropdown` is a render prop `(close) => ReactNode` | 15-K | Caller receives `close()` directly; no companion prop needed. Cleaner than a static ReactNode + separate `onFooterAction` callback. |
+| `photo` is library-only — never copied to `activePlayers` snapshot | 15-L | Same rule as `starred` and `inMoneyLists`. Surfaces using `activePlayers` must enrich from `playerLib` by id/name lookup when photo display is needed. |
+| Player photos drawn directly onto canvas in share image | 15-L | iOS Safari does not render `<img>` inside SVG foreignObject reliably. Photos are omitted from the foreignObject HTML and drawn via canvas 2D API (`ctx.arc` + `ctx.clip` + `ctx.drawImage`) after the foreignObject renders. |
+| Sixes color anchor is `sixesTeams[0]` team composition, not raw player index | 15-Bugs.4 | `sixesTeams[0].a` and `sixesTeams[0].b` define the permanent "blue side" regardless of player indices. Raw index (0+1=blue, 2+3=red) fails when segment-0 team pairs index 0 with index 3. |
+| Overall back-9 Total cells show back-9 result only (not 18-hole cumulative) | 15-Bugs.4 | Chip bar is the correct place to read the 18-hole summary. Mixing scopes in the split table would be inconsistent and confusing. |
 
 ---
 
@@ -327,7 +236,7 @@ _None._
 | Always use canonical Cloudflare URL | 14-A | `https://the-card-1qm.pages.dev` always points to latest deploy. Hash URLs (e.g. `941b83c0.the-card-1qm.pages.dev`) are frozen snapshots — never use them for testing. |
 | CourseImportReviewModal replaced by Review & Save via ManualCourseModal | 14-B | Dedicated review grid scrapped — consistent UI, less code. `finish()` in PhotoImportModal opens ManualCourseModal pre-populated via `initialData`. |
 | Website field removed from course schema UI | 14-B | Removed from ManualCourseModal, CourseCard, courseLib prompt/merge. Existing localStorage data with `website` field silently ignored. |
-| SI validation: 2-nine courses use USGA odd/even rule; 1 or 3+ nines use 1–9 | 14-B | Front nine: odd 1–17. Back nine: even 2–18. 27-hole: each nine 1–9 independently. Save blocked on duplicates. |
+| SI validation: 2-nine courses offer all 18 values; duplicate detection is sole gate | 14-B, 15-Bugs.5 | Original: odd/even per nine index (14-B). Amended 15-Bugs.5: courses vary; even-front layouts are valid. Both nines now show 1–18; `dupIndices` blocks duplicates. 1-nine and 3-nine courses unaffected (still 1–9). |
 | Tee Boxes card layout preserved as commented code | 14-B | `TeeRow` component kept in `ManualCourseModal.jsx` as commented-out Tees 1 option for potential future settings menu. |
 | `SwipeableRow` gesture mechanics port from `SwipeableRoundRow` | 15-E | All swipe gesture tracking in refs (zero setState during gesture). `snapClose` called before action callbacks. Full-swipe threshold = 80% of row width. Edit strip = pale yellow `#fff9e6`, delete = `#c0392b`. |
 | Money List on Home page; cumulative winnings removed from History | 15-E | Home page shows roster-filtered, `inMoneyLists`-filtered cumulative winnings. History page shows rounds only. |
@@ -338,48 +247,10 @@ _None._
 | Backup payload `settings` field for app-level preferences | 15-E.1 | Top-level `settings` field on the export JSON carries app preferences (currently `moneyListRange` and `historyRange`). `HistoryPage.handleImportFile` preserves it through to `applyImport`, which writes each present key to localStorage. Settings overwrite silently — not subject to the player/course conflict prompt. Future preference keys follow the same pattern. |
 | App-preference localStorage keys are direct strings, not part of `SK` | 15-E.1 | `SK` is reserved for entity data (players, courses, rounds, active round, setup draft). UI preference keys (`moneyListRange`, `historyRange`) are direct string literals owned by the component that uses them. Documented in `App_Data_Model_Contract.md` §1. |
 | iOS-style scroll wheel for custom date picker | 15-E.1 | Three independent scroll columns (month/day/year) using CSS `scroll-snap-type: y mandatory` and `scroll-snap-align: center`. Selection highlight band is semi-transparent with green borders so the centered text is fully readable. Top/bottom fades stop short of the selected row to avoid obscuring it. |
-| Money List visual: position + initials + name + amount, left accent bar | 15-E.1 | Each row has a 4px left accent bar colored green (positive) / red (negative) / grey (zero) — colorblind-safe contrast. No winner highlight, no round counters. Place number muted (12px, grey, weight 700). Name flex-grows; amount right-aligned. |
+| Money List visual: avatar + name + amount | 15-L | Left accent bar and place number removed (15-L). Avatar circle (30px) + name + amount. Green/red/grey amount coloring retained for win/loss/zero. |
 | Player import conflict field-list includes `starred` and `inMoneyLists` | 15-E.1 | `HistoryPage.applyImport` previously rebuilt player records using a fixed five-field list (`name, gender, ghin, email, phone`), silently dropping `starred` and `inMoneyLists` on any conflicting import. Both fields added to the `f` list at conflict-detection (line ~158) and conflict-resolution (line ~199) sites. Brand-new players (no conflict) were already correct. |
 | Payouts page: player chips vertical stack, first+last initials, sorted win-to-loss | 15-C | Circle / first name / last name / net amount stacked vertically. All players in one row. Amounts always align because name is always two lines. |
 | Payouts page: greedy debt-simplification for Settle Up tile | 15-C | `buildSettlements(bank)` sorts debtors/creditors by magnitude, matches greedily for fewest transactions. |
 | "Total — All Games" section removed from Payouts page | 15-C | Redundant with player chips which already show each player's net. |
 | ScoreGrid half labels simplified to Front/Back | 15-B | `frontLabel`/`backLabel` props removed from `ScoreGrid` — dead after label simplification. Variables retained in `ScorecardPage` for toolbar nine-name display. |
 | Female CH on 3-nine courses: filter to active nines before summing womensPar | 15-Bugs.1 | `course.nines` must be filtered to the active front and back nines before summing parsWomen for the womensPar used in courseHandicap(). Summing all nines produces wildly wrong par (e.g. 108 instead of 72 at Sahalee). Fixed at both call sites in `NewRoundPage.jsx`. Captured as H-43. |
-
----
-
-## Deferred / Deprioritized
-
-| Item | Priority | Reason deferred |
-|---|---|---|
-| 15-D: Save Game Settings as Defaults | Deferred | Owner unsure about implementing |
-| 11-B: Shared GameTable shell | Low | Pattern already working; documentation value only |
-| Dark mode | Deferred | Token structure ready in `ui.jsx`; low demand |
-| Undo delete toast | Deferred | Low impact |
-| Match scorecard rows collapse by default | Deferred | Low priority |
-| CoursesPage GHIN/USGA API import | Deferred | External dependency; low priority |
-| Scorecard gear icon options menu | Deferred | Design decision still open |
-| Press modal live match status display | Deferred | Low priority UX enhancement |
-| `buildShareImage` range-awareness | Deferred | Owner directed — revisit alongside 15-H |
-| Mid-round Round Summary access gating | Deferred | Revisit when partial-round UX fully complete |
-| "Overall" → "Total" full internal rename | Deferred | Risky rename, low user impact; requires migration shim |
-| Pinch-zoom with snap-back on scorecard | Deferred | Risk of breaking touch handling in ScoreGrid |
-| Sponsor/staking mechanic for non-betting player | Deferred | Contract-first; non-trivial engine work; narrow use case |
-| Lock/pin scorecard toggle | Deferred | Contract-first; revisit when scorecard UX fully stable |
-| API key / Face ID security gate | Deferred | Personal-use PWA; not worth complexity for current distribution |
-| API key proxy migration (Option C — Netlify Function) | Deferred | Option B chosen for build phase. Surgical migration deferred to production hardening. Only `aiCall()` in `courseLib.js` changes. |
-| Replace PNG logos with SVG | Deferred | When designer provides SVG files |
-| Handicap multiplier | Deferred | Contract-first; revisit when demand clear |
-| D-15: Team Dots → Individual Dots after parent ends | Deferred | Complex; wait for real demand |
-| Multi-instance for non-Match games | Deferred | Major scope; no current need |
-| Wrap-around rounds | Deferred indefinitely | Rare use case; major cross-layer complexity |
-| 13-C.4 Mid-Round Game Start (late arrival) | Deferred | Owner confirmed too rare to justify cost |
-| Bingo Bango Bongo, Vegas, Round Robin, Snake, Rabbit/Flags/String | Deferred | Lower priority game formats |
-| Uneven team matches (1v2) | Deferred | Structural complexity; wait for demand |
-| MatchNassauTable column headers for non-zero-start matches | Deferred | Polish — post-13-E |
-| "Computed over holes 1–k" notes in game table footers | Deferred | Polish — post-13-E |
-| Game range indicator in game table headers | Deferred | Polish — post-13-E |
-| Stroke Play §14 G-2 `effMin` not received from `subsetMin()` | Deferred | Architectural inconsistency only; results correct |
-| Auto Scan accuracy to production quality | Deferred to 14-A.2 | Gemini coordinate approach has known limitations. Mistral OCR is next candidate. Test on real WiFi in 14-A.2. |
-| starred players auto-selected in New Round | Deferred | Out of scope for 15-E; log for future sprint if demand arises |
-| ScoreGrid sticky/pin to top of ScorecardPage | Deferred — optional | ScoreGrid takes significant vertical space; pinning may not be worth the screen cost. Revisit if user demand arises. Contract pattern documented in 15-G planning. |

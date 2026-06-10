@@ -57,8 +57,9 @@ import { GameConfigStrokePlay } from './GameConfigStrokePlay.jsx';
 import { GameConfigSkins }      from './GameConfigSkins.jsx';
 import { GameConfigStableford } from './GameConfigStableford.jsx';
 import { GameConfigNines }      from './GameConfigNines.jsx';
-import { GameConfigSixes }      from './GameConfigSixes.jsx';
-import { GameConfigDots }       from './GameConfigDots.jsx';
+import { GameConfigSixes }       from './GameConfigSixes.jsx';
+import { GameConfigDots }        from './GameConfigDots.jsx';
+import { GameConfigWolf }        from './GameConfigWolf.jsx';
 
 // ─── InlineRow — shared export (kept for future use; no internal callers) ─────
 export function InlineRow({ label, children }) {
@@ -295,6 +296,13 @@ export default function GameConfig({ game, opts, setOpt, bet, setBet, players,
       dots={dots} setDots={setDots}
       gameRanges={gameRanges} setGameRange={setGameRange}
       roundStartHole={roundStartHole} roundEndHole={roundEndHole}
+      activateSetupKp={activateSetupKp} activeFieldId={activeFieldId}
+    />
+  );
+
+  if (game === 'Wolf') return (
+    <GameConfigWolf
+      opts={opts} setOpt={setOpt} bet={bet} setBet={setBet} players={players}
       activateSetupKp={activateSetupKp} activeFieldId={activeFieldId}
     />
   );

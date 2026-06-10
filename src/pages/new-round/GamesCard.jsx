@@ -161,6 +161,24 @@ export default function GamesCard({
             const includeNOL  = g !== 'Dots';
             const scoring     = opts.grossNetNOL ?? opts.scoring ?? (g === 'Dots' ? 'gross' : g === 'Stroke Play' ? 'gross' : 'net');
 
+            // Wolf: disabled when player count !== 4 (contract §9)
+            if (g === 'Wolf' && activePlayers.length !== 4) {
+              tiles.push(
+                <div key={g} style={{
+                  width: '100%', boxSizing: 'border-box', borderRadius: 12,
+                  border: '1.5px solid #eee', background: '#fafafa',
+                  padding: '8px 12px',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <input type="checkbox" readOnly checked={false}
+                    style={{ accentColor: G, width: 13, height: 13, flexShrink: 0, pointerEvents: 'none', opacity: 0.4 }}/>
+                  <span style={{ fontWeight: 600, fontSize: 13, color: '#aaa' }}>Wolf</span>
+                  <span style={{ fontSize: 11, color: '#bbb', marginLeft: 4 }}>Requires 4 players</span>
+                </div>
+              );
+              return;
+            }
+
             // Secondary dropdown per game:
             //   Stableford: Individual / Teams (Teams disabled — Option Z, 11-L unblocks)
             //   Dots:       Individual / Sixes Teams / Match Teams (dynamic)

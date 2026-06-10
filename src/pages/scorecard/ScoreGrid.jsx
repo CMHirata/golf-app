@@ -52,6 +52,7 @@ import { StrokePlayTable }  from '../tables/StrokePlayTable.jsx';
 import { MatchNassauTable } from '../tables/MatchNassauTable.jsx';
 import { SixesTable }       from '../tables/SixesTable.jsx';
 import { DotsTable }        from '../tables/DotsTable.jsx';
+import WolfTable            from '../tables/WolfTable.jsx';
 import { TotalsCard }       from './TotalsCard.jsx';
 
 // ── PopDots ────────────────────────────────────────────────────────────────────
@@ -196,6 +197,10 @@ export function ScoreGrid({
   // not participate in this gesture — they are fully inert.
   //   (pi: number) => void
   onUndoDeparturePrompt,
+  // Wolf: per-hole picks, setter, and pre-computed display state
+  wolfPicks     = {},
+  setWolfPicks,
+  wolfState     = null,
 }) {
   // 13-C.2: Derived end hole (never stored per PartialGameContract §1A.3, §14.17)
   const roundEndHole = roundStartHole + roundNumHoles - 1;
@@ -239,6 +244,10 @@ export function ScoreGrid({
   // "Is [Name] done for the round?" with two buttons. Saved cell at the
   // moment the long-press fires so we know who we're asking about.
   const [departPrompt, setDepartPrompt] = useState(null); // { h, pi } | null
+
+  // Wolf pick popup — fires when the user first scores all players on a hole
+  // that has no pick yet. { holeIdx, wolfIdx } | null
+  const [wolfPickPrompt, setWolfPickPrompt] = useState(null);
 
   // Keep activeKpCellRef always current — used inside setTimeout closures in startLongPress
   useEffect(() => { activeKpCellRef.current = activeKpCell; }, [activeKpCell]);
@@ -610,11 +619,18 @@ export function ScoreGrid({
       setKpValue('');
       return;
     }
+    // Wolf pick popup: fire when crossing a hole boundary (last player scored),
+    // if Wolf is active and no pick has been recorded for the completed hole.
+    if (nh !== h && activeGames?.includes('Wolf') && setWolfPicks && !wolfPicks[h]) {
+      const wolfOrder = gameOpts?.Wolf?.wolfOrder || [0, 1, 2, 3];
+      const wolfIdx = wolfOrder[h % 4];
+      setWolfPickPrompt({ holeIdx: h, wolfIdx });
+    }
     // Keep ZoomModal centred on the active hole when crossing a hole boundary
     if (nh !== h) setZoomHole(nh);
     setActiveKpCell({ h: nh, pi: npi });
     setKpValue('');
-  }, [players.length, setZoomHole, roundEndHole]);
+  }, [players.length, setZoomHole, roundEndHole, activeGames, wolfPicks, setWolfPicks, gameOpts]);
 
   // Retreat to prior cell
   const kpRetreatCell = useCallback((h, pi) => {
@@ -1417,6 +1433,7 @@ export function ScoreGrid({
               {/* Match / Nassau: per-match ranges are keyed by matchDef.id; MatchNassauTable reads them directly from gameRanges. Round bounds forwarded for range-fallback inside the table. */}
               {activeGames.includes('Match / Nassau')   && <MatchNassauTable  players={players} scores={scores}             hcps={hcps} matches={matches || []}         courseHcps={courseHcps} minCourseHcp={minCourseHcp} manualPresses={manualPresses} setManualPresses={setManualPresses} isLandscape={isLandscape} gameRanges={gameRanges} roundStartHole={roundStartHole} roundEndHole={roundEndHole} earlyDepartureOpts={earlyDepartureOpts}/>}
               {activeGames.includes('Sixes')            && <SixesTable        players={players} scores={scores}             hcps={hcps} opts={gameOpts.Sixes}           courseHcps={courseHcps} minCourseHcp={minCourseHcp} sixesTeams={sixesTeams} manualPresses={manualPresses} setManualPresses={setManualPresses}                         startHole={sixesR.startHole} endHole={sixesR.endHole} earlyDepartureOpts={earlyDepartureOpts}/>}
+              {activeGames.includes('Wolf') && wolfState  && <WolfTable          players={players} wolfState={wolfState} opts={gameOpts.Wolf} isLandscape={isLandscape}/>}
             </>
           );
         })()}
@@ -1487,6 +1504,62 @@ export function ScoreGrid({
           onConfirm={handleDepartConfirmYes}
         />
       )}
+
+      {/* Wolf pick popup — fires after all players scored on a hole with no pick */}
+      {wolfPickPrompt && (() => {
+        const { holeIdx, wolfIdx } = wolfPickPrompt;
+        const wolfName = players[wolfIdx]?.name?.split(' ')[0] || '?';
+        const nonWolf  = players.map((_, i) => i).filter(i => i !== wolfIdx);
+        const dismiss  = (pick) => {
+          if (pick && setWolfPicks) setWolfPicks(prev => ({ ...prev, [holeIdx]: pick }));
+          setWolfPickPrompt(null);
+        };
+        const makePick = (partnerIdx, loneWolf, blindWolf, pointValue) =>
+          dismiss({ wolfIdx, partnerIdx: partnerIdx ?? null, loneWolf: !!loneWolf, blindWolf: !!blindWolf, pointValue });
+
+        return (
+          <div
+            style={{ position:'fixed', inset:0, zIndex:450, background:'rgba(0,0,0,0.45)',
+                     display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{ background:'#fff', borderRadius:14, padding:'18px 16px 16px',
+                       width:'100%', maxWidth:320, boxShadow:'0 8px 32px rgba(0,0,0,0.2)' }}
+            >
+              <div style={{ fontWeight:800, fontSize:15, color:'#4a1580', marginBottom:4 }}>
+                Hole {holeIdx + 1} — {wolfName} is Wolf
+              </div>
+              <div style={{ fontSize:11, color:'#888', marginBottom:14 }}>Select partner or go alone</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {nonWolf.map(pi => {
+                  const name = players[pi]?.name?.split(' ')[0] || '?';
+                  return (
+                    <button key={pi} onClick={() => makePick(pi, false, false, 1)}
+                      style={{ padding:'10px 14px', borderRadius:10, border:'1.5px solid #dac8f5',
+                               background:'#f0e8f8', fontSize:13, fontWeight:700, color:'#4a1580',
+                               cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
+                      Partner: {name} <span style={{ fontSize:11, fontWeight:400, color:'#888' }}>(1 pt)</span>
+                    </button>
+                  );
+                })}
+                <button onClick={() => makePick(null, true, false, 2)}
+                  style={{ padding:'10px 14px', borderRadius:10, border:'1.5px solid #fce4c4',
+                           background:'#fef3e8', fontSize:13, fontWeight:700, color:'#7b3f00',
+                           cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
+                  Go Lone Wolf <span style={{ fontSize:11, fontWeight:400, color:'#888' }}>(2 pts)</span>
+                </button>
+                <button onClick={() => makePick(null, false, true, 3)}
+                  style={{ padding:'10px 14px', borderRadius:10, border:'1.5px solid #c8d8f8',
+                           background:'#e8f0fc', fontSize:13, fontWeight:700, color:'#1a3a5c',
+                           cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
+                  Go Blind Wolf <span style={{ fontSize:11, fontWeight:400, color:'#888' }}>(3 pts)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

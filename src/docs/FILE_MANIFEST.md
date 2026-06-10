@@ -91,12 +91,14 @@ src/pages/new-round/GameConfigSixes.jsx — sixes config panel (moved from table
 src/pages/new-round/GameConfigSkins.jsx — skins config panel (moved from tables/ in 15-J)
 src/pages/new-round/GameConfigStableford.jsx — stableford config panel (moved from tables/ in 15-J)
 src/pages/new-round/GameConfigStrokePlay.jsx — stroke play config panel (moved from tables/ in 15-J)
+src/pages/new-round/GameConfigWolf.jsx — wolf config panel (added 16-A)
 src/pages/tables/MatchNassauTable.jsx — match/nassau game table (render-only)
 src/pages/tables/NinesTable.jsx — nines game table (render-only)
 src/pages/tables/SixesTable.jsx — sixes game table (render-only)
 src/pages/tables/SkinsTable.jsx — skins game table (render-only)
 src/pages/tables/StablefordTable.jsx — stableford game table (render-only)
 src/pages/tables/StrokePlayTable.jsx — stroke play game table (render-only)
+src/pages/tables/WolfTable.jsx — wolf game table (render-only, added 16-A)
 
 src/services/courseLib.js — course library CRUD and schema
 src/services/exportUtils.js — auto-export trigger, backup payload builder

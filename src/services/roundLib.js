@@ -424,6 +424,7 @@ export const roundLib = {
       scores:    ar.scores    || Array.from({ length: 18 }, () => []),
       breakdown: ar.breakdown || [],
       bank:      ar.bank      || {},
+      wolf_picks: ar.wolfPicks || {},
     };
   },
 
@@ -527,6 +528,7 @@ export const roundLib = {
         scores:             rec.scores              || Array.from({ length: 18 }, () => []),
         breakdown:          rec.breakdown           || [],
         bank:               rec.bank                || {},
+        wolfPicks:          rec.wolf_picks          || {},
       };
     } catch(e) {
       console.error('roundLib.toActiveRound failed:', e);
@@ -598,6 +600,7 @@ export const roundLib = {
       earlyDepartureOpts:  rec.early_departure_opts,
       earlyEndOpts:        rec.early_end_opts,
       lastCompletedHole:   rec.last_completed_hole,
+      wolfPicks:           rec.wolf_picks || {},
     };
   },
 };

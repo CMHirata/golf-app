@@ -36,7 +36,7 @@
 import { useCallback, useMemo, useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Btn, G } from '../components/ui.jsx';
 import { ScoreGrid } from './scorecard/ScoreGrid.jsx';
-import { computeNolDotOptions } from './scorecard/scorecardUtils.js';
+import { computeNolDotOptions, buildWolfState } from './scorecard/scorecardUtils.js';
 import { useDepartureResolver } from './scorecard/useDepartureResolver.js';
 import { DepartureResolverSheet } from './scorecard/DepartureResolverSheet.jsx';
 import { ReorderDeparturesModal } from './scorecard/ReorderDeparturesModal.jsx';
@@ -113,6 +113,7 @@ const ScorecardPage = forwardRef(function ScorecardPage(
   const [dots,          setDots]           = useState(initDots || []);
   const [dotEntries,    setDotEntries_]    = useState(() => ar.dotEntries || {});
   const [manualPresses, setManualPresses_] = useState(() => ar.manualPresses || {});
+  const [wolfPicks,     setWolfPicks_]     = useState(() => ar.wolfPicks || {});
 
   // Refs always mirror the latest state values synchronously.
   // Updated inside the wrapped setters below — never via useEffect — so they
@@ -120,6 +121,7 @@ const ScorecardPage = forwardRef(function ScorecardPage(
   const scoresRef        = useRef(ar.scores || Array.from({ length: 18 }, () => new Array(activePlayers.length).fill('')));
   const dotEntriesRef    = useRef(ar.dotEntries || {});
   const manualPressesRef = useRef(ar.manualPresses || {});
+  const wolfPicksRef     = useRef(ar.wolfPicks || {});
 
   // Wrapped setters keep refs in sync synchronously.
   const setScores = useCallback((fn) => {
@@ -146,6 +148,14 @@ const ScorecardPage = forwardRef(function ScorecardPage(
     });
   }, []);
 
+  const setWolfPicks = useCallback((fn) => {
+    setWolfPicks_(prev => {
+      const next = typeof fn === 'function' ? fn(prev) : fn;
+      wolfPicksRef.current = next;
+      return next;
+    });
+  }, []);
+
   const isDiscardingRef = useRef(false);
 
   // Persist mutable state on every change.
@@ -157,13 +167,13 @@ const ScorecardPage = forwardRef(function ScorecardPage(
   // after would re-write the cleared round.
   useEffect(() => {
     const latest = getActiveRound() || ar;
-    saveActiveRound({ ...latest, scores, dotEntries, manualPresses });
+    saveActiveRound({ ...latest, scores, dotEntries, manualPresses, wolfPicks });
     return () => {
       if (isDiscardingRef.current) return;
       const latestOnUnmount = getActiveRound() || ar;
-      saveActiveRound({ ...latestOnUnmount, scores: scoresRef.current, dotEntries: dotEntriesRef.current, manualPresses: manualPressesRef.current });
+      saveActiveRound({ ...latestOnUnmount, scores: scoresRef.current, dotEntries: dotEntriesRef.current, manualPresses: manualPressesRef.current, wolfPicks: wolfPicksRef.current });
     };
-  }, [scores, dotEntries, manualPresses]);
+  }, [scores, dotEntries, manualPresses, wolfPicks]);
 
   // ── Departure resolver chain (extracted to useDepartureResolver.js) ────────
   //
@@ -196,7 +206,7 @@ const ScorecardPage = forwardRef(function ScorecardPage(
   // always current so this is safe even if useEffect hasn't fired yet.
   const flushNow = useCallback(() => {
     const latest = getActiveRound() || ar;
-    saveActiveRound({ ...latest, scores: scoresRef.current, dotEntries: dotEntriesRef.current, manualPresses: manualPressesRef.current });
+    saveActiveRound({ ...latest, scores: scoresRef.current, dotEntries: dotEntriesRef.current, manualPresses: manualPressesRef.current, wolfPicks: wolfPicksRef.current });
   }, [getActiveRound, ar]);
 
   const flushAndBack = useCallback(() => {
@@ -284,6 +294,11 @@ const ScorecardPage = forwardRef(function ScorecardPage(
 
   const frontLabel = layout?.frontName;
   const backLabel  = layout?.backName;
+
+  // Wolf display state — computed fresh each render; passed to ScoreGrid → WolfTable
+  const wolfState = activeGames.includes('Wolf')
+    ? buildWolfState({ scores, players: activePlayers, gameOpts, wolfPicks, courseHcps, minCourseHcp })
+    : null;
 
   // Ref to ScoreGrid's openZoom — used for landscape zoom button
   const zoomTriggerRef = useRef(null);
@@ -438,6 +453,9 @@ const ScorecardPage = forwardRef(function ScorecardPage(
               onOpenDepartureResolver={onOpenDepartureResolver}
               onOpenReorderDeparturesModal={onOpenReorderDeparturesModal}
               onUndoDeparturePrompt={onUndoDeparturePrompt}
+              wolfPicks={wolfPicks}
+              setWolfPicks={setWolfPicks}
+              wolfState={wolfState}
             />
         }
       </div>

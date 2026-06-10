@@ -20,7 +20,7 @@ import { scoreForMode, stabPts, hdcpStrokesFromCourseHcp } from './handicap.js';
 // ─── Game list ────────────────────────────────────────────────────────────────
 // Single source of truth for available games. Import from here everywhere.
 // 'Match Play' and 'Nassau' replaced by unified 'Match / Nassau'.
-export const ALL_GAMES = ['Stroke Play', 'Skins', 'Match / Nassau', 'Stableford', 'Nines', 'Sixes', 'Dots'];
+export const ALL_GAMES = ['Stroke Play', 'Skins', 'Match / Nassau', 'Stableford', 'Nines', 'Sixes', 'Dots', 'Wolf'];
 
 // ─── Skins ───────────────────────────────────────────────────────────────────
 // skinPlayerIdxs: array of player indices participating (empty = all players)
@@ -776,4 +776,305 @@ export function sixesSegForHole(h) {
   if (h < 6) return 0;
   if (h < 12) return 1;
   return 2;
+}
+
+// ─── Wolf ─────────────────────────────────────────────────────────────────────
+// Contract: Wolf_Contract.md §5
+//
+// runWolf(scores, players, opts, wolfPicks, courseHcps, minCourseHcp)
+//   scores:       number[][] — scores[playerIdx][holeIdx]
+//   players:      activePlayers[] — each entry has siArray for net/NOL adjustment
+//   opts:         gameOpts.Wolf — { bet, wolfOrder, carryover, grossNetNOL }
+//   wolfPicks:    per-hole pick object keyed by hole index (0-based)
+//   courseHcps:   number[] — per-player course handicap (required for net/NOL)
+//   minCourseHcp: number   — minimum course handicap in group (for NOL)
+//
+// Returns WolfResult:
+//   holes[]:    per-hole resolution objects (all 18, resolved:false if incomplete)
+//   cumulative: number[4] — running point totals per player index after each hole
+//
+// Point values (fixed per contract §5.2):
+//   blindWolf: 3 pts each opponent   loneWolf: 2 pts each opponent
+//   partner:   1 pt each losing player to each winning player
+//
+// Payout is always pairwise. No payStyle. No betMode.
+export function runWolf(scores, players, opts, wolfPicks, courseHcps, minCourseHcp) {
+  const { wolfOrder = [0, 1, 2, 3], carryover = false, grossNetNOL = 'gross' } = opts || {};
+
+  // Guard: Wolf requires exactly 4 players
+  if (!players || players.length !== 4) {
+    return { holes: [], cumulative: [0, 0, 0, 0] };
+  }
+
+  // Validate wolfOrder is a permutation of [0,1,2,3]
+  const sortedOrder = [...wolfOrder].sort((a, b) => a - b);
+  if (sortedOrder.join(',') !== '0,1,2,3') {
+    return { holes: [], cumulative: [0, 0, 0, 0] };
+  }
+
+  const picks = wolfPicks || {};
+  const cumulative = [0, 0, 0, 0];
+  const holes = [];
+  const cHcps = courseHcps || players.map(() => 0);
+  const minCHcp = minCourseHcp ?? Math.min(...cHcps);
+
+  // Compute effective score for a player on a given hole
+  const effectiveScore = (pi, h) => {
+    const raw = scores[h]?.[pi];
+    if (raw === '' || raw == null) return null;
+    if (raw === 'X') return Infinity; // X always loses
+    const g = parseInt(raw);
+    if (!g) return null;
+    if (grossNetNOL === 'gross') return g;
+    const rank = players[pi].siArray[h];
+    return scoreForMode(g, cHcps[pi], rank, minCHcp, grossNetNOL === 'netofflow' ? 'netofflow' : 'net');
+  };
+
+  let carryPoints = 0;
+
+  for (let h = 0; h < 18; h++) {
+    const wolfIdx = wolfOrder[h % 4];
+    const pick = picks[h];
+
+    if (!pick) {
+      holes.push({
+        holeIdx: h,
+        wolfIdx,
+        partnerIdx: null,
+        loneWolf: false,
+        blindWolf: false,
+        pointValue: 0,
+        carryPoints,
+        totalPoints: 0,
+        winningTeam: null,
+        losingTeam: null,
+        resolved: false,
+        tied: false,
+        deltas: [0, 0, 0, 0],
+      });
+      continue;
+    }
+
+    const { partnerIdx, loneWolf, blindWolf, pointValue } = pick;
+
+    // Determine teams
+    const nonWolf = [0, 1, 2, 3].filter(i => i !== wolfIdx);
+    let wolfTeam, oppTeam;
+    if (loneWolf || blindWolf) {
+      wolfTeam = [wolfIdx];
+      oppTeam  = nonWolf;
+    } else {
+      wolfTeam = [wolfIdx, partnerIdx];
+      oppTeam  = nonWolf.filter(i => i !== partnerIdx);
+    }
+
+    // Check all players scored
+    const allScored = [0, 1, 2, 3].every(pi => {
+      const raw = scores[h]?.[pi];
+      return raw !== '' && raw != null;
+    });
+
+    if (!allScored) {
+      holes.push({
+        holeIdx: h, wolfIdx, partnerIdx: partnerIdx ?? null,
+        loneWolf: !!loneWolf, blindWolf: !!blindWolf, pointValue,
+        carryPoints, totalPoints: 0,
+        winningTeam: null, losingTeam: null,
+        resolved: false, tied: false,
+        deltas: [0, 0, 0, 0],
+      });
+      continue;
+    }
+
+    // Best score for each team (lone wolf = single player; partner = best of two)
+    const wolfScore = Math.min(...wolfTeam.map(pi => effectiveScore(pi, h) ?? Infinity));
+    const oppScore  = Math.min(...oppTeam.map(pi => effectiveScore(pi, h) ?? Infinity));
+
+    let winningTeam = null;
+    let losingTeam  = null;
+    let tied        = false;
+
+    if (wolfScore < oppScore)       { winningTeam = wolfTeam; losingTeam = oppTeam; }
+    else if (oppScore < wolfScore)  { winningTeam = oppTeam;  losingTeam = wolfTeam; }
+    else                            { tied = true; }
+
+    const totalPoints = pointValue + carryPoints;
+    const deltas = [0, 0, 0, 0];
+    const carryIntoHole = carryPoints;
+
+    if (tied) {
+      if (carryover) {
+        carryPoints += pointValue;
+      } else {
+        carryPoints = 0;
+      }
+    } else {
+      // Pairwise: each loser pays each winner totalPoints
+      losingTeam.forEach(li => {
+        winningTeam.forEach(wi => {
+          deltas[li] -= totalPoints;
+          deltas[wi] += totalPoints;
+        });
+      });
+      carryPoints = 0;
+    }
+
+    deltas.forEach((d, i) => (cumulative[i] += d));
+
+    holes.push({
+      holeIdx:     h,
+      wolfIdx,
+      partnerIdx:  partnerIdx ?? null,
+      loneWolf:    !!loneWolf,
+      blindWolf:   !!blindWolf,
+      pointValue,
+      carryPoints: carryIntoHole,  // carry coming INTO this hole (before resolution)
+      totalPoints: tied ? 0 : totalPoints,
+      winningTeam: winningTeam ?? null,
+      losingTeam:  losingTeam  ?? null,
+      resolved:    true,
+      tied,
+      deltas,
+    });
+  }
+
+  return { holes, cumulative: [...cumulative] };
+}
+  const { wolfOrder = [0, 1, 2, 3], carryover = false, grossNetNOL = 'gross' } = opts || {};
+
+  // Guard: Wolf requires exactly 4 players
+  if (!players || players.length !== 4) {
+    return { holes: [], cumulative: [0, 0, 0, 0] };
+  }
+
+  // Validate wolfOrder is a permutation of [0,1,2,3]
+  const sortedOrder = [...wolfOrder].sort((a, b) => a - b);
+  if (sortedOrder.join(',') !== '0,1,2,3') {
+    return { holes: [], cumulative: [0, 0, 0, 0] };
+  }
+
+  const picks = wolfPicks || {};
+  const cumulative = [0, 0, 0, 0];
+  const holes = [];
+
+  // Compute effective score for a player on a given hole
+  const effectiveScore = (pi, h, courseHcps, minCHcp) => {
+    const raw = scores[h]?.[pi];
+    if (raw === '' || raw == null) return null;
+    if (raw === 'X') return Infinity; // X always loses
+    const g = parseInt(raw);
+    if (!g) return null;
+    if (grossNetNOL === 'gross') return g;
+    const rank = players[pi].siArray[h];
+    return scoreForMode(g, courseHcps ? courseHcps[pi] : 0, rank, minCHcp ?? 0, grossNetNOL === 'netofflow' ? 'netofflow' : 'net');
+  };
+
+  let carryPoints = 0;
+
+  for (let h = 0; h < 18; h++) {
+    const wolfIdx = wolfOrder[h % 4];
+    const pick = picks[h];
+
+    if (!pick) {
+      holes.push({
+        holeIdx: h,
+        wolfIdx,
+        partnerIdx: null,
+        loneWolf: false,
+        blindWolf: false,
+        pointValue: 0,
+        carryPoints,
+        totalPoints: 0,
+        winningTeam: null,
+        losingTeam: null,
+        resolved: false,
+        tied: false,
+        deltas: [0, 0, 0, 0],
+      });
+      continue;
+    }
+
+    const { partnerIdx, loneWolf, blindWolf, pointValue } = pick;
+
+    // Determine teams
+    const nonWolf = [0, 1, 2, 3].filter(i => i !== wolfIdx);
+    let wolfTeam, oppTeam;
+    if (loneWolf || blindWolf) {
+      wolfTeam = [wolfIdx];
+      oppTeam  = nonWolf;
+    } else {
+      wolfTeam = [wolfIdx, partnerIdx];
+      oppTeam  = nonWolf.filter(i => i !== partnerIdx);
+    }
+
+    // Check all players scored
+    const allScored = [0, 1, 2, 3].every(pi => {
+      const raw = scores[h]?.[pi];
+      return raw !== '' && raw != null;
+    });
+
+    if (!allScored) {
+      holes.push({
+        holeIdx: h, wolfIdx, partnerIdx: partnerIdx ?? null,
+        loneWolf: !!loneWolf, blindWolf: !!blindWolf, pointValue,
+        carryPoints, totalPoints: 0,
+        winningTeam: null, losingTeam: null,
+        resolved: false, tied: false,
+        deltas: [0, 0, 0, 0],
+      });
+      continue;
+    }
+
+    // Team scores (best team score = sum for partner, single for lone/blind)
+    const wolfScore = Math.min(...wolfTeam.map(pi => effectiveScore(pi, h, null, null) ?? Infinity));
+    const oppScore  = Math.min(...oppTeam.map(pi => effectiveScore(pi, h, null, null) ?? Infinity));
+
+    let winningTeam = null;
+    let losingTeam  = null;
+    let tied        = false;
+
+    if (wolfScore < oppScore)       { winningTeam = wolfTeam; losingTeam = oppTeam; }
+    else if (oppScore < wolfScore)  { winningTeam = oppTeam;  losingTeam = wolfTeam; }
+    else                            { tied = true; }
+
+    const totalPoints = pointValue + carryPoints;
+    const deltas = [0, 0, 0, 0];
+
+    if (tied) {
+      if (carryover) {
+        carryPoints += pointValue;
+      } else {
+        carryPoints = 0;
+      }
+    } else {
+      // Pairwise: each loser pays each winner totalPoints
+      losingTeam.forEach(li => {
+        winningTeam.forEach(wi => {
+          deltas[li] -= totalPoints;
+          deltas[wi] += totalPoints;
+        });
+      });
+      carryPoints = 0;
+    }
+
+    deltas.forEach((d, i) => (cumulative[i] += d));
+
+    holes.push({
+      holeIdx: h,
+      wolfIdx,
+      partnerIdx:  partnerIdx ?? null,
+      loneWolf:    !!loneWolf,
+      blindWolf:   !!blindWolf,
+      pointValue,
+      carryPoints: tied ? carryPoints - (carryover ? pointValue : 0) : totalPoints - pointValue, // carry coming INTO this hole
+      totalPoints: tied ? 0 : totalPoints,
+      winningTeam: winningTeam ?? null,
+      losingTeam:  losingTeam  ?? null,
+      resolved:    true,
+      tied,
+      deltas,
+    });
+  }
+
+  return { holes, cumulative: [...cumulative] };
 }

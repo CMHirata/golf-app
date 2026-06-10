@@ -1,6 +1,8 @@
 # App Data Model Contract
 
-_Version 3.8 — May 2026_
+_Version 4.1 — June 2026_
+_Changes in v4.1 (15-O): §5.2 — course library record schema added; `starred?: boolean` field documented (library-only, absent = false; starred courses sort above non-starred in `courseLib.list()`; A→Z within each tier). Mirrors player library `starred` pattern from §5.3._
+_Supersedes v4.0._
 _Changes in v3.8 (15-E.1): §1 Storage Keys — two app-preference keys (`moneyListRange`, `historyRange`) documented as the exception to the SK-only rule. New §1.1 — shape and valid values for the range pref object. §1.2 — backup payload `settings` field documented as a new top-level export field carrying app preferences (`moneyListRange` and `historyRange`); preserved through `HistoryPage.applyImport` and applied to localStorage on import. New shared component `RangePicker.jsx` in `src/components/` is the sole owner of read/write to these keys — see `UI_Component_Contract.md` §10._
 _Supersedes v3.7._
 _Changes in v3.7 (13-G.2): §5.3 Players — Player object schema gains `siArray: number[18]` (per-player stroke index, required at round-start; never null for a started round; built once via `buildPlayerSI(player, layout)` from `Handicap_Contract.md` §2.8; not serialized — `roundLib.toActiveRound` rebuilds defensively on reload). Engines read `players[pi].siArray[h]` for stroke allocation in every game (§5 amendment in `Handicap_Contract.md`). The shared `activeRound.hcps` field is retained for SI display rows only._
