@@ -598,17 +598,14 @@ export function ScoreGrid({
   }, []);
 
   // Open keypad on a specific cell — always seeds kpValue='' (H-16)
-  // Wolf intercept: when pi===0 and Wolf is active, show pick popup first.
-  // Popup dismisses and calls openKeypadOnCell(h, 0) to resume — keypad
-  // stays open throughout. If pick already exists, popup shows it highlighted.
   const openKeypadOnCell = useCallback((h, pi) => {
     cancelKpAdvance();
+    // Wolf intercept: manual tap on pi===0 — show pick popup before keypad.
+    // Auto-advance path is handled inside kpAdvanceCell at hole boundary.
     if (pi === 0 && activeGames?.includes('Wolf') && setWolfPicks) {
       const wolfOrder = gameOpts?.Wolf?.wolfOrder || [0, 1, 2, 3];
-      const wolfIdx = wolfOrder[h % 4];
-      // Store target cell so popup can restore keypad after dismissal
+      const wolfIdx   = wolfOrder[h % 4];
       setWolfPickPrompt({ holeIdx: h, wolfIdx, resumeCell: { h, pi: 0 } });
-      // Do NOT open keypad yet — popup will call resumeKeypad after pick
       return;
     }
     setActiveKpCell({ h, pi });
@@ -630,11 +627,20 @@ export function ScoreGrid({
       setKpValue('');
       return;
     }
+    // Wolf: when crossing into a new hole (nh !== h), show pick popup instead
+    // of opening keypad. resumeKeypad restores activeKpCell after pick.
+    if (nh !== h && activeGames?.includes('Wolf') && setWolfPicks) {
+      const wolfOrder = gameOpts?.Wolf?.wolfOrder || [0, 1, 2, 3];
+      const wolfIdx   = wolfOrder[nh % 4];
+      setZoomHole(nh);
+      setWolfPickPrompt({ holeIdx: nh, wolfIdx, resumeCell: { h: nh, pi: 0 } });
+      return;
+    }
     // Keep ZoomModal centred on the active hole when crossing a hole boundary
     if (nh !== h) setZoomHole(nh);
     setActiveKpCell({ h: nh, pi: npi });
     setKpValue('');
-  }, [players.length, setZoomHole, roundEndHole]);
+  }, [players.length, setZoomHole, roundEndHole, activeGames, gameOpts, setWolfPicks]);
 
   // Retreat to prior cell
   const kpRetreatCell = useCallback((h, pi) => {
@@ -1561,8 +1567,12 @@ export function ScoreGrid({
         );
 
         return (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 450, background: 'rgba(0,0,0,0.45)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 450, background: 'rgba(0,0,0,0.45)',
+                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+            onTouchEnd={(e) => { if (e.target === e.currentTarget) { wolfTouchRef.current = Date.now(); resumeKeypad(); } }}
+            onClick={(e) => { if (e.target === e.currentTarget && Date.now() - wolfTouchRef.current > 600) resumeKeypad(); }}
+          >
             <div onClick={e => e.stopPropagation()}
               style={{ background: '#fff', borderRadius: 14, padding: '18px 16px 16px',
                        width: '100%', maxWidth: 320, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
@@ -1597,6 +1607,14 @@ export function ScoreGrid({
                   { border: '2px solid #1a3a5c',   background: '#c8d8f8', color: '#1a3a5c' },
                   isSelected(null, false, true),
                   <span>Go Blind Wolf <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(3 pts)</span></span>
+                )}
+                {/* Cancel — keeps existing pick (or none), resumes keypad */}
+                {guardedBtn(
+                  resumeKeypad,
+                  { border: '1.5px solid #ddd', background: '#f5f5f5', color: '#888', marginTop: 4 },
+                  { border: '1.5px solid #ddd', background: '#f5f5f5', color: '#888', marginTop: 4 },
+                  false,
+                  <span style={{ fontWeight: 500 }}>Cancel</span>
                 )}
               </div>
             </div>
