@@ -799,7 +799,7 @@ export function sixesSegForHole(h) {
 //
 // Payout is always pairwise. No payStyle. No betMode.
 export function runWolf(scores, players, opts, wolfPicks, courseHcps, minCourseHcp) {
-  const { wolfOrder = [0, 1, 2, 3], carryover = false, grossNetNOL = 'gross' } = opts || {};
+  const { wolfOrder = [0, 1, 2, 3], carryover = false, grossNetNOL = 'net' } = opts || {};
 
   // Guard: Wolf requires exactly 4 players
   if (!players || players.length !== 4) {
