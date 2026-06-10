@@ -22,13 +22,14 @@ const NEU_CLR     = '#aaa';
 const fmtDelta = d => d === 0 ? '·' : d > 0 ? `+${d}` : `${d}`;
 const dClr     = d => d > 0 ? POS_CLR : d < 0 ? NEG_CLR : NEU_CLR;
 
-// Wolf design tokens — green palette matching M but with Wolf label
+// Wolf design tokens — green palette matching M but with row alternation
 const W = {
   hdrBg:  M.hdrBg,
   hdrClr: M.hdrClr,
   totBg:  M.totBg,
   totClr: M.totClr,
   border: M.border,
+  row:    ['#f5fbf5', '#edf7ed'],
 };
 
 export default function WolfTable({ players, wolfState, opts, isLandscape }) {
@@ -74,7 +75,7 @@ export default function WolfTable({ players, wolfState, opts, isLandscape }) {
               const pi  = orderedPis[rowIdx];
               const tot = hs === FRONT_H ? frontTot[pi] : backTot[pi];
               return (
-                <tr key={pi} style={{ background: M.row[rowIdx % 2] }}>
+                <tr key={pi} style={{ background: W.row[rowIdx % 2] }}>
                   <td style={{ ...nameTd, color: W.hdrClr }}>{p.name}</td>
                   {hs.map(h => {
                     const hole = holes[h];
@@ -111,7 +112,7 @@ export default function WolfTable({ players, wolfState, opts, isLandscape }) {
           const ft = frontTot[pi];
           const bt = backTot[pi];
           return (
-            <tr key={pi} style={{ background: M.row[rowIdx % 2] }}>
+            <tr key={pi} style={{ background: W.row[rowIdx % 2] }}>
               <td style={{ ...nameTd, color: W.hdrClr }}>{p.name}</td>
               {FRONT_H.map(h => {
                 const hole = holes[h]; const d = hole?.deltas?.[pi] ?? 0; const bg = cellBg(pi, h);
