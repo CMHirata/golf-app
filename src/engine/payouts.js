@@ -1733,13 +1733,9 @@ export function computePayouts({
         const gb  = initBank(players);
 
         result.holes.forEach(hole => {
-          if (!hole.resolved || hole.tied || !hole.winningTeam) return;
-          hole.losingTeam.forEach(li => {
-            hole.winningTeam.forEach(wi => {
-              const amt = hole.totalPoints * bet;
-              gb[players[li].name] -= amt;
-              gb[players[wi].name] += amt;
-            });
+          if (!hole.resolved || hole.tied) return;
+          hole.deltas.forEach((d, pi) => {
+            if (d !== 0) gb[players[pi].name] += d * bet;
           });
         });
 

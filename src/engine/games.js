@@ -909,13 +909,22 @@ export function runWolf(scores, players, opts, wolfPicks, courseHcps, minCourseH
         carryPoints = 0;
       }
     } else {
-      // Pairwise: each loser pays each winner totalPoints
-      losingTeam.forEach(li => {
-        winningTeam.forEach(wi => {
-          deltas[li] -= totalPoints;
-          deltas[wi] += totalPoints;
+      if (loneWolf || blindWolf) {
+        // Lone/Blind Wolf: Wolf collects totalPoints from each opponent individually.
+        // Wolf wins: each opponent pays Wolf totalPoints.
+        // Wolf loses: Wolf pays each opponent totalPoints.
+        losingTeam.forEach(li => {
+          winningTeam.forEach(wi => {
+            deltas[li] -= totalPoints;
+            deltas[wi] += totalPoints;
+          });
         });
-      });
+      } else {
+        // Partner: each player on winning side gets +totalPoints,
+        // each player on losing side pays -totalPoints. Flat, not per-opponent.
+        winningTeam.forEach(wi => { deltas[wi] += totalPoints; });
+        losingTeam.forEach(li => { deltas[li] -= totalPoints; });
+      }
       carryPoints = 0;
     }
 
