@@ -596,6 +596,8 @@ export function ScoreGrid({
       const skipped = engineHole?.skipped;
       if (!skipped) {
         const wolfIdx = engineHole?.wolfIdx ?? (gameOpts?.Wolf?.wolfOrder || [0,1,2,3])[h % 4];
+        setActiveKpCell(null);
+        setKpValue('');
         setWolfPickPrompt({ holeIdx: h, wolfIdx, resumeCell: { h, pi: 0 } });
         return;
       }
@@ -650,6 +652,8 @@ export function ScoreGrid({
       if (!skipped) {
         const wolfIdx = engineHole?.wolfIdx ?? (gameOpts?.Wolf?.wolfOrder || [0,1,2,3])[nh % 4];
         setZoomHole(nh);
+        setActiveKpCell(null);
+        setKpValue('');
         setWolfPickPrompt({ holeIdx: nh, wolfIdx, resumeCell: { h: nh, pi: 0 } });
         return;
       }
@@ -1641,16 +1645,6 @@ export function ScoreGrid({
                   { border: '2px solid #4a1580',   background: '#dac8f5', color: '#4a1580' },
                   isSelected(null, false, true),
                   <span>Go Blind Wolf <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(3 pts)</span></span>
-                )}
-                {/* Cancel — always available. Dismisses the popup; resumes the
-                    keypad only if a pick already existed (same behavior as
-                    outside-tap), so an unresolved hole never gets scoreable. */}
-                {guardedBtn(
-                  handleOutsideTap,
-                  { border: '1.5px solid #ddd', background: '#f5f5f5', color: '#888', marginTop: 4 },
-                  { border: '1.5px solid #ddd', background: '#f5f5f5', color: '#888', marginTop: 4 },
-                  false,
-                  <span style={{ fontWeight: 500 }}>Cancel</span>
                 )}
               </div>
             </div>
