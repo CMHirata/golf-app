@@ -278,22 +278,9 @@ export function ScoreGrid({
     setKpValue('');
   }, []);
 
-  // When ZoomModal opens, activate the first empty cell on the target hole.
-  // Deferred by one tick so the dismiss handler (touchend) doesn't immediately
-  // clear it (the zoom button tap fires touchend after setZoomOpen).
-  useEffect(() => {
-    if (!zoomOpen) return;
-    const timer = setTimeout(() => {
-      let targetPi = 0;
-      for (let pi = 0; pi < players.length; pi++) {
-        const v = scores[zoomHole]?.[pi];
-        if (v === '' || v == null) { targetPi = pi; break; }
-      }
-      setActiveKpCell({ h: zoomHole, pi: targetPi });
-      setKpValue('');
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [zoomOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  // (ZoomModal initial-cell-activation effect moved below openKeypadOnCell's
+  // definition — see after openKeypadOnCell — so it can call that function
+  // directly without relying on closure timing across the render.)
 
   // H-4: isLandscape passed from ScorecardPage; fall back to local detection.
   const [isLandscapeLocal, setIsLandscapeLocal] = useState(
@@ -617,6 +604,27 @@ export function ScoreGrid({
     setActiveKpCell({ h, pi });
     setKpValue('');
   }, [cancelKpAdvance, activeGames, gameOpts, setWolfPicks, wolfState]);
+
+  // When ZoomModal opens, activate the first empty cell on the target hole.
+  // Deferred by one tick so the dismiss handler (touchend) doesn't immediately
+  // clear it (the zoom button tap fires touchend after setZoomOpen).
+  // Routed through openKeypadOnCell (not setActiveKpCell directly) so the
+  // Wolf pick popup intercept fires correctly when targetPi === 0 — this is
+  // what makes the popup open on Hole 1 when ZoomModal defaults there on
+  // round start, matching the auto-advance and manual-tap paths.
+  useEffect(() => {
+    if (!zoomOpen) return;
+    const timer = setTimeout(() => {
+      let targetPi = 0;
+      for (let pi = 0; pi < players.length; pi++) {
+        const v = scores[zoomHole]?.[pi];
+        if (v === '' || v == null) { targetPi = pi; break; }
+      }
+      openKeypadOnCell(zoomHole, targetPi);
+    }, 0);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoomOpen]);
 
   // iOS click-suppression: track when touchend handled a tap so the
   // synthetic click that follows ~300ms later is ignored. preventDefault()
