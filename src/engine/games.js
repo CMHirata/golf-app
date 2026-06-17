@@ -799,7 +799,14 @@ export function sixesSegForHole(h) {
 //
 // Payout is always pairwise. No payStyle. No betMode.
 export function runWolf(scores, players, opts, wolfPicks, courseHcps, minCourseHcp) {
-  const { wolfOrder = [0, 1, 2, 3], carryover = false, grossNetNOL = 'net' } = opts || {};
+  const {
+    wolfOrder   = [0,1,2,3],
+    carryover   = false,
+    grossNetNOL = 'net',
+    ptPartner   = 1,
+    ptLone      = 2,
+    ptBlind     = 3,
+  } = opts || {};
 
   // Guard: Wolf requires exactly 4 players
   if (!players || players.length !== 4) {
@@ -855,7 +862,9 @@ export function runWolf(scores, players, opts, wolfPicks, courseHcps, minCourseH
       continue;
     }
 
-    const { partnerIdx, loneWolf, blindWolf, pointValue } = pick;
+    const { partnerIdx, loneWolf, blindWolf } = pick;
+    // Derive pointValue from current opts so config changes take effect immediately
+    const pointValue = blindWolf ? ptBlind : loneWolf ? ptLone : ptPartner;
 
     // Determine teams
     const nonWolf = [0, 1, 2, 3].filter(i => i !== wolfIdx);

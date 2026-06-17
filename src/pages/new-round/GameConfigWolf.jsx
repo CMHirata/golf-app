@@ -1,31 +1,31 @@
 // ─── GameConfigWolf.jsx ───────────────────────────────────────────────────────
 // Wolf game configuration panel.
 // Rendered by GameConfig.jsx dispatcher when game === 'Wolf'.
-// Architecture: UI layer only — no engine calls (ARCHITECTURE_FOUNDATIONS §2).
+//
+// Uses BetSection + StyledSel from GameConfigShared — identical structure
+// to GameConfigSkins / GameConfigNines.
 //
 // Config surface (Wolf_Contract.md §3.3):
-//   - Bet per point (dollar amount)
-//   - Carryover toggle (tied holes carry vs push)
-//   - Wolf order panel: 4 slots showing player names in rotation order
-//     plus a Randomize button (all permutations of 4 indices valid)
+//   - Bet per point (BetSection, carryover as extraField)
+//   - Point values for partner / lone wolf / blind wolf (StyledSel, 1–5)
+//   - Wolf order panel: 4 slots + Randomize button
 //
-// grossNetNOL is handled by the parent GameTile header (not rendered here).
-// payStyle is not supported for Wolf (contract §5.3 / §10.6).
+// grossNetNOL handled by parent GameTile header (not here).
+// payStyle not supported for Wolf.
+//
+// ✅ Self-checked (16-A): uses BetSection/StyledSel/G/GA from shared
+//   components. Point values stored as opts.ptPartner/ptLone/ptBlind.
+//   Defaults: 1/2/3 matching contract. WolfOrderPanel unchanged.
 
-import { useState } from 'react';
-import { BetInput, G, GA } from '../../components/ui.jsx';
+import { G, GA } from '../../components/ui.jsx';
+import { BetSection } from './GameConfigShared.jsx';
+import { StyledSel } from '../PlayerDropdown.jsx';
 
-// ─── Wolf order panel ─────────────────────────────────────────────────────────
-// Shows 4 numbered slots. Tapping a slot cycles that player forward by 1
-// position in the order (shift right, others shift left — intuitive "move up"
-// feel for who goes first).
-// Randomize button: shuffles order using Fisher-Yates ensuring a different
-// permutation each time (retries once on identity to avoid no-op feel).
+const PT_OPTS = [1,2,3,4,5].map(v => ({ value: v, label: String(v) }));
+
 function WolfOrderPanel({ players, wolfOrder, onOrderChange }) {
-  const n = 4;
-
   const randomize = () => {
-    const arr = [0, 1, 2, 3];
+    const arr = [0,1,2,3];
     let result;
     let attempts = 0;
     do {
@@ -39,7 +39,6 @@ function WolfOrderPanel({ players, wolfOrder, onOrderChange }) {
     onOrderChange(result);
   };
 
-  // Tap a slot: swap it with the previous slot (moves player earlier in order)
   const moveUp = (slotIdx) => {
     if (slotIdx === 0) return;
     const next = [...wolfOrder];
@@ -49,54 +48,44 @@ function WolfOrderPanel({ players, wolfOrder, onOrderChange }) {
 
   return (
     <div style={{ marginTop: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#666' }}>Wolf Order</span>
-        <button
-          onClick={randomize}
-          style={{
-            padding: '4px 10px', borderRadius: 8,
-            border: `1.5px solid ${G}`, background: GA,
-            fontSize: 11, fontWeight: 700, color: G,
-            cursor: 'pointer', fontFamily: 'inherit',
-          }}>
-          Randomize
-        </button>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+        <span style={{ fontSize:11, fontWeight:700, color:'#666' }}>Wolf Order</span>
+        <button onClick={randomize} style={{
+          padding:'4px 10px', borderRadius:8,
+          border:`1.5px solid ${G}`, background:GA,
+          fontSize:11, fontWeight:700, color:G,
+          cursor:'pointer', fontFamily:'inherit',
+        }}>Randomize</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:5 }}>
         {wolfOrder.map((pi, slotIdx) => {
-          const p = players[pi];
-          const first = (p?.name || '?').trim().split(/\s+/)[0];
+          const first = (players[pi]?.name || '?').trim().split(/\s+/)[0];
           return (
-            <div
-              key={slotIdx}
-              onClick={() => moveUp(slotIdx)}
-              style={{
-                borderRadius: 8,
-                border: `1.5px solid ${G}`,
-                background: slotIdx === 0 ? G : GA,
-                padding: '5px 4px',
-                textAlign: 'center',
-                cursor: slotIdx === 0 ? 'default' : 'pointer',
-                userSelect: 'none',
-              }}>
-              <div style={{ fontSize: 9, fontWeight: 600, color: slotIdx === 0 ? '#fff' : '#888', marginBottom: 2 }}>
-                {slotIdx === 0 ? 'First' : `#${slotIdx + 1}`}
+            <div key={slotIdx} onClick={() => moveUp(slotIdx)} style={{
+              borderRadius:8, border:`1.5px solid ${G}`,
+              background: slotIdx === 0 ? G : GA,
+              padding:'5px 4px', textAlign:'center',
+              cursor: slotIdx === 0 ? 'default' : 'pointer',
+              userSelect:'none',
+            }}>
+              <div style={{ fontSize:9, fontWeight:600, color: slotIdx===0?'#fff':'#888', marginBottom:2 }}>
+                {slotIdx===0?'First':`#${slotIdx+1}`}
               </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: slotIdx === 0 ? '#fff' : G, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize:12, fontWeight:700, color: slotIdx===0?'#fff':G,
+                            overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {first}
               </div>
             </div>
           );
         })}
       </div>
-      <div style={{ fontSize: 10, color: '#aaa', marginTop: 4 }}>
+      <div style={{ fontSize:10, color:'#aaa', marginTop:4 }}>
         Tap a slot to move that player earlier in the order
       </div>
     </div>
   );
 }
 
-// ─── GameConfigWolf (exported) ────────────────────────────────────────────────
 export function GameConfigWolf({
   opts, setOpt,
   bet, setBet,
@@ -104,54 +93,57 @@ export function GameConfigWolf({
   activateSetupKp,
   activeFieldId,
 }) {
-  const wolfOrder = opts?.wolfOrder || [0, 1, 2, 3];
-  const carryover = opts?.carryover ?? false;
+  const wolfOrder  = opts?.wolfOrder  || [0,1,2,3];
+  const carryover  = opts?.carryover  ?? false;
+  const ptPartner  = opts?.ptPartner  ?? 1;
+  const ptLone     = opts?.ptLone     ?? 2;
+  const ptBlind    = opts?.ptBlind    ?? 3;
 
   return (
-    <div style={{ width: '100%', boxSizing: 'border-box' }}>
+    <>
+      <BetSection
+        values={{ single: bet }}
+        onValueChange={(_, v) => setBet(v)}
+        extraField={
+          <StyledSel
+            value={carryover}
+            onChange={v => setOpt('carryover', v)}
+            options={[
+              { value: false, label: 'No Carryover' },
+              { value: true,  label: 'Carryover'    },
+            ]}
+            width="100%"
+          />
+        }
+        onActivate={activateSetupKp}
+        activeFieldId={activeFieldId}
+        betSectionId="wolf"
+      />
 
-      {/* Bet per point */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: G }}>Bet / pt</span>
-        <BetInput
-          value={bet || 0}
-          onChange={setBet}
-          style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center' }}
-          onActivate={activateSetupKp}
-          fieldId="wolf_bet"
-          isActive={activeFieldId === 'wolf_bet'}
-        />
+      {/* Point values */}
+      <div style={{ marginTop:10 }}>
+        <div style={{ fontSize:11, fontWeight:700, color:'#666', marginBottom:6 }}>Points</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+          <div>
+            <div style={{ fontSize:10, color:'#888', marginBottom:3, textAlign:'center' }}>Partner</div>
+            <StyledSel value={ptPartner} onChange={v => setOpt('ptPartner', v)} options={PT_OPTS} width="100%"/>
+          </div>
+          <div>
+            <div style={{ fontSize:10, color:'#888', marginBottom:3, textAlign:'center' }}>Lone Wolf</div>
+            <StyledSel value={ptLone} onChange={v => setOpt('ptLone', v)} options={PT_OPTS} width="100%"/>
+          </div>
+          <div>
+            <div style={{ fontSize:10, color:'#888', marginBottom:3, textAlign:'center' }}>Blind Wolf</div>
+            <StyledSel value={ptBlind} onChange={v => setOpt('ptBlind', v)} options={PT_OPTS} width="100%"/>
+          </div>
+        </div>
       </div>
 
-      {/* Carryover toggle */}
-      <div
-        onClick={() => setOpt('carryover', !carryover)}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '7px 10px', borderRadius: 8,
-          border: `1.5px solid ${carryover ? G : '#ddd'}`,
-          background: carryover ? GA : '#fff',
-          cursor: 'pointer', marginBottom: 4,
-          userSelect: 'none',
-        }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: carryover ? G : '#666' }}>
-          Carryover (ties carry points)
-        </span>
-        <input
-          type="checkbox"
-          readOnly
-          checked={carryover}
-          style={{ accentColor: G, width: 14, height: 14, pointerEvents: 'none' }}
-        />
-      </div>
-
-      {/* Wolf order panel */}
       <WolfOrderPanel
         players={players}
         wolfOrder={wolfOrder}
         onOrderChange={v => setOpt('wolfOrder', v)}
       />
-
-    </div>
+    </>
   );
 }
