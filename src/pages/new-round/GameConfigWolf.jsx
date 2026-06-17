@@ -2,30 +2,61 @@
 // Wolf game configuration panel.
 // Rendered by GameConfig.jsx dispatcher when game === 'Wolf'.
 //
-// Uses BetSection + StyledSel from GameConfigShared — identical structure
-// to GameConfigSkins / GameConfigNines.
+// Uses BetSection + TiebreakSelect + StyledSel from GameConfigShared —
+// identical structure to GameConfigSkins / GameConfigNines.
 //
 // Config surface (Wolf_Contract.md §3.3):
 //   - Bet per point (BetSection, carryover as extraField)
+//   - Partner-team tiebreak rule (TiebreakSelect)
 //   - Point values for partner / lone wolf / blind wolf (StyledSel, 1–5)
-//   - Wolf order panel: 4 slots + Randomize button
+//   - Wolf Order section: "Holes 1-16" subtitle + 4 slots + Randomize,
+//     "Holes 17 & 18" subtitle + 3-button segmented control (fairness rule)
 //
 // grossNetNOL handled by parent GameTile header (not here).
 // payStyle not supported for Wolf.
 //
-// ✅ Self-checked (16-A): uses BetSection/StyledSel/G/GA from shared
-//   components. Point values stored as opts.ptPartner/ptLone/ptBlind.
-//   Defaults: 1/2/3 matching contract. WolfOrderPanel unchanged.
+// ✅ Self-checked (16-A): Wolf Order is now a single section with two
+//   subsections (Holes 1-16 / Holes 17 & 18) per owner layout request.
+//   17/18 rule uses a 3-button segmented control instead of a dropdown.
 
 import { G, GA } from '../../components/ui.jsx';
 import { BetSection, TiebreakSelect } from './GameConfigShared.jsx';
 import { StyledSel } from '../PlayerDropdown.jsx';
 
 const PT_OPTS = [1,2,3,4,5].map(v => ({ value: v, label: String(v) }));
-
 const ORDER_LABELS = ['First', 'Second', 'Third', 'Fourth'];
 
-function WolfOrderPanel({ players, wolfOrder, onOrderChange }) {
+const LAST_TWO_OPTS = [
+  { value: 'keepOrder', label: 'Same Order' },
+  { value: 'lastPlace', label: 'Last Place' },
+  { value: 'skip',      label: 'Skip' },
+];
+
+// ─── Segmented button control ─────────────────────────────────────────────
+function SegmentedButtons({ value, onChange, options }) {
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:`repeat(${options.length},1fr)`, gap:5 }}>
+      {options.map(opt => {
+        const active = value === opt.value;
+        return (
+          <div key={opt.value} onClick={() => onChange(opt.value)} style={{
+            borderRadius:8, border:`1.5px solid ${active ? G : '#ddd'}`,
+            background: active ? G : '#fff',
+            padding:'7px 4px', textAlign:'center',
+            cursor:'pointer', userSelect:'none',
+          }}>
+            <span style={{ fontSize:11, fontWeight:700, color: active ? '#fff' : '#888' }}>
+              {opt.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Wolf Order section — Holes 1-16 slots + Holes 17/18 fairness rule ────
+function WolfOrderSection({ players, wolfOrder, onOrderChange, lastTwoHoles, onLastTwoChange }) {
   const randomize = () => {
     const arr = [0,1,2,3];
     let result;
@@ -50,8 +81,13 @@ function WolfOrderPanel({ players, wolfOrder, onOrderChange }) {
 
   return (
     <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize:12, fontWeight:700, color:G, marginBottom:8 }}>Wolf Order</div>
+
+      {/* Holes 1-16 */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-        <span style={{ fontSize:11, fontWeight:700, color:'#666' }}>Wolf Order</span>
+        <span style={{ fontSize:10, fontWeight:700, color:'#888', textTransform:'uppercase', letterSpacing:'0.04em' }}>
+          Holes 1–16
+        </span>
         <button onClick={randomize} style={{
           padding:'4px 10px', borderRadius:8,
           border:`1.5px solid ${G}`, background:GA,
@@ -81,9 +117,18 @@ function WolfOrderPanel({ players, wolfOrder, onOrderChange }) {
           );
         })}
       </div>
-      <div style={{ fontSize:10, color:'#aaa', marginTop:4 }}>
+      <div style={{ fontSize:10, color:'#aaa', marginTop:4, marginBottom:12 }}>
         Tap a slot to move that player earlier in the order
       </div>
+
+      {/* Holes 17 & 18 */}
+      <div style={{ fontSize:10, fontWeight:700, color:'#888', textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:4 }}>
+        Holes 17 &amp; 18
+      </div>
+      <div style={{ fontSize:10, color:'#aaa', marginBottom:6 }}>
+        Rotation gives each player 4 turns through hole 16 — pick a rule for the last two
+      </div>
+      <SegmentedButtons value={lastTwoHoles} onChange={onLastTwoChange} options={LAST_TWO_OPTS}/>
     </div>
   );
 }
@@ -147,29 +192,12 @@ export function GameConfigWolf({
         </div>
       </div>
 
-      {/* Holes 17/18 fairness — rotation only covers holes 1-16 evenly (4 turns
-          each); holes 17/18 repeat players 1 and 2 unless adjusted. */}
-      <div style={{ marginTop:10 }}>
-        <div style={{ fontSize:11, fontWeight:700, color:'#666', marginBottom:4 }}>Holes 17 &amp; 18</div>
-        <div style={{ fontSize:10, color:'#aaa', marginBottom:6 }}>
-          Rotation gives each player 4 turns through hole 16 — holes 17/18 need a rule
-        </div>
-        <StyledSel
-          value={lastTwoHoles}
-          onChange={v => setOpt('lastTwoHoles', v)}
-          options={[
-            { value:'keepOrder', label:'Keep Same Order' },
-            { value:'lastPlace', label:'Last Place First' },
-            { value:'skip',      label:'Skip Holes 17/18' },
-          ]}
-          width="100%"
-        />
-      </div>
-
-      <WolfOrderPanel
+      <WolfOrderSection
         players={players}
         wolfOrder={wolfOrder}
         onOrderChange={v => setOpt('wolfOrder', v)}
+        lastTwoHoles={lastTwoHoles}
+        onLastTwoChange={v => setOpt('lastTwoHoles', v)}
       />
     </>
   );
