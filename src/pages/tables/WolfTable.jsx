@@ -36,11 +36,11 @@ export default function WolfTable({ players, wolfState, opts, isLandscape }) {
   if (!wolfState || !players || players.length !== 4) return null;
 
   const { holes, cumulative } = wolfState;
-  const wolfOrder   = opts?.wolfOrder   || [0, 1, 2, 3];
   const grossNetNOL = opts?.grossNetNOL ?? 'net';
 
-  // Players rendered in wolfOrder sequence
-  const orderedPis = wolfOrder;
+  // Players rendered in scorecard order (same as every other game table) —
+  // NOT wolfOrder sequence. wolfOrder only drives engine rotation logic.
+  const orderedPis = [0, 1, 2, 3];
   const orderedPlayers = orderedPis.map(pi => players[pi]).filter(Boolean);
 
   // Per-player half totals

@@ -64,6 +64,7 @@ import { roundLib } from '../services/roundLib.js';
 import { playerLib } from '../services/playerLib.js';
 import { restoreDotDefs, COL_W, TOT_W, NAME_MIN } from './scorecard/scorecardUtils.js';
 import { xGrossScore } from '../engine/handicap.js';
+import { runWolf } from '../engine/games.js';
 import { MatchNassauTable } from './tables/MatchNassauTable.jsx';
 import { SixesTable }       from './tables/SixesTable.jsx';
 import { SkinsTable }       from './tables/SkinsTable.jsx';
@@ -71,6 +72,7 @@ import { NinesTable }       from './tables/NinesTable.jsx';
 import { StablefordTable }  from './tables/StablefordTable.jsx';
 import { StrokePlayTable }  from './tables/StrokePlayTable.jsx';
 import { DotsTable }        from './tables/DotsTable.jsx';
+import WolfTable            from './tables/WolfTable.jsx';
 import { TotalsCard }       from './scorecard/TotalsCard.jsx';
 import { computePayouts }   from '../engine/payouts.js';
 import { buildPayoutArgs, computePerMatchPayouts } from '../services/roundUtils.js';
@@ -182,6 +184,7 @@ export function RoundSummaryModal({ r, onClose }) {
     ninesPlayers, strokePlayPlayers, dotsPlayers,
     dots: rawDots, dotEntries, manualPresses,
     frontNine, backNine,
+    wolfPicks,
   } = ar;
 
   // 13-C.7.6: Per-player departure metadata, forwarded to game tables
@@ -337,6 +340,17 @@ export function RoundSummaryModal({ r, onClose }) {
                     skinsPlayerIdxs={skinsPlayers} isLandscape={isLandscape}
                     startHole={r.startHole} endHole={r.endHole}
                     earlyDepartureOpts={earlyDepartureOpts}/>
+                );
+              })()}
+              {activeGames.includes('Wolf') && players.length === 4 && gameOpts?.Wolf && (() => {
+                const wolfOpts = gameOpts.Wolf;
+                const wolfMin = wolfOpts.grossNetNOL === 'netofflow'
+                  ? Math.min(...[0,1,2,3].map(i => courseHcps[i]))
+                  : minCourseHcp;
+                const wolfState = runWolf(scores, players, wolfOpts, wolfPicks || {}, courseHcps, wolfMin);
+                return (
+                  <WolfTable players={players} wolfState={wolfState}
+                    opts={wolfOpts} isLandscape={isLandscape}/>
                 );
               })()}
               {activeGames.includes('Stroke Play') && (() => {

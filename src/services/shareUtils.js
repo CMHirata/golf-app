@@ -21,7 +21,7 @@
 //    copy inside buildShareHtml preserved intact per PartialGameContract §11.9
 //    / H-28. No engine imports duplicated. No circular import created.
 
-import { runMatchNassau, calcSkins, calcSkinsHole, calcNines, ninesPts, getSixesTeam, calcSixesSegment } from '../engine/games.js';
+import { runMatchNassau, calcSkins, calcSkinsHole, calcNines, ninesPts, getSixesTeam, calcSixesSegment, runWolf } from '../engine/games.js';
 import { scoreForMode, stabPts, escTotal, xGrossScore, hdcpStrokesFromCourseHcp } from '../engine/handicap.js';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement as h } from 'react';
@@ -31,6 +31,7 @@ import { DotsTable }       from '../pages/tables/DotsTable.jsx';
 import { SkinsTable }      from '../pages/tables/SkinsTable.jsx';
 import { NinesTable }      from '../pages/tables/NinesTable.jsx';
 import { StablefordTable } from '../pages/tables/StablefordTable.jsx';
+import WolfTable           from '../pages/tables/WolfTable.jsx';
 import { StrokePlayTable } from '../pages/tables/StrokePlayTable.jsx';
 import { MatchNassauTable } from '../pages/tables/MatchNassauTable.jsx';
 import { cleanGameName } from './roundUtils.js';
@@ -165,6 +166,7 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
     sixesTeams, sixesPlayers,
     dots, dotEntries, dotsPlayers,
     matches,
+    wolfPicks,
   } = ar;
 
   // 13-C.7.6: forward earlyDepartureOpts to every embedded table renderer
@@ -425,6 +427,23 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
         isLandscape: false,
         earlyDepartureOpts,
       }));
+    }
+    if (ao.includes('Wolf') && players.length === 4) {
+      const wolfOpts = gameOpts?.Wolf;
+      if (wolfOpts) {
+        const wolfMin = (() => {
+          const idxs = [0,1,2,3];
+          const mode = wolfOpts.grossNetNOL;
+          if (mode === 'netofflow') return Math.min(...idxs.map(i => courseHcps[i]));
+          return minCourseHcp;
+        })();
+        const wolfState = runWolf(scores, players, wolfOpts, wolfPicks || {}, courseHcps, wolfMin);
+        gamesHtml += renderToStaticMarkup(h(WolfTable, {
+          players, wolfState,
+          opts: wolfOpts,
+          isLandscape: false,
+        }));
+      }
     }
     if (ao.includes('Stroke Play')) {
       gamesHtml += renderToStaticMarkup(h(StrokePlayTable, {
