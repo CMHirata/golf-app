@@ -771,7 +771,7 @@ function buildShareHtml(r, ar, bank, breakdown, matchPayouts, logoDataUri, orien
   const sorted = Object.entries(bank||{}).sort((a,b)=>b[1]-a[1]);
   let payHtml = secLabel('Payouts');
   payHtml += `<div style="border-radius:8px;overflow:hidden;border:1px solid #d8ead8;margin-bottom:16px;">`;
-  payHtml += `<div style="background:${G_COLOR};padding:6px 12px;"><span style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.5px;">Overall (all games)</span></div>`;
+  payHtml += `<div style="background:${G_COLOR};padding:6px 12px;"><span style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.5px;">Total Payouts</span></div>`;
   sorted.forEach(([nm, v], i) => {
     const clr = v>0?GRN_PAY:v<0?RED_PAY:'#888';
     const bg  = i%2===0 ? '#fff' : '#f5fbf5';

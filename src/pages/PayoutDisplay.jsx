@@ -133,7 +133,7 @@ function GameCard({ children }) {
 }
 
 // ── PayoutsSection ────────────────────────────────────────────────────────────
-export function PayoutsSection({ bank, breakdown, matchPayouts }) {
+export function PayoutsSection({ bank, breakdown, matchPayouts, showTotalRow = true }) {
   if (!bank || !Object.keys(bank).length) {
     return (
       <div style={{ fontSize: 12, color: '#aaa', padding: '8px 0', textAlign: 'center' }}>
@@ -150,8 +150,22 @@ export function PayoutsSection({ bank, breakdown, matchPayouts }) {
     !String(e.game || '').startsWith('🥊 Match ')
   ).sort((a, b) => cleanGameName(a.game).localeCompare(cleanGameName(b.game)));
 
+  // Sorted overall totals, high to low — same data source as the share image's
+  // "Total Payouts" tile (built from `bank`, not per-game breakdown rows).
+  // ResultsPage already shows totals via its own player-chip row above this
+  // component, so it passes showTotalRow={false} to avoid duplication.
+  // RoundSummaryModal has no equivalent chip row, so it keeps the default.
+  const sortedTotals = Object.entries(bank).sort((a, b) => b[1] - a[1]);
+
   return (
     <div>
+      {showTotalRow && (
+        <GameCard>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Payouts</div>
+          {sortedTotals.map(([name, net], i) => <PayRow key={i} name={name} net={net}/>)}
+        </GameCard>
+      )}
+
       <div style={{ fontSize: 10, fontWeight: 700, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>By Game</div>
 
       {/* Per-match payouts */}

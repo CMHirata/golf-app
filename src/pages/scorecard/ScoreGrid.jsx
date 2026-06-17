@@ -1553,6 +1553,14 @@ export function ScoreGrid({
           }
         };
 
+        // A pick is required before the popup can be dismissed. Cancel/
+        // outside-tap only dismiss when a pick already exists (editing an
+        // already-resolved hole); otherwise they no-op so the hole cannot
+        // be left scored-but-unresolved.
+        const attemptDismiss = () => {
+          if (existingPick) resumeKeypad();
+        };
+
         const makePick = (partnerIdx, loneWolf, blindWolf, pointValue) => {
           if (setWolfPicks) {
             setWolfPicks(prev => ({ ...prev, [holeIdx]: {
@@ -1589,8 +1597,8 @@ export function ScoreGrid({
           <div
             style={{ position: 'fixed', inset: 0, zIndex: 450, background: 'rgba(0,0,0,0.45)',
                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-            onTouchEnd={(e) => { if (e.target === e.currentTarget) { wolfTouchRef.current = Date.now(); resumeKeypad(); } }}
-            onClick={(e) => { if (e.target === e.currentTarget && Date.now() - wolfTouchRef.current > 600) resumeKeypad(); }}
+            onTouchEnd={(e) => { if (e.target === e.currentTarget) { wolfTouchRef.current = Date.now(); attemptDismiss(); } }}
+            onClick={(e) => { if (e.target === e.currentTarget && Date.now() - wolfTouchRef.current > 600) attemptDismiss(); }}
           >
             <div onClick={e => e.stopPropagation()}
               style={{ background: '#fff', borderRadius: 14, padding: '18px 16px 16px',
@@ -1599,7 +1607,7 @@ export function ScoreGrid({
                 Hole {holeIdx + 1} — {wolfName} is Wolf
               </div>
               <div style={{ fontSize: 11, color: '#888', marginBottom: 14 }}>
-                {existingPick ? 'Current pick shown — tap to change' : 'Select partner or go alone'}
+                {existingPick ? 'Current pick shown — tap to change' : 'Select partner or go alone to continue'}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {nonWolf.map(pi => {
@@ -1615,20 +1623,21 @@ export function ScoreGrid({
                 })}
                 {guardedBtn(
                   () => makePick(null, true, false, 2),
-                  { border: '1.5px solid #fce4c4', background: '#fef3e8', color: '#7b3f00' },
-                  { border: '2px solid #7b3f00',   background: '#fce4c4', color: '#7b3f00' },
+                  { border: '1.5px solid #dac8f5', background: '#f0e8f8', color: '#4a1580' },
+                  { border: '2px solid #4a1580',   background: '#dac8f5', color: '#4a1580' },
                   isSelected(null, true, false),
                   <span>Go Lone Wolf <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(2 pts)</span></span>
                 )}
                 {guardedBtn(
                   () => makePick(null, false, true, 3),
-                  { border: '1.5px solid #c8d8f8', background: '#e8f0fc', color: '#1a3a5c' },
-                  { border: '2px solid #1a3a5c',   background: '#c8d8f8', color: '#1a3a5c' },
+                  { border: '1.5px solid #dac8f5', background: '#f0e8f8', color: '#4a1580' },
+                  { border: '2px solid #4a1580',   background: '#dac8f5', color: '#4a1580' },
                   isSelected(null, false, true),
                   <span>Go Blind Wolf <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(3 pts)</span></span>
                 )}
-                {/* Cancel — keeps existing pick (or none), resumes keypad */}
-                {guardedBtn(
+                {/* Cancel — only available when editing an already-resolved hole.
+                    No pick yet → no Cancel, since scoring can't proceed without one. */}
+                {existingPick && guardedBtn(
                   resumeKeypad,
                   { border: '1.5px solid #ddd', background: '#f5f5f5', color: '#888', marginTop: 4 },
                   { border: '1.5px solid #ddd', background: '#f5f5f5', color: '#888', marginTop: 4 },

@@ -283,7 +283,7 @@ export default function ResultsPage({ getActiveRound, onSave, onBack }) {
           <Card><div style={{ textAlign:'center', color:'#aaa', padding:36 }}>Enter scores to see results.</div></Card>
         )}
         {hasScores && (
-          <PayoutsSection breakdown={breakdown} bank={bank} matchPayouts={matchPayouts} />
+          <PayoutsSection breakdown={breakdown} bank={bank} matchPayouts={matchPayouts} showTotalRow={false} />
         )}
 
         {saveMsg && (
