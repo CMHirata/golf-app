@@ -20,7 +20,7 @@
 //   17/18 rule uses a 3-button segmented control instead of a dropdown.
 
 import { G, GA } from '../../components/ui.jsx';
-import { BetSection, TiebreakSelect } from './GameConfigShared.jsx';
+import { BetSection, TiebreakSelect, SegmentedPills } from './GameConfigShared.jsx';
 import { StyledSel } from '../PlayerDropdown.jsx';
 
 const PT_OPTS = [1,2,3,4,5].map(v => ({ value: v, label: String(v) }));
@@ -31,29 +31,6 @@ const LAST_TWO_OPTS = [
   { value: 'lastPlace', label: 'Last Place' },
   { value: 'skip',      label: 'Skip' },
 ];
-
-// ─── Segmented button control ─────────────────────────────────────────────
-function SegmentedButtons({ value, onChange, options }) {
-  return (
-    <div style={{ display:'grid', gridTemplateColumns:`repeat(${options.length},1fr)`, gap:5 }}>
-      {options.map(opt => {
-        const active = value === opt.value;
-        return (
-          <div key={opt.value} onClick={() => onChange(opt.value)} style={{
-            borderRadius:8, border:`1.5px solid ${active ? G : '#ddd'}`,
-            background: active ? G : '#fff',
-            padding:'7px 4px', textAlign:'center',
-            cursor:'pointer', userSelect:'none',
-          }}>
-            <span style={{ fontSize:11, fontWeight:700, color: active ? '#fff' : '#888' }}>
-              {opt.label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 // ─── Wolf Order section — Holes 1-16 slots + Holes 17/18 fairness rule ────
 function WolfOrderSection({ players, wolfOrder, onOrderChange, lastTwoHoles, onLastTwoChange }) {
@@ -100,16 +77,16 @@ function WolfOrderSection({ players, wolfOrder, onOrderChange, lastTwoHoles, onL
           const first = (players[pi]?.name || '?').trim().split(/\s+/)[0];
           return (
             <div key={slotIdx} onClick={() => moveUp(slotIdx)} style={{
-              borderRadius:8, border:`1.5px solid ${G}`,
-              background: slotIdx === 0 ? G : GA,
+              borderRadius:8, border:'1.5px solid #ddd',
+              background:'#fff',
               padding:'5px 4px', textAlign:'center',
               cursor: slotIdx === 0 ? 'default' : 'pointer',
               userSelect:'none',
             }}>
-              <div style={{ fontSize:9, fontWeight:600, color: slotIdx===0?'#fff':'#888', marginBottom:2 }}>
+              <div style={{ fontSize:9, fontWeight:600, color:'#888', marginBottom:2 }}>
                 {ORDER_LABELS[slotIdx]}
               </div>
-              <div style={{ fontSize:12, fontWeight:700, color: slotIdx===0?'#fff':G,
+              <div style={{ fontSize:12, fontWeight:700, color:G,
                             overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {first}
               </div>
@@ -128,7 +105,7 @@ function WolfOrderSection({ players, wolfOrder, onOrderChange, lastTwoHoles, onL
       <div style={{ fontSize:10, color:'#aaa', marginBottom:6 }}>
         Rotation gives each player 4 turns through hole 16 — pick a rule for the last two
       </div>
-      <SegmentedButtons value={lastTwoHoles} onChange={onLastTwoChange} options={LAST_TWO_OPTS}/>
+      <SegmentedPills value={lastTwoHoles} onChange={onLastTwoChange} options={LAST_TWO_OPTS}/>
     </div>
   );
 }

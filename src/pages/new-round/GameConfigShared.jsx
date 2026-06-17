@@ -356,18 +356,14 @@ export function TiebreakSelect({ value, onChange }) {
   );
 }
 
-// ─── PayStylePill ─────────────────────────────────────────────────────────────
-// Two-pill toggle for Pay Up / Pay Winner settlement style.
-// Rendered by each game panel when player count > 2.
-// value: 'payup' | 'paywinner'   onChange: (value) => void
-export function PayStylePill({ value, onChange }) {
-  const pills = [
-    { v: 'payup',     label: 'Pay Up' },
-    { v: 'paywinner', label: 'Pay Winner' },
-  ];
+// ─── SegmentedPills ───────────────────────────────────────────────────────────
+// Generalized N-option pill toggle. Selected = border highlight + tint
+// background (not solid fill) — matches PayStylePill exactly.
+// options: [{ value, label }]
+export function SegmentedPills({ value, onChange, options }) {
   return (
-    <div style={{ display:'flex', gap:5, marginTop:8 }}>
-      {pills.map(({ v, label }) => {
+    <div style={{ display:'flex', gap:5 }}>
+      {options.map(({ value: v, label }) => {
         const active = value === v;
         return (
           <div key={v} onClick={() => onChange(v)}
@@ -386,6 +382,25 @@ export function PayStylePill({ value, onChange }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ─── PayStylePill ─────────────────────────────────────────────────────────────
+// Two-pill toggle for Pay Up / Pay Winner settlement style.
+// Rendered by each game panel when player count > 2.
+// value: 'payup' | 'paywinner'   onChange: (value) => void
+export function PayStylePill({ value, onChange }) {
+  return (
+    <div style={{ marginTop:8 }}>
+      <SegmentedPills
+        value={value}
+        onChange={onChange}
+        options={[
+          { value:'payup',     label:'Pay Up' },
+          { value:'paywinner', label:'Pay Winner' },
+        ]}
+      />
     </div>
   );
 }

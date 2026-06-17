@@ -52,6 +52,7 @@ export {
   PlayerSubsetDropdown,
   PayStylePill,
   TiebreakSelect,
+  SegmentedPills,
 } from './GameConfigShared.jsx';
 
 import { GameConfigStrokePlay } from './GameConfigStrokePlay.jsx';
