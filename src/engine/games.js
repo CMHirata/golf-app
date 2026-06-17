@@ -861,10 +861,14 @@ export function runWolf(scores, players, opts, wolfPicks, courseHcps, minCourseH
     let wolfIdx;
     if (isLastTwo && lastTwoHoles === 'lastPlace') {
       // Whoever has the lowest cumulative points so far becomes Wolf.
-      // Ties broken by player index (lowest index wins the tiebreak).
-      let minVal = Infinity, minIdx = 0;
-      cumulative.forEach((v, pi) => { if (v < minVal) { minVal = v; minIdx = pi; } });
-      wolfIdx = minIdx;
+      // Ties broken by wolfOrder sequence: among tied players, whichever one
+      // appears earliest in wolfOrder wins the tiebreak (consistent with the
+      // app's existing rotation fairness rule rather than an arbitrary index).
+      const minVal = Math.min(...cumulative);
+      const tied = [0, 1, 2, 3].filter(pi => cumulative[pi] === minVal);
+      wolfIdx = tied.length === 1
+        ? tied[0]
+        : wolfOrder.find(pi => tied.includes(pi));
     } else {
       wolfIdx = wolfOrder[h % 4];
     }
