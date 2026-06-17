@@ -336,6 +336,26 @@ export function BetSection({
   );
 }
 
+// ─── TiebreakSelect ───────────────────────────────────────────────────────────
+// Shared Best Ball / Cumulative Score / 2nd Ball Breaks Tie dropdown.
+// Used by team-scoring games (Sixes, Wolf) where two players' scores combine
+// per hole and a tiebreak rule decides ties. value/onChange wire directly to
+// opts.scoring (or equivalent) in the calling panel.
+export function TiebreakSelect({ value, onChange }) {
+  return (
+    <StyledSel
+      value={value ?? 'none'}
+      onChange={onChange}
+      options={[
+        { value:'none',       label:'Best Ball' },
+        { value:'second',     label:'2nd Ball Breaks Tie' },
+        { value:'cumulative', label:'Cumulative Score' },
+      ]}
+      width="100%"
+    />
+  );
+}
+
 // ─── PayStylePill ─────────────────────────────────────────────────────────────
 // Two-pill toggle for Pay Up / Pay Winner settlement style.
 // Rendered by each game panel when player count > 2.

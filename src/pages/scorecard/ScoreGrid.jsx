@@ -602,15 +602,21 @@ export function ScoreGrid({
     cancelKpAdvance();
     // Wolf intercept: manual tap on pi===0 — show pick popup before keypad.
     // Auto-advance path is handled inside kpAdvanceCell at hole boundary.
+    // wolfIdx is read from the engine-computed wolfState (handles lastTwoHoles
+    // fairness modes correctly) rather than recomputing rotation here.
     if (pi === 0 && activeGames?.includes('Wolf') && setWolfPicks) {
-      const wolfOrder = gameOpts?.Wolf?.wolfOrder || [0, 1, 2, 3];
-      const wolfIdx   = wolfOrder[h % 4];
-      setWolfPickPrompt({ holeIdx: h, wolfIdx, resumeCell: { h, pi: 0 } });
-      return;
+      const engineHole = wolfState?.holes?.[h];
+      const skipped = engineHole?.skipped;
+      if (!skipped) {
+        const wolfIdx = engineHole?.wolfIdx ?? (gameOpts?.Wolf?.wolfOrder || [0,1,2,3])[h % 4];
+        setWolfPickPrompt({ holeIdx: h, wolfIdx, resumeCell: { h, pi: 0 } });
+        return;
+      }
+      // Skipped hole — no popup, open keypad directly
     }
     setActiveKpCell({ h, pi });
     setKpValue('');
-  }, [cancelKpAdvance, activeGames, gameOpts, setWolfPicks]);
+  }, [cancelKpAdvance, activeGames, gameOpts, setWolfPicks, wolfState]);
 
   // iOS click-suppression: track when touchend handled a tap so the
   // synthetic click that follows ~300ms later is ignored. preventDefault()
@@ -629,18 +635,23 @@ export function ScoreGrid({
     }
     // Wolf: when crossing into a new hole (nh !== h), show pick popup instead
     // of opening keypad. resumeKeypad restores activeKpCell after pick.
+    // wolfIdx read from engine-computed wolfState (handles lastTwoHoles modes).
     if (nh !== h && activeGames?.includes('Wolf') && setWolfPicks) {
-      const wolfOrder = gameOpts?.Wolf?.wolfOrder || [0, 1, 2, 3];
-      const wolfIdx   = wolfOrder[nh % 4];
-      setZoomHole(nh);
-      setWolfPickPrompt({ holeIdx: nh, wolfIdx, resumeCell: { h: nh, pi: 0 } });
-      return;
+      const engineHole = wolfState?.holes?.[nh];
+      const skipped = engineHole?.skipped;
+      if (!skipped) {
+        const wolfIdx = engineHole?.wolfIdx ?? (gameOpts?.Wolf?.wolfOrder || [0,1,2,3])[nh % 4];
+        setZoomHole(nh);
+        setWolfPickPrompt({ holeIdx: nh, wolfIdx, resumeCell: { h: nh, pi: 0 } });
+        return;
+      }
+      // Skipped hole — fall through to open keypad directly
     }
     // Keep ZoomModal centred on the active hole when crossing a hole boundary
     if (nh !== h) setZoomHole(nh);
     setActiveKpCell({ h: nh, pi: npi });
     setKpValue('');
-  }, [players.length, setZoomHole, roundEndHole, activeGames, gameOpts, setWolfPicks]);
+  }, [players.length, setZoomHole, roundEndHole, activeGames, gameOpts, setWolfPicks, wolfState]);
 
   // Retreat to prior cell
   const kpRetreatCell = useCallback((h, pi) => {

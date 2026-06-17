@@ -18,10 +18,12 @@
 //   Defaults: 1/2/3 matching contract. WolfOrderPanel unchanged.
 
 import { G, GA } from '../../components/ui.jsx';
-import { BetSection } from './GameConfigShared.jsx';
+import { BetSection, TiebreakSelect } from './GameConfigShared.jsx';
 import { StyledSel } from '../PlayerDropdown.jsx';
 
 const PT_OPTS = [1,2,3,4,5].map(v => ({ value: v, label: String(v) }));
+
+const ORDER_LABELS = ['First', 'Second', 'Third', 'Fourth'];
 
 function WolfOrderPanel({ players, wolfOrder, onOrderChange }) {
   const randomize = () => {
@@ -69,7 +71,7 @@ function WolfOrderPanel({ players, wolfOrder, onOrderChange }) {
               userSelect:'none',
             }}>
               <div style={{ fontSize:9, fontWeight:600, color: slotIdx===0?'#fff':'#888', marginBottom:2 }}>
-                {slotIdx===0?'First':`#${slotIdx+1}`}
+                {ORDER_LABELS[slotIdx]}
               </div>
               <div style={{ fontSize:12, fontWeight:700, color: slotIdx===0?'#fff':G,
                             overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
@@ -93,11 +95,12 @@ export function GameConfigWolf({
   activateSetupKp,
   activeFieldId,
 }) {
-  const wolfOrder  = opts?.wolfOrder  || [0,1,2,3];
-  const carryover  = opts?.carryover  ?? false;
-  const ptPartner  = opts?.ptPartner  ?? 1;
-  const ptLone     = opts?.ptLone     ?? 2;
-  const ptBlind    = opts?.ptBlind    ?? 3;
+  const wolfOrder    = opts?.wolfOrder    || [0,1,2,3];
+  const carryover    = opts?.carryover    ?? false;
+  const ptPartner    = opts?.ptPartner    ?? 1;
+  const ptLone       = opts?.ptLone       ?? 2;
+  const ptBlind      = opts?.ptBlind      ?? 3;
+  const lastTwoHoles = opts?.lastTwoHoles ?? 'keepOrder';
 
   return (
     <>
@@ -120,6 +123,11 @@ export function GameConfigWolf({
         betSectionId="wolf"
       />
 
+      {/* Partner team tiebreak rule */}
+      <div style={{ marginTop:8 }}>
+        <TiebreakSelect value={opts?.scoring} onChange={v => setOpt('scoring', v)}/>
+      </div>
+
       {/* Point values */}
       <div style={{ marginTop:10 }}>
         <div style={{ fontSize:11, fontWeight:700, color:'#666', marginBottom:6 }}>Points</div>
@@ -137,6 +145,25 @@ export function GameConfigWolf({
             <StyledSel value={ptBlind} onChange={v => setOpt('ptBlind', v)} options={PT_OPTS} width="100%"/>
           </div>
         </div>
+      </div>
+
+      {/* Holes 17/18 fairness — rotation only covers holes 1-16 evenly (4 turns
+          each); holes 17/18 repeat players 1 and 2 unless adjusted. */}
+      <div style={{ marginTop:10 }}>
+        <div style={{ fontSize:11, fontWeight:700, color:'#666', marginBottom:4 }}>Holes 17 &amp; 18</div>
+        <div style={{ fontSize:10, color:'#aaa', marginBottom:6 }}>
+          Rotation gives each player 4 turns through hole 16 — holes 17/18 need a rule
+        </div>
+        <StyledSel
+          value={lastTwoHoles}
+          onChange={v => setOpt('lastTwoHoles', v)}
+          options={[
+            { value:'keepOrder', label:'Keep Same Order' },
+            { value:'lastPlace', label:'Last Place First' },
+            { value:'skip',      label:'Skip Holes 17/18' },
+          ]}
+          width="100%"
+        />
       </div>
 
       <WolfOrderPanel

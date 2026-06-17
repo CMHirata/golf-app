@@ -800,12 +800,14 @@ export function sixesSegForHole(h) {
 // Payout is always pairwise. No payStyle. No betMode.
 export function runWolf(scores, players, opts, wolfPicks, courseHcps, minCourseHcp) {
   const {
-    wolfOrder   = [0,1,2,3],
-    carryover   = false,
-    grossNetNOL = 'net',
-    ptPartner   = 1,
-    ptLone      = 2,
-    ptBlind     = 3,
+    wolfOrder    = [0,1,2,3],
+    carryover    = false,
+    grossNetNOL  = 'net',
+    ptPartner    = 1,
+    ptLone       = 2,
+    ptBlind      = 3,
+    scoring      = 'none',
+    lastTwoHoles = 'keepOrder',
   } = opts || {};
 
   // Guard: Wolf requires exactly 4 players
@@ -840,7 +842,33 @@ export function runWolf(scores, players, opts, wolfPicks, courseHcps, minCourseH
   let carryPoints = 0;
 
   for (let h = 0; h < 18; h++) {
-    const wolfIdx = wolfOrder[h % 4];
+    const isLastTwo = h === 16 || h === 17;
+
+    // Holes 17/18 fairness handling (contract: rotation only covers holes
+    // 1-16 evenly at 4 turns each).
+    if (isLastTwo && lastTwoHoles === 'skip') {
+      holes.push({
+        holeIdx: h, wolfIdx: null, partnerIdx: null,
+        loneWolf: false, blindWolf: false, pointValue: 0,
+        carryPoints, totalPoints: 0,
+        winningTeam: null, losingTeam: null,
+        resolved: false, tied: false, skipped: true,
+        deltas: [0, 0, 0, 0],
+      });
+      continue;
+    }
+
+    let wolfIdx;
+    if (isLastTwo && lastTwoHoles === 'lastPlace') {
+      // Whoever has the lowest cumulative points so far becomes Wolf.
+      // Ties broken by player index (lowest index wins the tiebreak).
+      let minVal = Infinity, minIdx = 0;
+      cumulative.forEach((v, pi) => { if (v < minVal) { minVal = v; minIdx = pi; } });
+      wolfIdx = minIdx;
+    } else {
+      wolfIdx = wolfOrder[h % 4];
+    }
+
     const pick = picks[h];
 
     if (!pick) {
@@ -895,16 +923,38 @@ export function runWolf(scores, players, opts, wolfPicks, courseHcps, minCourseH
       continue;
     }
 
-    // Best score for each team (lone wolf = single player; partner = best of two)
-    const wolfScore = Math.min(...wolfTeam.map(pi => effectiveScore(pi, h) ?? Infinity));
-    const oppScore  = Math.min(...oppTeam.map(pi => effectiveScore(pi, h) ?? Infinity));
+    // Team score per scoring mode (only matters for 2-player partner teams;
+    // lone/blind wolf teams are a single player either way).
+    // 'none' (Best Ball): lower of the two scores wins.
+    // 'cumulative': sum of both team members' scores.
+    // 'second': best ball first; if tied, the worse (2nd) ball breaks the tie.
+    const teamScore = (team) => {
+      const vals = team.map(pi => effectiveScore(pi, h) ?? Infinity);
+      if (scoring === 'cumulative') return vals.reduce((a, b) => a + b, 0);
+      return Math.min(...vals);
+    };
+    const teamSecondBall = (team) => {
+      const vals = [...team.map(pi => effectiveScore(pi, h) ?? Infinity)].sort((a, b) => a - b);
+      return vals[1] ?? vals[0];
+    };
+
+    const wolfScore = teamScore(wolfTeam);
+    const oppScore  = teamScore(oppTeam);
 
     let winningTeam = null;
     let losingTeam  = null;
     let tied        = false;
 
-    if (wolfScore < oppScore)       { winningTeam = wolfTeam; losingTeam = oppTeam; }
-    else if (oppScore < wolfScore)  { winningTeam = oppTeam;  losingTeam = wolfTeam; }
+    if (wolfScore < oppScore)      { winningTeam = wolfTeam; losingTeam = oppTeam; }
+    else if (oppScore < wolfScore) { winningTeam = oppTeam;  losingTeam = wolfTeam; }
+    else if (scoring === 'second' && wolfTeam.length === 2 && oppTeam.length === 2) {
+      // Best balls tied — 2nd ball breaks the tie
+      const wolfSecond = teamSecondBall(wolfTeam);
+      const oppSecond  = teamSecondBall(oppTeam);
+      if (wolfSecond < oppSecond)      { winningTeam = wolfTeam; losingTeam = oppTeam; }
+      else if (oppSecond < wolfSecond) { winningTeam = oppTeam;  losingTeam = wolfTeam; }
+      else                              { tied = true; }
+    }
     else                            { tied = true; }
 
     const totalPoints = pointValue + carryPoints;

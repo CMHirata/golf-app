@@ -51,6 +51,7 @@ export {
   BetSection,
   PlayerSubsetDropdown,
   PayStylePill,
+  TiebreakSelect,
 } from './GameConfigShared.jsx';
 
 import { GameConfigStrokePlay } from './GameConfigStrokePlay.jsx';
