@@ -1545,6 +1545,11 @@ export function ScoreGrid({
         const existingPick = wolfPicks?.[holeIdx] ?? null;
         const wolfTouchRef = { current: 0 };
 
+        // closePopup: dismisses the popup only — never reopens the keypad.
+        // Used by outside-tap so the user can always back out to navigate
+        // elsewhere (other tabs, game tiles, etc.) without being trapped.
+        const closePopup = () => setWolfPickPrompt(null);
+
         const resumeKeypad = () => {
           setWolfPickPrompt(null);
           if (resumeCell) {
@@ -1553,12 +1558,14 @@ export function ScoreGrid({
           }
         };
 
-        // A pick is required before the popup can be dismissed. Cancel/
-        // outside-tap only dismiss when a pick already exists (editing an
-        // already-resolved hole); otherwise they no-op so the hole cannot
-        // be left scored-but-unresolved.
-        const attemptDismiss = () => {
+        // Outside-tap always dismisses. If a pick already existed for this
+        // hole, resume the keypad (user was just reviewing/editing). If no
+        // pick exists yet, close without reopening the keypad — the cell
+        // stays inactive, so no score can be typed; tapping that cell again
+        // will re-show this popup (openKeypadOnCell's pi===0 gate).
+        const handleOutsideTap = () => {
           if (existingPick) resumeKeypad();
+          else closePopup();
         };
 
         const makePick = (partnerIdx, loneWolf, blindWolf, pointValue) => {
@@ -1597,8 +1604,8 @@ export function ScoreGrid({
           <div
             style={{ position: 'fixed', inset: 0, zIndex: 450, background: 'rgba(0,0,0,0.45)',
                      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-            onTouchEnd={(e) => { if (e.target === e.currentTarget) { wolfTouchRef.current = Date.now(); attemptDismiss(); } }}
-            onClick={(e) => { if (e.target === e.currentTarget && Date.now() - wolfTouchRef.current > 600) attemptDismiss(); }}
+            onTouchEnd={(e) => { if (e.target === e.currentTarget) { wolfTouchRef.current = Date.now(); handleOutsideTap(); } }}
+            onClick={(e) => { if (e.target === e.currentTarget && Date.now() - wolfTouchRef.current > 600) handleOutsideTap(); }}
           >
             <div onClick={e => e.stopPropagation()}
               style={{ background: '#fff', borderRadius: 14, padding: '18px 16px 16px',
@@ -1607,7 +1614,7 @@ export function ScoreGrid({
                 Hole {holeIdx + 1} — {wolfName} is Wolf
               </div>
               <div style={{ fontSize: 11, color: '#888', marginBottom: 14 }}>
-                {existingPick ? 'Current pick shown — tap to change' : 'Select partner or go alone to continue'}
+                {existingPick ? 'Current pick shown — tap to change' : 'Select partner or go alone — required before scoring this hole'}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {nonWolf.map(pi => {
@@ -1635,10 +1642,11 @@ export function ScoreGrid({
                   isSelected(null, false, true),
                   <span>Go Blind Wolf <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(3 pts)</span></span>
                 )}
-                {/* Cancel — only available when editing an already-resolved hole.
-                    No pick yet → no Cancel, since scoring can't proceed without one. */}
-                {existingPick && guardedBtn(
-                  resumeKeypad,
+                {/* Cancel — always available. Dismisses the popup; resumes the
+                    keypad only if a pick already existed (same behavior as
+                    outside-tap), so an unresolved hole never gets scoreable. */}
+                {guardedBtn(
+                  handleOutsideTap,
                   { border: '1.5px solid #ddd', background: '#f5f5f5', color: '#888', marginTop: 4 },
                   { border: '1.5px solid #ddd', background: '#f5f5f5', color: '#888', marginTop: 4 },
                   false,
