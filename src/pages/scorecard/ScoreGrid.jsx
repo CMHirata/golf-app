@@ -1604,7 +1604,6 @@ export function ScoreGrid({
               border: '1.5px solid transparent',
               ...(isActive ? selectedStyle : style),
             }}>
-            {isActive && <span style={{ marginRight: 6, fontSize: 12 }}>✓</span>}
             {children}
           </button>
         );
@@ -1619,7 +1618,7 @@ export function ScoreGrid({
             <div onClick={e => e.stopPropagation()}
               style={{ background: '#fff', borderRadius: 14, padding: '18px 16px 16px',
                        width: '100%', maxWidth: 320, boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
-              <div style={{ fontWeight: 800, fontSize: 15, color: '#4a1580', marginBottom: 4 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#1a3a6e', marginBottom: 4 }}>
                 Hole {holeIdx + 1} — {wolfName} is Wolf
               </div>
               <div style={{ fontSize: 11, color: '#888', marginBottom: 14 }}>
@@ -1631,23 +1630,23 @@ export function ScoreGrid({
                   const active = isSelected(pi, false, false);
                   return guardedBtn(
                     () => makePick(pi, false, false, 1),
-                    { border: '1.5px solid #dac8f5', background: '#f0e8f8', color: '#4a1580' },
-                    { border: '2px solid #4a1580',   background: '#dac8f5', color: '#4a1580' },
+                    { border: '1.5px solid #c8d8f8', background: '#e8f0fc', color: '#1a3a6e' },
+                    { border: '2px solid #1a3a6e',   background: '#c8d8f8', color: '#1a3a6e' },
                     active,
                     <span>Partner: {name} <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(1 pt)</span></span>
                   );
                 })}
                 {guardedBtn(
                   () => makePick(null, true, false, 2),
-                  { border: '1.5px solid #dac8f5', background: '#f0e8f8', color: '#4a1580' },
-                  { border: '2px solid #4a1580',   background: '#dac8f5', color: '#4a1580' },
+                  { border: '1.5px solid #c8d8f8', background: '#e8f0fc', color: '#1a3a6e' },
+                  { border: '2px solid #1a3a6e',   background: '#c8d8f8', color: '#1a3a6e' },
                   isSelected(null, true, false),
                   <span>Go Lone Wolf <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(2 pts)</span></span>
                 )}
                 {guardedBtn(
                   () => makePick(null, false, true, 3),
-                  { border: '1.5px solid #dac8f5', background: '#f0e8f8', color: '#4a1580' },
-                  { border: '2px solid #4a1580',   background: '#dac8f5', color: '#4a1580' },
+                  { border: '1.5px solid #c8d8f8', background: '#e8f0fc', color: '#1a3a6e' },
+                  { border: '2px solid #1a3a6e',   background: '#c8d8f8', color: '#1a3a6e' },
                   isSelected(null, false, true),
                   <span>Go Blind Wolf <span style={{ fontSize: 11, fontWeight: 400, color: '#888' }}>(3 pts)</span></span>
                 )}
