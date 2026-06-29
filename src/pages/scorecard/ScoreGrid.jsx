@@ -1557,8 +1557,13 @@ export function ScoreGrid({
         const resumeKeypad = () => {
           setWolfPickPrompt(null);
           if (resumeCell) {
-            setActiveKpCell(resumeCell);
-            setKpValue('');
+            // Defer by one tick so wolfPicks state update (from makePick) flushes
+            // before activeKpCell is set — prevents the keypad from receiving
+            // stale state and failing to render visibly.
+            setTimeout(() => {
+              setActiveKpCell(resumeCell);
+              setKpValue('');
+            }, 0);
           }
         };
 
