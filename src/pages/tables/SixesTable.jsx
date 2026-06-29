@@ -370,8 +370,7 @@ export function SixesTable({
                     <td key={h} style={{ textAlign: 'center', color: '#bbb', fontSize: 12 }}>–</td>
                   );
                   const isA = w === 'a';
-                  const winnerPi = isA ? a : c;
-                  const isBlue = isBluePlayer(winnerPi);
+                  const isBlue = isA ? aIsBlueRow : !aIsBlueRow;
                   return (
                     <td key={h} style={{ textAlign: 'center', padding: '1px' }}>
                       <span style={{
@@ -425,8 +424,7 @@ export function SixesTable({
                         <td key={h} style={{ textAlign: 'center', color: '#bbb', fontSize: 12 }}>–</td>
                       );
                       const isA = w === 'a';
-                      const winnerPi = isA ? a : c;
-                      const isBlue = isBluePlayer(winnerPi);
+                      const isBlue = isA ? aIsBlueRow : !aIsBlueRow;
                       return (
                         <td key={h} style={{ textAlign: 'center', padding: '1px' }}>
                           <span style={{
