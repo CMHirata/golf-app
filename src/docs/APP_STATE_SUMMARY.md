@@ -33,15 +33,15 @@ Before logging a session anywhere, confirm all of the following:
 
 ## Work in Flight
 
-_None. Session 15-Bugs.6 fully complete and device-confirmed. **Next session: 16-A — Wolf (contract first)**._
+_None. Session 15-Bugs.7 fully complete and device-confirmed. **Next session: TBD.**_
 
 ---
 
 ## Current State
 
-_Last refresh: June 2026 — Session 15-Bugs.6 complete and confirmed on device._
+_Last refresh: June 2026 — Session 15-Bugs.7 complete and confirmed on device._
 
-Session 15-Bugs.6 complete. `ManualCourseModal.jsx` now scrolls correctly when `ScoreKeypad` opens on the Rating/Slope & Yardage tab. Fix mirrors the 15-Bugs.3 pattern (H-48): `paddingBottom:300` applied to the modal card when `setupKp` is active, forcing the scroll container to be genuinely scrollable. `kpWasOpenRef` guards the `scrollTop = scrollHeight` call to fire only on the closed→open keypad transition — not on field-to-field switches while the keypad is already open (which caused a double-scroll / extra whitespace artifact). H-48 amended; H-51 added. Sprint 15 remains fully complete. Next: 16-A — Wolf (contract first).
+All Sprint 15 sessions and 16-A (Wolf) are complete. 15-Bugs.7 closed the Sixes per-hole winner chip color bug: in segments 1 and 2, `renderSegment` was using global player identity (`isBluePlayer(winnerPi)`) to color hole chips, causing both teams to show blue when rotation placed two globally-blue players on opposite sides. Fixed with segment-relative `isA ? aIsBlueRow : !aIsBlueRow` at both the base segment row and press row call sites in `SixesTable.jsx`. Wolf field testing in progress. Next session TBD.
 
 ---
 
@@ -130,7 +130,7 @@ the date range filter, producing stale or wrong insight values.
 ### H-15: `PlayerPickerPopup` selection order is significant for Sixes
 The order players are selected in `PlayerPickerPopup` determines their index in
 `activePlayers`. Sixes team rotation is keyed to those indices via `sixesTeams`.
-Do not sort or reorder `activePlders` after the picker closes.
+Do not sort or reorder `activePlayers` after the picker closes.
 
 ### H-16: `roundLib` list order is insertion order — do not sort
 `roundLib.list()` returns rounds in insertion (chronological) order.
@@ -395,6 +395,48 @@ Dependency is `setupKp?.fieldId` (so it fires on each new field activation), but
 the `wasOpen` guard suppresses it unless the keypad was previously closed. Surfaced
 and fixed in 15-Bugs.6.
 
+### H-52: Wolf pick popup must clear `activeKpCell` before showing — stale keypad bug
+When the Wolf pick popup fires (from `openKeypadOnCell` or `kpAdvanceCell`), the
+prior `activeKpCell` value must be explicitly cleared (`setActiveKpCell(null)`) before
+calling `setWolfPickPrompt`. If not cleared, `kpVisible` remains `true` (since it
+derives from `!!activeKpCell`), causing the keypad to render underneath or alongside
+the popup. Both trigger points — the manual-tap path in `openKeypadOnCell` and the
+auto-advance path in `kpAdvanceCell` — must each call `setActiveKpCell(null)` and
+`setKpValue('')` before `setWolfPickPrompt(...)`. Surfaced and fixed in 16-A.
+
+### H-53: `wolfPicks` must be preserved across setup round-trips in `handleStartRound`
+When a user navigates back to setup mid-round and then starts scoring again,
+`NewRoundPage` assembles a fresh `roundState` containing only setup fields — it has
+no knowledge of `wolfPicks` (a scoring-session field). If `handleStartRound` in
+`App.jsx` calls `saveActiveRound(roundState)` directly, `wolfPicks` is silently
+dropped and all Wolf picks from prior holes are lost. Fix: merge the existing
+`activeRound.wolfPicks` into `roundState` before saving, but only when it is
+non-empty. Pattern:
+```js
+const existing = ls.get(SK.activeRound);
+const merged = existing?.wolfPicks && Object.keys(existing.wolfPicks).length > 0
+  ? { ...roundState, wolfPicks: existing.wolfPicks }
+  : roundState;
+saveActiveRound(merged);
+```
+Applies to any future per-scoring-session fields (like per-hole data) that must
+survive setup edits. Surfaced and fixed in 16-A.
+
+### H-54: Sixes per-hole chip color must use segment-relative identity — not global `isBluePlayer(winnerPi)`
+In `renderSegment`, the hole winner chip color must be derived from `isA ? aIsBlueRow : !aIsBlueRow`,
+not from `isBluePlayer(winnerPi)`. Although `isBluePlayer` is correctly anchored to
+`sixesTeams[0]` (H-49), calling it with `winnerPi` (a global player index) still fails in
+segments 1 and 2 because the rotation places globally-blue players on both sides — both
+teams' winners return `isBlue = true` and render blue chips. The correct derivation:
+`aIsBlueRow` (already computed at the top of `renderSegment` as `isBluePlayer(a)`) tells
+you whether team A is blue in this segment; `isA` tells you which team won. Combine them:
+```js
+const isA = w === 'a';
+const isBlue = isA ? aIsBlueRow : !aIsBlueRow;
+```
+`winnerPi` is not needed for color resolution — remove it from the derivation.
+Applies to both the base segment row and press rows. Surfaced and fixed in 15-Bugs.7.
+
 ---
 
 ## Open Items
@@ -417,6 +459,10 @@ and fixed in 15-Bugs.6.
 ### Sprint 15 — carry-over
 
 - **Starred players auto-selection in New Round** — starred players surface at top of picker but are not auto-selected. Deferred; log for future sprint if demand arises.
+
+### Sprint 16 — carry-over
+
+- **Wolf field testing** — 16-A device-confirmed in controlled testing. Full field round not yet played. Post-field-test refinements expected in a new designated session.
 
 ---
 
@@ -444,13 +490,14 @@ Contract version pins below verified against each contract's actual version head
 | `ScoreKeypad_Contract.md` | v2.4 AUTHORITATIVE | Custom keypad: universal system-keyboard replacement |
 | `UI_Component_Contract.md` | v1.7 | `ui.jsx` tokens, all components, `style` prop pattern. v1.6 (15-E.1): §10 NEW — `RangePicker.jsx` shared component documented. v1.7 (15-G): §3.6 NEW — `BIRDIE_COLOR` and `BOGEY_COLOR` tokens. §4.11 NEW — ScoreGrid score-cell indicator overlay rules (eagle/birdie/par/bogey/double-bogey). §10 amended (15-N): 6 pill options documented (Week/Month/Year/YTD/All/Custom); `'30days'` and `'365days'` range values added; MTD removed. |
 | `Universal_Contract_Template.md` | v1.0 AUTHORITATIVE SKELETON | Template every game contract must conform to |
+| `Wolf_Contract.md` | v1.0 | Wolf game rules, rotation, wolfPicks schema, point resolution engine, WolfTable display spec, 17/18 fairness options. Created 16-A. |
 
 ### Process / planning docs
 
 | Document | Purpose |
 |---|---|
 | `BUILD_PLAN.md` | Authoritative session history, completed sessions table, open session plan, deferred items, decision log |
-| `APP_STATE_SUMMARY.md` (this file) | Lean status, gotchas (H-1…H-51), open items, document index |
+| `APP_STATE_SUMMARY.md` (this file) | Lean status, gotchas (H-1…H-54), open items, document index |
 | `Session_Intro_Template.md` | Boilerplate prompt for starting a fresh chat session |
 | `Session_Closing_Maintenance_Template.md` | Step-by-step closing-session checklist for BP and ASS maintenance |
 | `NewRoundPage_Design_Spec.md` | 11-H output: full NewRoundPage setup UI design spec. 13-E.7: three card body sections now in `pages/new-round/NewRoundCourseCard.jsx`, `PlayersCard.jsx`, `GamesCard.jsx` |

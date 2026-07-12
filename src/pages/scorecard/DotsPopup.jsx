@@ -1,4 +1,12 @@
 // ─── scorecard/DotsPopup.jsx ──────────────────────────────────────────────────
+// ✅ Self-checked (15-Bugs.8): backdrop dismiss and tile-tap guards rebuilt
+// around a mount-timestamp ghost-click guard. Traced touch/click event order
+// for the long-press → popup-open sequence; confirmed the real touchend from
+// the opening gesture always targets the originating score cell (touch events
+// never retarget to elements that mount mid-gesture), while the delayed
+// synthetic "click" iOS fires afterward IS hit-tested against whatever is
+// topmost on screen at that point — this popup, once mounted. That explains
+// both the instant-close (Bug 1) and the swallowed-first-tap (Bug 2) reports.
 // RENDER ONLY — no business logic in this file.
 // No scoring calculations. No match state computation.
 // All logic must come from engine/ or scorecardUtils.js
@@ -121,18 +129,26 @@ export function DotsPopup({
 
   const hasMulti = enabled.some(sp => !sp.auto && sp.multi);
 
-  // touchStartedOnBackdrop: only close on touchend if a touchstart was first
-  // received on the backdrop after mount. This prevents the finger-lift from the
-  // long-press gesture (which opens the popup) from immediately closing it.
-  const touchStartedOnBackdrop = useRef(false);
+  // mountedAt / isGhost (15-Bugs.8): the long-press gesture that opens this
+  // popup is often still in progress (finger not yet lifted) when this
+  // component first mounts. Real touch events (touchstart/move/end) always
+  // target the element the gesture started on — the score cell — so that
+  // gesture's own touchend can never land on this popup. But the delayed
+  // synthetic "click" browsers synthesize ~300ms after touchend is NOT
+  // capture-based: it hit-tests (elementFromPoint) at that screen coordinate
+  // at the moment it fires, which by then is this popup (fixed, full-screen,
+  // zIndex 400) — or occasionally a tile, if one happens to render under that
+  // point. Any click/tap action within 600ms of mount is that ghost, not a
+  // deliberate user tap. Same 600ms convention as H-40 (ScoreKeypad) and the
+  // Wolf pick popup's guardedBtn.
+  const mountedAt = useRef(Date.now());
+  const isGhost   = () => Date.now() - mountedAt.current < 600;
 
-  // cardInteractionsReady: false until the opening long-press finger has lifted.
-  // The long-press that opens DotsPopup is still in progress when the card mounts.
-  // The finger-lift generates a synthesized click that would fire tile onClick handlers
-  // before the user has made a deliberate tap. This ref blocks all tile interactions
-  // until the first touchend on the card is consumed (the opening finger-lift), after
-  // which all subsequent taps are processed normally.
-  const cardInteractionsReady = useRef(false);
+  // touchStartedOnBackdrop: only close on touchend if a touchstart was first
+  // received on the backdrop after mount. Real touch gestures always target
+  // the element they started on, so the opening long-press's touchend can
+  // never land here — this only fires for a genuine new touch on the backdrop.
+  const touchStartedOnBackdrop = useRef(false);
 
   return (
     <div
@@ -155,7 +171,14 @@ export function DotsPopup({
           touchStartedOnBackdrop.current = false;
         }
       }}
-      onClick={onClose}
+      onClick={e => {
+        // Guard against the delayed ghost click from the opening long-press
+        // (isGhost, above) and require a direct backdrop hit — not a bubbled
+        // click from the card or a tile.
+        if (e.target !== e.currentTarget) return;
+        if (isGhost()) return;
+        onClose();
+      }}
     >
       <div
         style={{ background: '#fff', borderRadius: 18, padding: 20,
@@ -164,17 +187,7 @@ export function DotsPopup({
         onClick={e => e.stopPropagation()}
         onMouseDown={e => e.preventDefault()}
         onTouchStart={e => e.stopPropagation()}
-        onTouchEnd={e => {
-          e.stopPropagation();
-          if (!cardInteractionsReady.current) {
-            // First touchend after mount = the opening long-press finger lifting.
-            // Call preventDefault to suppress the synthesized click that would
-            // otherwise fire on whichever tile is under the finger.
-            e.preventDefault();
-            cardInteractionsReady.current = true;
-          }
-          // Subsequent touchends: no preventDefault — synthesized clicks fire normally.
-        }}
+        onTouchEnd={e => e.stopPropagation()}
       >
         <div style={{ fontWeight: 700, fontSize: 15, color: G, marginBottom: 2 }}>
           Dots — H{hole + 1}
@@ -204,7 +217,7 @@ export function DotsPopup({
             if (sp.multi) {
               return (
                 <div key={sp.id}
-                  onClick={() => { if (cardInteractionsReady.current) increment(sp); }}
+                  onClick={() => { if (!isGhost()) increment(sp); }}
                   style={{ ...tileStyle(isOn), cursor: 'pointer' }}
                 >
                   {/* Name + multiplier inline, close together */}
@@ -213,7 +226,7 @@ export function DotsPopup({
                   <div style={{ flex: 1 }}/>
                   {/* Count badge — 24px fits within standard tile padding; tap decrements */}
                   <div
-                    onClick={e => { e.stopPropagation(); if (cardInteractionsReady.current && isOn) decrement(sp); }}
+                    onClick={e => { e.stopPropagation(); if (!isGhost() && isOn) decrement(sp); }}
                     style={{
                       width: 24, height: 24, borderRadius: 6,
                       background: isOn ? G : '#e8e8e8',
@@ -230,7 +243,7 @@ export function DotsPopup({
             // ── Single-count row: tap tile toggles ──
             return (
               <div key={sp.id}
-                onClick={() => { if (cardInteractionsReady.current) toggle(sp); }}
+                onClick={() => { if (!isGhost()) toggle(sp); }}
                 style={{ ...tileStyle(isOn), cursor: 'pointer' }}
               >
                 <span style={{ fontSize: 14, fontWeight: isOn ? 700 : 400, color: nameClr(isOn) }}>{sp.name}</span>

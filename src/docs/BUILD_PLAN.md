@@ -1,6 +1,6 @@
 # The Card — Master Build Plan
 
-_Last updated: June 2026 — 15-Bugs.6 complete and confirmed on device. ScoreKeypad overlap fix in ManualCourseModal. Next session: **16-A — Wolf (contract first)**._
+_Last updated: June 2026 — 15-Bugs.7 complete and confirmed on device. Sixes per-hole chip color fixed. Next session: **TBD**._
 _Maintained in this chat as the authoritative sequence and history of all build sessions._
 _The APP_STATE_SUMMARY.md in the project knowledge base is the authoritative record of_
 _what is implemented. This file is the authoritative record of what was planned, why,_
@@ -36,6 +36,8 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 - **15-Bugs.4** non-sequential designation per owner. Bug-fix + color scheme overhaul session for `MatchNassauTable.jsx` and `SixesTable.jsx`.
 - **15-Bugs.5** non-sequential designation per owner. Bug-fix session for SI dropdown options in `ManualCourseModal.jsx` — even-front 2-nine courses.
 - **15-Bugs.6** non-sequential designation per owner. Bug-fix session for ScoreKeypad overlap in `ManualCourseModal.jsx` — Rating/Slope & Yardage tab.
+- **16-A** scope significantly exceeded original plan — original spec was contract-first Wolf contract + Phase 2 implementation. Implementation extended across many sub-fixes: popup timing/enforcement, keypad-under-popup bug, wolfPicks preservation across setup round-trips, WolfTable layout iteration, RoundSummaryModal + shareUtils wiring, Total Payouts rename, GameConfigShared extractions (TiebreakSelect, SegmentedPills), lastTwoHoles fairness options, configurable point values.
+- **15-Bugs.7** non-sequential designation per owner. Bug-fix session for Sixes per-hole winner chip color in segments 1 and 2.
 
 ---
 
@@ -118,20 +120,20 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 | 15-Bugs.5 | SI dropdown options fix for 2-nine courses with even-front layout. `siValidSet()` in `ManualCourseModal.jsx` previously enforced USGA odd/even per nine index — nine 0 odd-only, nine 1 even-only. Courses with even SI values on the front nine (e.g. Snohomish GC) caused all selects to snap to the first valid option, displaying all 1s and 2s. Fix: 2-nine courses now offer all 18 values in both nines' dropdowns; duplicate detection via `dupIndices` remains the sole correctness gate. Single `str_replace` to `siValidSet` + call site. H-50 added. | — | Confirmed on device |
 | 15-O | CoursesPage sort + starred courses. `courseLib.list()` now returns courses sorted starred-first then A→Z within each tier (mirrors `playerLib.list()`). Star toggle button added to each course row in `CoursesPage.jsx` (gold filled ★ when starred, grey outline when not — identical style to Players page). `CoursePickerPopup` in `NewRoundPage.jsx`: sorted same way; tiles simplified to name + location only (tees line removed); gold star shown on right of starred tiles. History-course prepend participates in sort. `App_Data_Model_Contract.md` §5.2 amended — course library record schema added with `starred?: boolean` (library-only, absent = false). | App_Data_Model v4.1 | Confirmed on device |
 | 15-Bugs.6 | ScoreKeypad overlap fix in `ManualCourseModal.jsx` — Rating/Slope & Yardage tab. Applied `paddingBottom:300` to the modal card when `setupKp` is active (reverts to 20 when null). Added `useEffect` on `setupKp?.fieldId` to scroll `modalCardRef` to `scrollHeight` on keypad open. `kpWasOpenRef` guards the scroll to fire only on closed→open transition — not on field-to-field switches while keypad is already up (which caused double-scroll / extra whitespace). H-51 added. | — | Confirmed on device |
+| 16-A | Wolf game — contract + full implementation. `Wolf_Contract.md` v1.0 created and approved. Engine: `runWolf` in `games.js`, Wolf payout branch in `payouts.js`, `wolfPicks` round-trip in `roundLib.js`, `buildPayoutArgs` sync in `roundUtils.js`. UI: `GameConfigWolf.jsx` new (bet, carryover, configurable point values, `TiebreakSelect`, wolf order panel with First/Second/Third/Fourth labels, holes 17/18 fairness segmented buttons — Same Order/Last Place/Skip); `WolfTable.jsx` new (`GameSection` shell, stacked front/back layout, team-color cell shading, scorecard row order). `ScoreGrid.jsx` — Wolf pick popup (blue scheme, H-40 guard, pick enforced before score entry, `activeKpCell` cleared before popup, deferred keypad resume after pick, outside-tap dismissal). `ScorecardPage.jsx` — `wolfPicks` state/ref/persist/flush. `App.jsx` — `wolfPicks` preserved across setup round-trips. `RoundSummaryModal.jsx` and `shareUtils.js` — `WolfTable` wired; "Overall (all games)" renamed "Total Payouts". `PayoutDisplay.jsx` — Total Payouts section added (new `showTotalRow` prop). `ResultsPage.jsx` — `showTotalRow={false}`. `GameConfigShared.jsx` — `TiebreakSelect` and `SegmentedPills` extracted as shared components. `GameConfig.jsx` — Wolf dispatcher case + new re-exports. `GamesCard.jsx` — 4-player gate. `FILE_MANIFEST.md` — two new files. H-52, H-53 added. Scope significantly exceeded plan. | Wolf_Contract.md v1.0 | Confirmed on device. Scope significantly exceeded plan. Field testing in progress. |
+| 15-Bugs.7 | Sixes per-hole winner chip color fix. In segments 1 and 2, `renderSegment` used `isBluePlayer(winnerPi)` (global player identity) to color hole chips, causing both teams to render blue when the rotation placed two globally-blue players on opposite sides. Fixed by replacing with segment-relative `isA ? aIsBlueRow : !aIsBlueRow` at both the base segment row and press rows. Two `str_replace` edits to `SixesTable.jsx`. H-54 added. | — | Confirmed on device |
 
 ---
 
 ## Known Bugs
 
-| Bug | Severity | Discovered | Notes |
-|---|---|---|---|
-| — | — | — | No known bugs. |
+_None._
 
 ---
 
 ## Open Session Plan
 
-> **Next session: 16-A — Wolf (contract first).** Sprint 15 complete. Sprint 16 (new game formats) is next; all sessions are contract-first.
+> **Next session: TBD.** Sprint 15 and 16-A complete. 15-Bugs.7 complete. Next designated session TBD.
 
 ---
 
@@ -157,15 +159,13 @@ _14-A complete. 14-B complete. 14-bugs.1 complete. AI Assistant + Review & Save 
 
 ### Sprint 15 — Display Polish + Features
 
-_15-A, 15-B, 15-Bugs.1, 15-Bugs.2, 15-Bugs.3, 15-Bugs.4, 15-Bugs.5, 15-Bugs.6, 15-C, 15-E, 15-E.1, 15-F, 15-G, 15-H, 15-I, 15-J, 15-K, 15-L, 15-M, 15-N, 15-O complete and confirmed on device — see Completed Sessions table above. 15-D deferred. **Next session: 16-A — Wolf (contract first).**_
+_15-A, 15-B, 15-Bugs.1, 15-Bugs.2, 15-Bugs.3, 15-Bugs.4, 15-Bugs.5, 15-Bugs.6, 15-Bugs.7, 15-C, 15-E, 15-E.1, 15-F, 15-G, 15-H, 15-I, 15-J, 15-K, 15-L, 15-M, 15-N, 15-O complete and confirmed on device — see Completed Sessions table above. 15-D deferred. **Next session: TBD.**_
 
 ---
 
 ### Sprint 16 — New Game Formats
 
-_All Sprint 16 sessions are contract-first._
-
-**16-A: Wolf** *(contract first)* — extension point preserved in `GAME_CONFIGS`.
+_16-A complete and confirmed on device — see Completed Sessions table above. **Next session: TBD.**_
 
 **16-B+: Other formats** — High/Low, Bingo Bango Bongo, etc.
 
@@ -175,7 +175,6 @@ _All Sprint 16 sessions are contract-first._
 
 | Item | Contract | Notes |
 |---|---|---|
-| Sprint 16: Wolf | New `Wolf_Contract.md` | Full contract session before any code |
 | Sprint 16: High/Low | New `HighLow_Contract.md` | Full contract session before any code |
 | Sprint 16: other formats | New contracts per format | Full contract session each |
 
@@ -214,7 +213,7 @@ _None._
 | All `GameConfig*.jsx` files live in `src/pages/new-round/` | 15-J | Moved from `src/pages/tables/` — config panels belong with new-round setup, not with display tables |
 | `MatchCard.jsx` renamed `GameConfigMatch.jsx` and moved to `new-round/` | 15-J | Consistent naming with all other GameConfig panel files |
 | Pay Up / Pay Winner semantics: flat `bet` per rank-position pair (not per-pot) | 15-J | Pay Up: j pays i `bet` for every pair where i ranked above j. Pay Winner: all losers pay only top scorer `bet`. Applies uniformly across flat-bet and differential modes. |
-| iOS double-cell-advance fix: `touchHandledRef` timestamp guard | 13-G | React 18 passive listeners; synthetic click suppressed within 600ms of touchend. |
+| iOS double-cell-advance fix: `touchHandledRef` timestamp guard | 14-bugs.1 | React 18 passive listeners; synthetic click suppressed within 600ms of touchend. |
 | `footerSlot` on `PlayerDropdown` is a render prop `(close) => ReactNode` | 15-K | Caller receives `close()` directly; no companion prop needed. Cleaner than a static ReactNode + separate `onFooterAction` callback. |
 | `photo` is library-only — never copied to `activePlayers` snapshot | 15-L | Same rule as `starred` and `inMoneyLists`. Surfaces using `activePlayers` must enrich from `playerLib` by id/name lookup when photo display is needed. |
 | Player photos drawn directly onto canvas in share image | 15-L | iOS Safari does not render `<img>` inside SVG foreignObject reliably. Photos are omitted from the foreignObject HTML and drawn via canvas 2D API (`ctx.arc` + `ctx.clip` + `ctx.drawImage`) after the foreignObject renders. |
