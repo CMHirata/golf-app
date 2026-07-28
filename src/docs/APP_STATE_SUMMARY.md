@@ -33,15 +33,15 @@ Before logging a session anywhere, confirm all of the following:
 
 ## Work in Flight
 
-_None. Session 15-Bugs.7 fully complete and device-confirmed. **Next session: TBD.**_
+_None. Session 15-Bugs.8 fully complete and device-confirmed. **Next session: TBD.**_
 
 ---
 
 ## Current State
 
-_Last refresh: June 2026 — Session 15-Bugs.7 complete and confirmed on device._
+_Last refresh: July 2026 — Session 15-Bugs.8 complete and confirmed on device._
 
-All Sprint 15 sessions and 16-A (Wolf) are complete. 15-Bugs.7 closed the Sixes per-hole winner chip color bug: in segments 1 and 2, `renderSegment` was using global player identity (`isBluePlayer(winnerPi)`) to color hole chips, causing both teams to show blue when rotation placed two globally-blue players on opposite sides. Fixed with segment-relative `isA ? aIsBlueRow : !aIsBlueRow` at both the base segment row and press row call sites in `SixesTable.jsx`. Wolf field testing in progress. Next session TBD.
+All Sprint 15 sessions and 16-A (Wolf) are complete. 15-Bugs.8 fixed three related DotsPopup touch regressions — instant close after long-press finger-lift, dot-tile taps needing two attempts, and long-press appearing unreliable across the main grid and both ZoomModal columns — all traced to one root cause in `DotsPopup.jsx`: an unconditional backdrop `onClick={onClose}` and a `cardInteractionsReady` "first touch = ghost" heuristic both wrongly assumed the delayed iOS synthetic click following the opening long-press would land on the popup's own DOM. It doesn't (real touch events stay bound to the originating cell); the ghost click is instead hit-tested against whatever is topmost on screen when it fires, which is the popup once mounted. Replaced both mechanisms with a single mount-timestamp `isGhost()` guard (600ms window), mirroring the Wolf popup's existing `wolfTouchRef` pattern. `ScoreGrid.jsx` and `ZoomModal.jsx` long-press wiring was audited and confirmed already correct on all three surfaces — no changes needed there. Wolf field testing still in progress. Next session TBD.
 
 ---
 
@@ -437,6 +437,25 @@ const isBlue = isA ? aIsBlueRow : !aIsBlueRow;
 `winnerPi` is not needed for color resolution — remove it from the derivation.
 Applies to both the base segment row and press rows. Surfaced and fixed in 15-Bugs.7.
 
+### H-55: Long-press-triggered popups must guard dismissal/tap actions with a mount-timestamp ghost-click check — not a "first touch = ghost" heuristic
+When a popup mounts mid-gesture (before the triggering long-press's finger has
+lifted), real touch events (`touchstart`/`touchmove`/`touchend`) still target the
+element the gesture started on — they never retarget to a popup that mounts later.
+But the delayed synthetic `click` iOS fires ~300ms after that `touchend` IS
+hit-tested (`elementFromPoint`) against whatever is topmost on screen at the
+moment it fires — which, once the popup has mounted, is the popup itself (or
+occasionally a tile, if one happens to render at that exact point). A popup's
+outside-tap dismiss handler must not be a plain, unconditional `onClick={onClose}`
+— it must check `e.target === e.currentTarget` AND compare `Date.now()` against
+the popup's own mount timestamp (600ms window, same convention as H-40), ignoring
+any click within that window. Do not use a "the first touchend/click received is
+the ghost" heuristic for tile/tap actions either — it assumes the ghost lands on
+the popup's own DOM, which touch capture prevents, and instead silently swallows
+the user's actual first deliberate tap. Fixed in `DotsPopup.jsx` in 15-Bugs.8;
+apply the same pattern to any future long-press-triggered popup (see also H-52's
+Wolf popup reference model, which already used this pattern correctly via
+`wolfTouchRef`).
+
 ---
 
 ## Open Items
@@ -497,7 +516,7 @@ Contract version pins below verified against each contract's actual version head
 | Document | Purpose |
 |---|---|
 | `BUILD_PLAN.md` | Authoritative session history, completed sessions table, open session plan, deferred items, decision log |
-| `APP_STATE_SUMMARY.md` (this file) | Lean status, gotchas (H-1…H-54), open items, document index |
+| `APP_STATE_SUMMARY.md` (this file) | Lean status, gotchas (H-1…H-55), open items, document index |
 | `Session_Intro_Template.md` | Boilerplate prompt for starting a fresh chat session |
 | `Session_Closing_Maintenance_Template.md` | Step-by-step closing-session checklist for BP and ASS maintenance |
 | `NewRoundPage_Design_Spec.md` | 11-H output: full NewRoundPage setup UI design spec. 13-E.7: three card body sections now in `pages/new-round/NewRoundCourseCard.jsx`, `PlayersCard.jsx`, `GamesCard.jsx` |

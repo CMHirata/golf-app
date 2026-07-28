@@ -1,6 +1,6 @@
 # The Card — Master Build Plan
 
-_Last updated: June 2026 — 15-Bugs.7 complete and confirmed on device. Sixes per-hole chip color fixed. Next session: **TBD**._
+_Last updated: July 2026 — 15-Bugs.8 complete and confirmed on device. DotsPopup touch reliability fixed (ghost-click guard). Next session: **TBD**._
 _Maintained in this chat as the authoritative sequence and history of all build sessions._
 _The APP_STATE_SUMMARY.md in the project knowledge base is the authoritative record of_
 _what is implemented. This file is the authoritative record of what was planned, why,_
@@ -38,6 +38,7 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 - **15-Bugs.6** non-sequential designation per owner. Bug-fix session for ScoreKeypad overlap in `ManualCourseModal.jsx` — Rating/Slope & Yardage tab.
 - **16-A** scope significantly exceeded original plan — original spec was contract-first Wolf contract + Phase 2 implementation. Implementation extended across many sub-fixes: popup timing/enforcement, keypad-under-popup bug, wolfPicks preservation across setup round-trips, WolfTable layout iteration, RoundSummaryModal + shareUtils wiring, Total Payouts rename, GameConfigShared extractions (TiebreakSelect, SegmentedPills), lastTwoHoles fairness options, configurable point values.
 - **15-Bugs.7** non-sequential designation per owner. Bug-fix session for Sixes per-hole winner chip color in segments 1 and 2.
+- **15-Bugs.8** non-sequential designation per owner. Bug-fix session for DotsPopup touch reliability (popup close-on-lift, dot-tile double-tap, long-press reliability across main grid / ZoomModal center / ZoomModal left-right).
 
 ---
 
@@ -122,6 +123,7 @@ _and in what order — including items that shifted, were skipped, reinstated, o
 | 15-Bugs.6 | ScoreKeypad overlap fix in `ManualCourseModal.jsx` — Rating/Slope & Yardage tab. Applied `paddingBottom:300` to the modal card when `setupKp` is active (reverts to 20 when null). Added `useEffect` on `setupKp?.fieldId` to scroll `modalCardRef` to `scrollHeight` on keypad open. `kpWasOpenRef` guards the scroll to fire only on closed→open transition — not on field-to-field switches while keypad is already up (which caused double-scroll / extra whitespace). H-51 added. | — | Confirmed on device |
 | 16-A | Wolf game — contract + full implementation. `Wolf_Contract.md` v1.0 created and approved. Engine: `runWolf` in `games.js`, Wolf payout branch in `payouts.js`, `wolfPicks` round-trip in `roundLib.js`, `buildPayoutArgs` sync in `roundUtils.js`. UI: `GameConfigWolf.jsx` new (bet, carryover, configurable point values, `TiebreakSelect`, wolf order panel with First/Second/Third/Fourth labels, holes 17/18 fairness segmented buttons — Same Order/Last Place/Skip); `WolfTable.jsx` new (`GameSection` shell, stacked front/back layout, team-color cell shading, scorecard row order). `ScoreGrid.jsx` — Wolf pick popup (blue scheme, H-40 guard, pick enforced before score entry, `activeKpCell` cleared before popup, deferred keypad resume after pick, outside-tap dismissal). `ScorecardPage.jsx` — `wolfPicks` state/ref/persist/flush. `App.jsx` — `wolfPicks` preserved across setup round-trips. `RoundSummaryModal.jsx` and `shareUtils.js` — `WolfTable` wired; "Overall (all games)" renamed "Total Payouts". `PayoutDisplay.jsx` — Total Payouts section added (new `showTotalRow` prop). `ResultsPage.jsx` — `showTotalRow={false}`. `GameConfigShared.jsx` — `TiebreakSelect` and `SegmentedPills` extracted as shared components. `GameConfig.jsx` — Wolf dispatcher case + new re-exports. `GamesCard.jsx` — 4-player gate. `FILE_MANIFEST.md` — two new files. H-52, H-53 added. Scope significantly exceeded plan. | Wolf_Contract.md v1.0 | Confirmed on device. Scope significantly exceeded plan. Field testing in progress. |
 | 15-Bugs.7 | Sixes per-hole winner chip color fix. In segments 1 and 2, `renderSegment` used `isBluePlayer(winnerPi)` (global player identity) to color hole chips, causing both teams to render blue when the rotation placed two globally-blue players on opposite sides. Fixed by replacing with segment-relative `isA ? aIsBlueRow : !aIsBlueRow` at both the base segment row and press rows. Two `str_replace` edits to `SixesTable.jsx`. H-54 added. | — | Confirmed on device |
+| 15-Bugs.8 | DotsPopup touch reliability fix — three related regressions traced to one root cause. Symptoms: popup closing instantly on long-press finger-lift, dot-tile taps requiring two attempts, and long-press appearing unreliable across main grid / ZoomModal center / ZoomModal left-right. Root cause confirmed in `DotsPopup.jsx`: the delayed synthetic "ghost" click iOS fires ~300ms after the opening long-press's real `touchend` is hit-tested (`elementFromPoint`) against whatever is topmost on screen at fire time — the popup itself, once mounted — not the originating cell (real touch events stay bound to the cell that started them). The backdrop's unconditional `onClick={onClose}` and the `cardInteractionsReady` "first touch = ghost" heuristic both assumed the ghost would land on the popup's own DOM; it doesn't, so the heuristic swallowed the user's real first tap and the plain onClick closed on the ghost. Replaced both with a single mount-timestamp `isGhost()` guard (600ms window), mirroring the Wolf popup's existing `wolfTouchRef` pattern (H-52). Audited `ScoreGrid.jsx` and `ZoomModal.jsx` long-press wiring on all three surfaces — confirmed already correct; no changes needed there. Single-file fix to `DotsPopup.jsx`. H-55 added. | — | Confirmed on device |
 
 ---
 
@@ -133,7 +135,7 @@ _None._
 
 ## Open Session Plan
 
-> **Next session: TBD.** Sprint 15 and 16-A complete. 15-Bugs.7 complete. Next designated session TBD.
+> **Next session: TBD.** Sprint 15 and 16-A complete. 15-Bugs.7, 15-Bugs.8 complete. Next designated session TBD.
 
 ---
 
@@ -159,7 +161,7 @@ _14-A complete. 14-B complete. 14-bugs.1 complete. AI Assistant + Review & Save 
 
 ### Sprint 15 — Display Polish + Features
 
-_15-A, 15-B, 15-Bugs.1, 15-Bugs.2, 15-Bugs.3, 15-Bugs.4, 15-Bugs.5, 15-Bugs.6, 15-Bugs.7, 15-C, 15-E, 15-E.1, 15-F, 15-G, 15-H, 15-I, 15-J, 15-K, 15-L, 15-M, 15-N, 15-O complete and confirmed on device — see Completed Sessions table above. 15-D deferred. **Next session: TBD.**_
+_15-A, 15-B, 15-Bugs.1, 15-Bugs.2, 15-Bugs.3, 15-Bugs.4, 15-Bugs.5, 15-Bugs.6, 15-Bugs.7, 15-Bugs.8, 15-C, 15-E, 15-E.1, 15-F, 15-G, 15-H, 15-I, 15-J, 15-K, 15-L, 15-M, 15-N, 15-O complete and confirmed on device — see Completed Sessions table above. 15-D deferred. **Next session: TBD.**_
 
 ---
 
@@ -253,3 +255,4 @@ _None._
 | "Total — All Games" section removed from Payouts page | 15-C | Redundant with player chips which already show each player's net. |
 | ScoreGrid half labels simplified to Front/Back | 15-B | `frontLabel`/`backLabel` props removed from `ScoreGrid` — dead after label simplification. Variables retained in `ScorecardPage` for toolbar nine-name display. |
 | Female CH on 3-nine courses: filter to active nines before summing womensPar | 15-Bugs.1 | `course.nines` must be filtered to the active front and back nines before summing parsWomen for the womensPar used in courseHandicap(). Summing all nines produces wildly wrong par (e.g. 108 instead of 72 at Sahalee). Fixed at both call sites in `NewRoundPage.jsx`. Captured as H-43. |
+| Long-press-triggered popup ghost-click guard: mount-timestamp check, not first-touch heuristic | 15-Bugs.8 | The delayed iOS synthetic click following a long-press's real touchend is hit-tested against whatever is topmost on screen when it fires — the newly-mounted popup — not the originating cell. Guard dismissal and tap actions with a 600ms mount-timestamp check (same convention as H-40/Wolf popup's `wolfTouchRef`), not a heuristic assuming the popup's first touch event is the ghost. Captured as H-55. |

@@ -12,8 +12,9 @@
 // driven by the activeKpCell prop from ScoreGrid. No hidden input, no keyboard
 // focus logic, no advance/retreat logic lives here.
 
-import { G } from '../../components/ui.jsx';
+import { G, BIRDIE_COLOR, BOGEY_COLOR } from '../../components/ui.jsx';
 import { strokesForMode, xGrossScore } from '../../engine/handicap.js';
+import { parRelative } from './scorecardUtils.js';
 
 function splitName(fullName = '') {
   const parts = fullName.trim().split(/\s+/);
@@ -39,6 +40,54 @@ function ZoomPlusMark() {
   return (
     <div style={{ position: 'absolute', bottom: 3, right: 3, pointerEvents: 'none',
       fontSize: 8, fontWeight: 800, color: G, lineHeight: 1 }}>+</div>
+  );
+}
+
+// ── ScoreIndicator — par-relative overlay (§4.11) ─────────────────────────────
+// Absolutely-positioned SVG overlaid on a score cell. Stroke-only, no fill.
+// level: 'eagle' | 'birdie' | 'bogey' | 'double_bogey' (null / 'par' → no render)
+// Mirrored verbatim from ScoreGrid.jsx's ScoreIndicator — keep both in sync.
+function ScoreIndicator({ level }) {
+  if (!level || level === 'par') return null;
+  const isBirdie = level === 'birdie' || level === 'eagle';
+  const color    = isBirdie ? BIRDIE_COLOR : BOGEY_COLOR;
+  const sw       = 1.5;
+
+  if (level === 'birdie') {
+    return (
+      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
+           viewBox="0 0 26 26">
+        <circle cx="13" cy="13" r="11" stroke={color} strokeWidth={sw} fill="none"/>
+      </svg>
+    );
+  }
+  if (level === 'eagle') {
+    return (
+      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
+           viewBox="0 0 26 26">
+        <circle cx="13" cy="13" r="11" stroke={color} strokeWidth={sw} fill="none"/>
+        <circle cx="13" cy="13" r="9"  stroke={color} strokeWidth={sw} fill="none"/>
+      </svg>
+    );
+  }
+  if (level === 'bogey') {
+    return (
+      <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
+           viewBox="0 0 26 26">
+        <rect x="2.5" y="2.5" width="21" height="21" rx="0" ry="0"
+          stroke={color} strokeWidth={sw} fill="none"/>
+      </svg>
+    );
+  }
+  // double_bogey
+  return (
+    <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}
+         viewBox="0 0 26 26">
+      <rect x="2.5" y="2.5" width="21" height="21" rx="0" ry="0"
+        stroke={color} strokeWidth={sw} fill="none"/>
+      <rect x="4.5" y="4.5" width="17" height="17" rx="0" ry="0"
+        stroke={color} strokeWidth={sw} fill="none"/>
+    </svg>
   );
 }
 
@@ -285,6 +334,7 @@ export function ZoomModal({
                                 <span style={{ color: '#b8860b', fontSize: h === zoomHole ? 16 : 12, fontWeight: 800, marginLeft: 1 }}>X</span>
                               </>
                             ) : (val !== '' && val !== 0 ? val : '')}
+                            {!isXScore && <ScoreIndicator level={parRelative(val, pars[h])}/>}
                             <ZoomDotBadge count={dotCount} isCenter={isCenter} />
                             {dotMode && !(dotMode === 'netofflow' && nonParticipantIdxs?.has(pi)) && (() => {
                               const ch = courseHcps[pi];

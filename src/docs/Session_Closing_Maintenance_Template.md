@@ -32,6 +32,21 @@ ASS is **not** a session journal. It does not stack `_Last updated_` paragraphs.
 
 When closing this session, walk these in order:
 
+**Editing method — surgical edits, then audit.** Apply each step below as a
+targeted edit (string replacement) against the existing `BUILD_PLAN.md` and
+`APP_STATE_SUMMARY.md` files — not a full regeneration of either document.
+Surgical edits keep the diff reviewable, avoid accidental drift in sections
+the session didn't touch, and preserve formatting the files already use (list
+styles, table alignment, etc.) that a regenerated file can silently lose. Only
+fall back to a full-file rewrite when the volume of distinct changes is large
+enough that surgical edits become error-prone, or when a step requires
+restructuring existing content rather than adding/editing a row or paragraph —
+and say so before doing it. After all edits from Steps 2–13 are applied, read
+through both files in full (not just the lines touched) as a final accuracy
+and completeness audit, confirming each edit landed correctly and nothing
+adjacent was disturbed. This audit is in addition to, not a substitute for,
+the Step 14 cross-check.
+
 ### Step 1 — Confirm session designation
 The owner provides the session designation (e.g. "13-C.5"). Do not invent one. If the owner has not specified it, stop and ask.
 
@@ -112,8 +127,8 @@ Before finalizing, verify:
 - No completed session appears in any "open" or "pending" list anywhere
 - No strikethrough rows have been introduced in any active table
 
-### Step 15 — Output full updated files
-Output complete updated `BUILD_PLAN.md` and `APP_STATE_SUMMARY.md` files (or clear diffs) ready to copy/upload back. After updating, copy the new files into project knowledge.
+### Step 15 — Present the audited files
+Present the final `BUILD_PLAN.md` and `APP_STATE_SUMMARY.md` — surgically edited and audited per the method above — as complete files (or clear diffs of the changes made) ready to copy/upload back. After updating, copy the new files into project knowledge.
 
 ---
 
@@ -131,6 +146,7 @@ These are the failure modes that drifted the documents into a mess before the Ap
 - **Don't invent session designations.** Owner-assigned only.
 - **Don't use notation variants for "Confirmed on device."** That's the canonical form.
 - **Don't add a row to the Pending Decisions table if the decision is already confirmed.** Add to Confirmed. (The previous Pending Decisions table had 6 of 7 confirmed rows; that's a smell.)
+- **Don't regenerate a file from scratch when targeted edits will do.** Full rewrites risk silently dropping or reformatting untouched content. Make surgical edits and follow them with a full read-through audit — that combination catches drift without introducing it.
 
 ---
 
